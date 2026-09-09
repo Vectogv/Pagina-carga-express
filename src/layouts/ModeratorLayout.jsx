@@ -18,6 +18,7 @@ const navItems = [
   { icon: '📢', label: 'Comunicados', to: '/moderator/comunicados' },
   { icon: '📊', label: 'Encuestas', to: '/moderator/encuestas' },
   { icon: '📌', label: 'Avisos', to: '/moderator/avisos' },
+  { icon: '👤', label: 'Mi Perfil', to: '/moderator/profile' },
 ];
 
 const pathTitleMap = {
