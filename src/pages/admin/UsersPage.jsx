@@ -12,6 +12,7 @@ import {
   setLeader,
   registerUser,
 } from '../../api/admin';
+import { getRolUsuario, getLabelRol } from '../../utils/roles';
 
 const theme = {
   bg: '#020208',
@@ -173,8 +174,11 @@ const styles = {
 const roleColors = {
   admin: theme.danger,
   moderador: theme.warning,
+  moderador_lider: theme.warning,
   lider: '#a78bfa',
-  usuario: theme.muted,
+  conductor: '#8b5cf6',
+  cliente: theme.success,
+  desconocido: theme.muted,
 };
 
 const statusColors = {
@@ -212,7 +216,7 @@ function UsersPage() {
       const d = res.data;
       let list = Array.isArray(d) ? d : (d.users || d.data || []);
       if (rolFilter !== 'all') {
-        list = list.filter((u) => (u.rol || u.role || '').toLowerCase() === rolFilter);
+        list = list.filter((u) => getRolUsuario(u) === rolFilter);
       }
       setUsers(list);
       setTotal(Array.isArray(d) && rolFilter === 'all' ? d.length : list.length);
@@ -390,13 +394,10 @@ function UsersPage() {
       key: 'rol',
       label: 'Rol',
       render: (_, user) => {
-        const role = user.rol || user.role || 'usuario';
-        const color = roleColors[role] || theme.muted;
-        return (
-          <span style={{ ...styles.badge, backgroundColor: `${color}20`, color }}>
-            {role}
-          </span>
-        );
+        const r = getRolUsuario(user);
+        const label = getLabelRol(user);
+        const color = roleColors[r] || theme.muted;
+        return <span style={{ ...styles.badge, backgroundColor: `${color}20`, color }}>{label}</span>;
       },
     },
     {
@@ -476,6 +477,7 @@ function UsersPage() {
     { key: 'all', label: 'Todos' },
     { key: 'cliente', label: 'Clientes' },
     { key: 'conductor', label: 'Conductores' },
+    { key: 'moderador', label: 'Moderadores' },
     { key: 'admin', label: 'Admins' },
   ];
 
@@ -490,14 +492,14 @@ function UsersPage() {
         </div>
         <button onClick={() => setAddModal(true)} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: theme.accent, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ Agregar Usuario / Moderador</button>
       </div>
-      <div style={{ padding: '0 16px', marginTop: 8, display: 'flex', gap: 8, fontSize: 11, color: theme.muted }}>
-        <span>👥 Clientes: {users.filter((u) => (u.rol||'').toLowerCase()==='cliente').length}</span>
+      <div style={{ padding: '0 16px', marginTop: 8, display: 'flex', gap: 8, fontSize: 11, color: theme.muted, flexWrap: 'wrap' }}>
+        <span>👥 Clientes: {users.filter((u) => getRolUsuario(u) === 'cliente').length}</span>
         <span>•</span>
-        <span>🚗 Conductores: {users.filter((u) => (u.rol||'').toLowerCase()==='conductor').length}</span>
+        <span>🚗 Conductores: {users.filter((u) => getRolUsuario(u) === 'conductor').length}</span>
         <span>•</span>
-        <span>👑 Admin: {users.filter((u) => (u.rol||'').toLowerCase()==='admin').length}</span>
-        <span>• Para conductores ve a</span>
-        <a href="/admin/drivers" style={{ color: theme.accent, textDecoration: 'underline' }}>Conductores →</a>
+        <span>🛡️ Moderadores: {users.filter((u) => u.esModerador).length}</span>
+        <span>•</span>
+        <span>👑 Admin: {users.filter((u) => getRolUsuario(u) === 'admin').length}</span>
       </div>
       <div style={styles.content}>
         {toast && <div style={{ position: 'fixed', bottom: 16, right: 16, background: toast.ok ? theme.success : theme.danger, color: '#fff', padding: '10px 14px', borderRadius: 8, fontSize: 13, zIndex: 9999 }}>{toast.msg}</div>}

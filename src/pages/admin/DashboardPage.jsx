@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDashboard, getUsers, getDrivers } from '../../api/admin';
 import StatsCard from '../../components/admin/StatsCard';
+import { getRolUsuario } from '../../utils/roles';
 
 const theme = {
   bg: '#020208',
@@ -58,17 +59,20 @@ function DashboardPage() {
         if (cancelled) return;
         const users = Array.isArray(uRes.data) ? uRes.data : (uRes.data.users || uRes.data.data || []);
         const drivers = Array.isArray(dRes.data) ? dRes.data : (dRes.data.drivers || dRes.data.data || []);
-        const byRol = { admin: 0, conductor: 0, cliente: 0, otro: 0 };
+        const byRol = { admin: 0, conductor: 0, cliente: 0, moderador: 0, lider: 0, otro: 0 };
         let moderadores = 0;
         const byEstado = { activo: 0, suspendido: 0 };
         const byCiudad = {};
         users.forEach((u) => {
-          const r = (u.rol || u.role || 'otro').toLowerCase();
+          const r = getRolUsuario(u);
           if (byRol[r] !== undefined) byRol[r]++; else byRol.otro++;
-          if (u.esModerador || u.es_moderador) moderadores++;
+          if (u.esModerador) moderadores++;
           const e = u.suspendido ? 'suspendido' : 'activo';
           byEstado[e]++;
         });
+        // Corrige conteos: moderadores ya están en byRol.moderador via getRolUsuario, no sumar aparte
+        // Clientes reales = cliente sin esModerador (getRolUsuario ya lo hace)
+        // Conductores reales = conductor sin esModerador/esLider
         drivers.forEach((d) => {
           const c = (d.ciudad || 'sin-ciudad').toLowerCase();
           byCiudad[c] = (byCiudad[c] || 0) + 1;

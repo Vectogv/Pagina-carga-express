@@ -3,6 +3,7 @@ import Header from '../../components/admin/Header';
 import DataTable from '../../components/admin/DataTable';
 import { getUsers, suspendUser, deleteUser } from '../../api/admin';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
+import { getRolUsuario } from '../../utils/roles';
 
 const theme = { bg: '#020208', cards: '#0f1220', accent: '#6366f1', text: '#e2e8f0', muted: '#64748b', success: '#22c55e', warning: '#f59e0b', danger: '#ef4444', border: '#1e2238' };
 
@@ -19,7 +20,7 @@ export default function ClientsPage() {
       const res = await getUsers({ page: 1, limit: 100, search });
       const d = res.data;
       const list = Array.isArray(d) ? d : (d.users || d.data || []);
-      setClients(list.filter(u => (u.rol || u.role || '').toLowerCase() === 'cliente'));
+      setClients(list.filter(u => getRolUsuario(u) === 'cliente'));
     } catch (err) { setError(err.response?.data?.message || 'Error al cargar clientes'); }
     finally { setLoading(false); }
   }, [search]);
