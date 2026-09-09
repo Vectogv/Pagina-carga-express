@@ -15,6 +15,7 @@ const navItems = [
   { icon: '📊', label: 'Dashboard', to: '/moderator' },
   { icon: '👥', label: 'Conductores', to: '/moderator/drivers' },
   { icon: '😴', label: 'Inactivos', to: '/moderator/drivers/inactive' },
+  { icon: '🛣️', label: 'Viajes', to: '/moderator/trips' },
   { icon: '📢', label: 'Comunicados', to: '/moderator/comunicados' },
   { icon: '📊', label: 'Encuestas', to: '/moderator/encuestas' },
   { icon: '📌', label: 'Avisos', to: '/moderator/avisos' },

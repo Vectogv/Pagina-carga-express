@@ -29,5 +29,8 @@ export const getMyEncuestas = (params) => api.get('/api/moderator/encuestas', { 
 export const getMyReports = (params) => api.get('/api/moderator/reports', { params })
 export const getModeratorDashboard = () => api.get('/api/moderator/dashboard')
 
+// Viajes — nuevo GET /api/moderator/trips filtrado por ciudad del moderador
+export const getModeratorTrips = (params) => api.get('/api/moderator/trips', { params })
+
 // Perfil (usa mismo endpoint que admin/users/profile pero con rol moderador)
 export const getModeratorProfile = () => api.get('/api/users/profile')
