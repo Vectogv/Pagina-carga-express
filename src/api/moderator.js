@@ -24,5 +24,10 @@ export const createAviso = (data) => api.post('/api/avisos', data)
 export const pinAviso = (id) => api.put(`/api/avisos/${id}/pin`)
 export const deleteAviso = (id) => api.delete(`/api/avisos/${id}`)
 
+// Nuevos — requieren backend con los 3 bloques que pegaste
+export const getMyEncuestas = (params) => api.get('/api/moderator/encuestas', { params })
+export const getMyReports = (params) => api.get('/api/moderator/reports', { params })
+export const getModeratorDashboard = () => api.get('/api/moderator/dashboard')
+
 // Perfil (usa mismo endpoint que admin/users/profile pero con rol moderador)
 export const getModeratorProfile = () => api.get('/api/users/profile')

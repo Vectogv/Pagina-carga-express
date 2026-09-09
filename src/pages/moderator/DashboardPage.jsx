@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getModeratorDrivers, getInactiveDrivers, getModeratorComunicados, getAvisos } from '../../api/moderator';
+import { getModeratorDashboard } from '../../api/moderator';
 
 const theme = { bg: '#020208', cards: '#0f1220', accent: '#f59e0b', text: '#e2e8f0', muted: '#64748b', border: '#1e2238', success: '#22c55e', danger: '#ef4444' };
 
@@ -13,20 +13,17 @@ export default function ModeratorDashboard() {
     let cancelled = false;
     (async () => {
       try {
-        const [d, i, c, a] = await Promise.allSettled([
-          getModeratorDrivers({ page: 1, limit: 1 }),
-          getInactiveDrivers({ page: 1, limit: 1 }),
-          getModeratorComunicados({ page: 1, limit: 1 }),
-          getAvisos({ page: 1, limit: 1 }),
-        ]);
+        const res = await getModeratorDashboard();
         if (cancelled) return;
-        const count = (r) => {
-          if (r.status !== 'fulfilled') return '—';
-          const data = r.value.data;
-          if (Array.isArray(data)) return data.length;
-          return data.total ?? data.count ?? '—';
-        };
-        setStats({ drivers: count(d), inactive: count(i), comunicados: count(c), avisos: count(a) });
+        const d = res.data;
+        setStats({
+          drivers: d.totalDrivers ?? d.drivers ?? '—',
+          inactive: d.inactiveDrivers ?? d.inactive ?? '—',
+          comunicados: d.totalComunicados ?? d.comunicados ?? '—',
+          avisos: d.totalAvisos ?? d.avisos ?? '—',
+        });
+      } catch {
+        if (!cancelled) setStats({ drivers: '—', inactive: '—', comunicados: '—', avisos: '—' });
       } finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };

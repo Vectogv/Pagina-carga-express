@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
-import { createEncuesta, getEncuestaResults, getModeratorComunicados } from '../../api/moderator';
+import { createEncuesta, getEncuestaResults, getMyEncuestas } from '../../api/moderator';
 
 const theme = { bg: '#020208', cards: '#0f1220', accent: '#f59e0b', text: '#e2e8f0', muted: '#64748b', border: '#1e2238', success: '#22c55e', danger: '#ef4444' };
 
@@ -18,12 +18,10 @@ export default function ModeratorEncuestasPage() {
   const fetch = async () => {
     setLoading(true); setError(null);
     try {
-      // No hay GET /moderator/encuestas directo, usamos comunicados como proxy o mostramos creado local
-      // Intentamos via moderator reports o dejamos lista vacía hasta crear
-      const res = await getModeratorComunicados({ page: 1, limit: 50 });
+      const res = await getMyEncuestas({ page: 1, limit: 50 });
       const d = res.data;
-      const all = Array.isArray(d) ? d : (d.data || []);
-      setList(all.filter((x) => x.tipo === 'encuesta' || x.pregunta));
+      const all = Array.isArray(d) ? d : (d.data || d.encuestas || []);
+      setList(all);
     } catch (err) { setError(err.response?.data?.message || 'Error al cargar encuestas'); }
     finally { setLoading(false); }
   };
