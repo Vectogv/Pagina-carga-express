@@ -59,11 +59,13 @@ function DashboardPage() {
         const users = Array.isArray(uRes.data) ? uRes.data : (uRes.data.users || uRes.data.data || []);
         const drivers = Array.isArray(dRes.data) ? dRes.data : (dRes.data.drivers || dRes.data.data || []);
         const byRol = { admin: 0, conductor: 0, cliente: 0, otro: 0 };
+        let moderadores = 0;
         const byEstado = { activo: 0, suspendido: 0 };
         const byCiudad = {};
         users.forEach((u) => {
           const r = (u.rol || u.role || 'otro').toLowerCase();
           if (byRol[r] !== undefined) byRol[r]++; else byRol.otro++;
+          if (u.esModerador || u.es_moderador) moderadores++;
           const e = u.suspendido ? 'suspendido' : 'activo';
           byEstado[e]++;
         });
@@ -72,7 +74,7 @@ function DashboardPage() {
           byCiudad[c] = (byCiudad[c] || 0) + 1;
         });
         const pendingVerif = drivers.filter((d) => (d.estadoVerificacion || d.estado_verificacion) === 'pendiente').length;
-        setUserStats({ total: users.length, byRol, byEstado, byCiudad, driversTotal: drivers.length, pendingVerif, activos: byEstado.activo });
+        setUserStats({ total: users.length, byRol, moderadores, byEstado, byCiudad, driversTotal: drivers.length, pendingVerif, activos: byEstado.activo });
       } catch {}
     })();
     return () => { cancelled = true; };
@@ -82,9 +84,9 @@ function DashboardPage() {
   if (error) return <ErrorState message={error} />;
 
   const stats = [
-    { title: 'Clientes', value: '→', icon: '👤', color: '#22c55e', to: '/admin/clients' },
-    { title: 'Conductores', value: '→', icon: '🚗', color: '#8b5cf6', to: '/admin/drivers' },
-    { title: 'Moderación', value: '→', icon: '🛡️', color: '#f59e0b', to: '/admin/moderators' },
+    { title: 'Clientes', value: userStats?.byRol.cliente ?? '—', icon: '👤', color: '#22c55e', to: '/admin/clients' },
+    { title: 'Conductores', value: userStats?.byRol.conductor ?? data?.totalDrivers ?? '—', icon: '🚗', color: '#8b5cf6', to: '/admin/drivers' },
+    { title: 'Moderación', value: userStats?.moderadores ?? '—', icon: '🛡️', color: '#f59e0b', to: '/admin/moderators' },
     { title: 'Viajes Activos', value: data?.activeTrips ?? data?.trips ?? 0, icon: '🛣️', color: theme.success, to: '/admin/trips' },
     { title: 'Ingresos Totales', value: formatCurrency(data?.totalEarnings ?? data?.earnings ?? 0), icon: '💰', color: '#f59e0b', to: '/admin/earnings' },
     { title: 'Emergencias Pendientes', value: data?.pendingEmergencies ?? data?.emergencies ?? 0, icon: '🚨', color: theme.danger, to: '/admin/emergencies' },
