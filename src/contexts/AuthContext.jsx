@@ -13,8 +13,12 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await getProfile()
       const u = data.user || data.data || data
-      setUser(u)
-      localStorage.setItem('user', JSON.stringify(u))
+      // Preserva rol/esModerador del login si el endpoint no lo devuelve (admin profile no trae rol)
+      const existingRaw = localStorage.getItem('user')
+      const existing = existingRaw ? JSON.parse(existingRaw) : {}
+      const merged = { ...existing, ...u, rol: u.rol || u.role || existing.rol || existing.role || (u.email?.includes('admin') ? 'admin' : undefined) }
+      setUser(merged)
+      localStorage.setItem('user', JSON.stringify(merged))
       setIsAuthenticated(true)
       return true
     } catch (err) {
