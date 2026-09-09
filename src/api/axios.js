@@ -1,9 +1,7 @@
 import axios from 'axios'
 
-const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-
 const api = axios.create({
-  baseURL: isDev ? '' : 'https://bakend-cargaexpress-production.up.railway.app',
+  baseURL: '',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -60,7 +58,7 @@ api.interceptors.response.use(
     try {
       const refreshToken = localStorage.getItem('refreshToken')
       const { data } = await axios.post(
-        `${api.defaults.baseURL}/api/auth/refresh-token`,
+        '/api/auth/refresh-token',
         { refreshToken },
         { headers: { 'Content-Type': 'application/json' } }
       )
