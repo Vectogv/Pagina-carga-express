@@ -21,6 +21,8 @@ import ConfigPage from './pages/admin/ConfigPage'
 import ProfilePage from './pages/admin/ProfilePage'
 import BackupsPage from './pages/admin/BackupsPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
+import ModeratorsPage from './pages/admin/ModeratorsPage'
+import ClientsPage from './pages/admin/ClientsPage'
 import ModeratorDashboard from './pages/moderator/DashboardPage'
 import ModeratorDrivers from './pages/moderator/DriversPage'
 import ModeratorInactive from './pages/moderator/InactiveDriversPage'
@@ -67,6 +69,8 @@ function AppRoutes() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="clients" element={<ClientsPage />} />
+        <Route path="moderators" element={<ModeratorsPage />} />
         <Route path="drivers" element={<DriversPage />} />
         <Route path="trips" element={<TripsPage />} />
         <Route path="earnings" element={<EarningsPage />} />

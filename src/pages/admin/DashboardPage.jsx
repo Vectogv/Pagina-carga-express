@@ -82,6 +82,9 @@ function DashboardPage() {
   if (error) return <ErrorState message={error} />;
 
   const stats = [
+    { title: 'Clientes', value: data?.totalUsers ? '→' : '→', icon: '👤', color: '#22c55e', to: '/admin/clients' },
+    { title: 'Conductores', value: data?.totalDrivers ?? data?.drivers ?? 0, icon: '🚗', color: '#8b5cf6', to: '/admin/drivers' },
+    { title: 'Moderadores', value: '→', icon: '🛡️', color: '#f59e0b', to: '/admin/moderators' },
     { title: 'Total Usuarios', value: data?.totalUsers ?? data?.users ?? 0, icon: '👥', color: theme.accent, to: '/admin/users' },
     { title: 'Viajes Activos', value: data?.activeTrips ?? data?.trips ?? 0, icon: '🛣️', color: theme.success, to: '/admin/trips' },
     { title: 'Ingresos Totales', value: formatCurrency(data?.totalEarnings ?? data?.earnings ?? 0), icon: '💰', color: '#f59e0b', to: '/admin/earnings' },
