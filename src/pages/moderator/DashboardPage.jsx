@@ -6,8 +6,11 @@ const theme = { bg: '#020208', cards: '#0f1220', accent: '#f59e0b', text: '#e2e8
 
 export default function ModeratorDashboard() {
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const ciudad = user.zonaModerador || user.zona_moderador || 'tu ciudad';
   const [stats, setStats] = useState({ drivers: '-', inactive: '-', comunicados: '-', avisos: '-' });
   const [detail, setDetail] = useState(null);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export default function ModeratorDashboard() {
         const comAprob = comunicados.filter((c) => c.estado === 'aprobado').length;
         const avisosFij = avisos.filter((a) => a.fijado || a.pinned).length;
         setDetail({ online, offline: drivers.length - online, pendingVerif, comPend, comAprob, avisosFij, avisosTotal: avisos.length });
+        setUsers(drivers.slice(0, 5));
       } catch {}
     })();
     return () => { cancelled = true; };
@@ -65,9 +69,19 @@ export default function ModeratorDashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ background: `${theme.cards}`, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 14, display: 'flex', gap: 10, alignItems: 'center' }}>
-        <span style={{ fontSize: 18 }}>ℹ️</span>
-        <p style={{ color: theme.muted, fontSize: 11, margin: 0, lineHeight: 1.6 }}>Todas las acciones están limitadas a tu <b style={{ color: theme.text }}>zonaModerador</b>. Comunicados y encuestas quedan <b>pendientes</b> hasta aprobación del admin.</p>
+      <div style={{ background: `linear-gradient(135deg, ${theme.cards} 0%, #1a1205 100%)`, border: `1px solid ${theme.accent}40`, borderRadius: 12, padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 10, background: `${theme.accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🛡️</div>
+          <div>
+            <h2 style={{ fontSize: 15, fontWeight: 800, color: theme.text, margin: 0, textTransform: 'capitalize' }}>Moderador de {ciudad}</h2>
+            <p style={{ fontSize: 12, color: theme.muted, margin: '2px 0 0' }}>{user.nombre || ''} {user.apellido || ''} • {user.email || ''}</p>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: theme.accent, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Tu ciudad</p>
+          <p style={{ fontSize: 18, fontWeight: 800, color: theme.text, margin: '2px 0 0', textTransform: 'capitalize' }}>{ciudad}</p>
+          <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>{stats.drivers !== '-' ? `${stats.drivers} conductores asignados` : ''}</p>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 12 }}>
@@ -85,7 +99,7 @@ export default function ModeratorDashboard() {
 
       {detail && (
         <div style={{ background: 'rgba(15,18,32,0.6)', border: `1px solid ${theme.border}`, borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: 0 }}>Estadísticas de tu ciudad — lo importante</h3>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: 0 }}>Estadísticas de {ciudad} — lo importante</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
             <div style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
               <p style={{ fontSize: 10, fontWeight: 600, color: theme.muted, textTransform: 'uppercase', margin: '0 0 4px' }}>Conductores</p>
@@ -104,6 +118,18 @@ export default function ModeratorDashboard() {
               <p style={{ fontSize: 11, color: theme.muted, margin: '4px 0 0' }}>📌 {detail.avisosFij} fijados</p>
             </div>
           </div>
+          {users.length > 0 && (
+            <div style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: theme.muted, textTransform: 'uppercase', margin: '0 0 8px' }}>Tus usuarios de {ciudad} — muestra</p>
+              {users.map((u) => (
+                <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: `1px solid ${theme.border}` }}>
+                  <span style={{ fontSize: 12, color: theme.text }}>{u.usuario?.nombre || ''} • {u.placa || ''}</span>
+                  <span style={{ fontSize: 11, color: theme.muted }}>{u.usuario?.email || ''}</span>
+                </div>
+              ))}
+              <button onClick={() => navigate('/moderator/drivers')} style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, border: `1px solid ${theme.border}`, background: 'transparent', color: theme.accent, fontSize: 11, cursor: 'pointer' }}>Ver todos →</button>
+            </div>
+          )}
         </div>
       )}
     </div>
