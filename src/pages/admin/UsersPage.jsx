@@ -289,7 +289,8 @@ function UsersPage() {
 
   const openModerator = (user) => {
     const esMod = !!user.esModerador;
-    setModModal({ open: true, user, esModerador: !esMod, zonaModerador: user.zonaModerador || 'cali' });
+    // Muestra estado actual para permitir: cambiar ciudad (mantener true) o quitar (poner false)
+    setModModal({ open: true, user, esModerador: esMod, zonaModerador: user.zonaModerador || user.zona_moderador || 'cali' });
   };
   const handleSetModerator = async () => {
     if (!modModal.user) return;
@@ -617,11 +618,21 @@ function UsersPage() {
       <Modal
         isOpen={modModal.open}
         onClose={() => setModModal({ open: false, user: null, esModerador: true, zonaModerador: 'cali' })}
-        title={modModal.esModerador ? 'Asignar Moderador' : 'Quitar Moderador'}
+        title={modModal.user?.esModerador ? 'Modificar Moderador' : 'Asignar Moderador'}
         size="sm"
       >
+        <div style={{ background: `${theme.cards}`, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: theme.muted }}>
+          <b style={{ color: theme.text }}>{modModal.user?.nombre} {modModal.user?.apellido}</b> — {modModal.user?.email}<br />
+          Actual: {modModal.user?.esModerador ? `Moderador ${modModal.user?.zonaModerador || ''}` : 'No es moderador'}
+        </div>
         <div style={styles.formGroup}>
-          <label style={styles.label}>Zona</label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: theme.text }}>
+            <input type="checkbox" checked={modModal.esModerador} onChange={(e) => setModModal({ ...modModal, esModerador: e.target.checked })} />
+            Es moderador
+          </label>
+        </div>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Zona {modModal.esModerador ? '*' : ''}</label>
           <select
             style={styles.select}
             value={modModal.zonaModerador}
@@ -632,9 +643,12 @@ function UsersPage() {
             <option value="popayan">Popayán</option>
             <option value="pasto">Pasto</option>
           </select>
+          <p style={{ fontSize: 11, color: theme.muted, margin: '6px 0 0' }}>
+            {modModal.esModerador ? 'Cambiar ciudad: selecciona nueva zona y guarda (ej: Pasto→Cali).' : 'Quitar: desmarca y guarda (esModerador:false).'}
+          </p>
         </div>
         <button style={styles.saveBtn} onClick={handleSetModerator}>
-          {modModal.esModerador ? 'Asignar como Moderador' : 'Quitar Moderador'}
+          {modModal.esModerador ? (modModal.user?.esModerador ? 'Guardar cambios' : 'Asignar como Moderador') : 'Quitar Moderador'}
         </button>
       </Modal>
 
