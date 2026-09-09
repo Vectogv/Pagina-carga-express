@@ -1,0 +1,91 @@
+import axios from 'axios'
+
+const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+
+const api = axios.create({
+  baseURL: isDev ? '' : 'https://bakend-cargaexpress-production.up.railway.app',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+let isRefreshing = false
+let failedQueue = []
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token)
+    }
+  })
+  failedQueue = []
+}
+
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config
+
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error)
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject })
+      })
+        .then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`
+          return api(originalRequest)
+        })
+        .catch((err) => Promise.reject(err))
+    }
+
+    originalRequest._retry = true
+    isRefreshing = true
+
+    try {
+      const refreshToken = localStorage.getItem('refreshToken')
+      const { data } = await axios.post(
+        `${api.defaults.baseURL}/api/auth/refresh-token`,
+        { refreshToken },
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+
+      const newToken = data.accessToken
+      localStorage.setItem('accessToken', newToken)
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken)
+      }
+
+      api.defaults.headers.common.Authorization = `Bearer ${newToken}`
+      originalRequest.headers.Authorization = `Bearer ${newToken}`
+
+      processQueue(null, newToken)
+      return api(originalRequest)
+    } catch (refreshError) {
+      processQueue(refreshError, null)
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      window.location.href = '/admin/login'
+      return Promise.reject(refreshError)
+    } finally {
+      isRefreshing = false
+    }
+  }
+)
+
+export default api
