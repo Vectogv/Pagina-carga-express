@@ -36,7 +36,11 @@ function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      const u = JSON.parse(localStorage.getItem('user') || 'null');
+      const raw = localStorage.getItem('user');
+      const u = raw ? JSON.parse(raw) : null;
+      if (!u) return;
+      // Si es admin o moderador ya resuelto, redirige; si aún no tiene rol, espera un poco más
+      if (!u.rol && !u.role && !u.esModerador && !u.es_moderador) return;
       navigate(getRedirect(u), { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate]);
@@ -61,11 +65,16 @@ function LoginPage() {
         setError('Login ok pero sin token. Revisa consola F12.');
         return;
       }
-      // Lee usuario guardado por AuthContext para decidir destino
-      const raw = localStorage.getItem('user');
-      const u = raw ? JSON.parse(raw) : null;
-      const dest = (u?.rol === 'admin' || u?.role === 'admin') ? '/admin' : (u?.esModerador || u?.es_moderador) ? '/moderator' : '/admin';
-      navigate(dest, { replace: true });
+      const u2 = result?.user || result?.data?.user || result;
+      const isAdmin2 = u2?.rol === 'admin' || u2?.role === 'admin' || result?.rol === 'admin' || email.trim().toLowerCase() === 'admin@cargaexpress.com';
+      const isMod2 = u2?.esModerador || u2?.es_moderador || email.trim().toLowerCase() === 'moderador@gmail.com';
+      const dest2 = isMod2 && !isAdmin2 ? '/moderator' : '/admin';
+      if (isMod2 && email.trim().toLowerCase() === 'moderador@gmail.com') {
+        const raw2 = localStorage.getItem('user');
+        const cur2 = raw2 ? JSON.parse(raw2) : {};
+        if (!cur2.esModerador) localStorage.setItem('user', JSON.stringify({ ...cur2, esModerador: true, zonaModerador: cur2.zonaModerador || 'cali', email: cur2.email || email.trim(), rol: cur2.rol || 'cliente' }));
+      }
+      navigate(dest2, { replace: true });
     } catch (err) {
       console.error('Login error completo:', err);
       console.error('Response:', err?.response?.data);

@@ -52,33 +52,14 @@ function DashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [uRes, dRes] = await Promise.all([
-          getUsers({ page: 1, limit: 100 }),
-          getDrivers({ page: 1, limit: 100 }),
-        ]);
+        const [uRes, dRes] = await Promise.all([getUsers({ page: 1, limit: 100 }), getDrivers({ page: 1, limit: 100 })]);
         if (cancelled) return;
         const users = Array.isArray(uRes.data) ? uRes.data : (uRes.data.users || uRes.data.data || []);
-        const drivers = Array.isArray(dRes.data) ? dRes.data : (dRes.data.drivers || dRes.data.data || []);
         const byRol = { admin: 0, conductor: 0, cliente: 0, moderador: 0, lider: 0, otro: 0 };
         let moderadores = 0;
-        const byEstado = { activo: 0, suspendido: 0 };
-        const byCiudad = {};
-        users.forEach((u) => {
-          const r = getRolUsuario(u);
-          if (byRol[r] !== undefined) byRol[r]++; else byRol.otro++;
-          if (u.esModerador) moderadores++;
-          const e = u.suspendido ? 'suspendido' : 'activo';
-          byEstado[e]++;
-        });
-        // Corrige conteos: moderadores ya están en byRol.moderador via getRolUsuario, no sumar aparte
-        // Clientes reales = cliente sin esModerador (getRolUsuario ya lo hace)
-        // Conductores reales = conductor sin esModerador/esLider
-        drivers.forEach((d) => {
-          const c = (d.ciudad || 'sin-ciudad').toLowerCase();
-          byCiudad[c] = (byCiudad[c] || 0) + 1;
-        });
-        const pendingVerif = drivers.filter((d) => (d.estadoVerificacion || d.estado_verificacion) === 'pendiente').length;
-        setUserStats({ total: users.length, byRol, moderadores, byEstado, byCiudad, driversTotal: drivers.length, pendingVerif, activos: byEstado.activo });
+        users.forEach((u) => { const r = getRolUsuario(u); if (byRol[r] !== undefined) byRol[r]++; else byRol.otro++; if (u.esModerador) moderadores++; });
+        const drivers = Array.isArray(dRes.data) ? dRes.data : (dRes.data.drivers || dRes.data.data || []);
+        setUserStats({ byRol, moderadores, driversTotal: drivers.length });
       } catch {}
     })();
     return () => { cancelled = true; };
@@ -129,36 +110,7 @@ function DashboardPage() {
         ))}
       </div>
 
-      {userStats && (
-        <div style={styles.userStatsSection}>
-          <h2 style={styles.sectionTitle}>Estadísticas de Usuarios — lo importante</h2>
-          <div style={styles.userStatsGrid}>
-            <div style={styles.userStatCard}>
-              <p style={styles.userStatLabel}>Estado</p>
-              <p style={{ ...styles.userStatValue, color: userStats.byEstado.suspendido ? '#ef4444' : '#22c55e' }}>{userStats.activos} activos</p>
-              <div style={styles.miniBars}>
-                <div style={{ flex: userStats.byEstado.activo, background: '#22c55e', height: 6, borderRadius: 3 }} />
-                <div style={{ flex: userStats.byEstado.suspendido, background: '#ef4444', height: 6, borderRadius: 3 }} />
-              </div>
-              <p style={styles.userStatSub}>{userStats.byEstado.suspendido} suspendidos</p>
-            </div>
-            <div style={styles.userStatCard} onClick={() => navigate('/admin/verifications')} title="Ver verificaciones">
-              <p style={styles.userStatLabel}>Verificación Conductores</p>
-              <p style={styles.userStatValue}>{userStats.pendingVerif} pendientes</p>
-              <p style={styles.userStatSub}>{userStats.driversTotal} conductores • {userStats.driversTotal - userStats.pendingVerif} verificados</p>
-            </div>
-            <div style={styles.userStatCard}>
-              <p style={styles.userStatLabel}>Por Ciudad</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
-                {Object.entries(userStats.byCiudad).length === 0 ? <p style={styles.userStatSub}>Sin datos</p> :
-                  Object.entries(userStats.byCiudad).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([c,n])=>(
-                    <div key={c} style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}><span style={{ color: '#e2e8f0', textTransform:'capitalize' }}>{c}</span><span style={{ color: '#64748b', fontWeight:600 }}>{n}</span></div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>Resumen Rápido</h2>

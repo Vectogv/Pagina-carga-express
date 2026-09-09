@@ -12,6 +12,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('');
   const [confirm, setConfirm] = useState(null);
 
   const fetchClients = useCallback(async () => {
@@ -49,12 +50,21 @@ export default function ClientsPage() {
     },
   ];
 
+  const filtered = clients.filter((u) => {
+    if (!filter.trim()) return true;
+    const q = filter.toLowerCase();
+    return `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.telefono || '').includes(q);
+  });
+
   return (
     <div style={{ minHeight:'100vh', background:theme.bg, color:theme.text }}>
       <Header title="Clientes" onSearch={setSearch} />
+      <div style={{ padding: '0 16px' }}>
+        <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrar por nombre, correo o teléfono (como moderación)" style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }} />
+      </div>
       <div style={{ padding:16 }}>
         {error && <div style={{ padding:10, background:`${theme.danger}15`, color:theme.danger, borderRadius:8, marginBottom:12, fontSize:13 }}>{error}</div>}
-        <DataTable columns={columns} data={clients} loading={loading} emptyMessage="No hay clientes" />
+        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={filter ? 'Sin resultados para "' + filter + '"' : 'No hay clientes'} />
       </div>
       <ConfirmDialog isOpen={!!confirm} onClose={()=>setConfirm(null)} onConfirm={handleDelete} title="Eliminar cliente" message={`¿Eliminar a ${confirm?.nombre || ''}?`} confirmText="Eliminar" danger />
     </div>

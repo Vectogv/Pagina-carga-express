@@ -1,95 +1,67 @@
 import { useState, useEffect, useCallback } from 'react';
-import Header from '../../components/admin/Header';
-import DataTable from '../../components/admin/DataTable';
-import Modal from '../../components/admin/Modal';
 import { getDrivers, approveVerification, rejectVerification, notifyDriver, reportDriver } from '../../api/admin';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
+import Modal from '../../components/admin/Modal';
 
 const theme = {
-  bg: '#020208',
-  cards: '#0f1220',
-  accent: '#6366f1',
-  text: '#e2e8f0',
-  muted: '#64748b',
+  bg: '#0a0e14',
+  cards: '#111827',
+  accent: '#22c55e',
+  text: '#f1f5f9',
+  muted: '#94a3b8',
+  border: '#1e293b',
   success: '#22c55e',
   warning: '#f59e0b',
   danger: '#ef4444',
-  border: '#1e2238',
 };
 
-const styles = {
-  page: { minHeight: '100vh', backgroundColor: theme.bg, color: theme.text },
-  content: { padding: 14 },
-  pagination: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, padding: '10px 14px', backgroundColor: theme.cards, borderRadius: 10, border: `1px solid ${theme.border}` },
-  pageInfo: { fontSize: 11, color: theme.muted },
-  pageButtons: { display: 'flex', gap: 6 },
-  pageBtn: { padding: '4px 10px', borderRadius: 6, border: `1px solid ${theme.border}`, backgroundColor: 'transparent', color: theme.text, fontSize: 11, fontWeight: 600, cursor: 'pointer' },
-  pageBtnActive: { backgroundColor: theme.accent, borderColor: theme.accent, color: '#fff' },
-  pageBtnDisabled: { opacity: 0.4, cursor: 'not-allowed' },
-  avatarCell: { display: 'flex', alignItems: 'center', gap: 8 },
-  avatar: { width: 28, height: 28, borderRadius: '50%', backgroundColor: `${theme.success}30`, color: theme.success, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 },
-  avatarImg: { width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 },
-  nameText: { fontWeight: 600, fontSize: 12 },
-  badge: { display: 'inline-block', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, textTransform: 'capitalize' },
-  stars: { display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: theme.warning },
-  starsNum: { fontSize: 11, color: theme.muted, marginLeft: 3 },
-  actionBtn: { padding: '4px 8px', borderRadius: 5, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', backgroundColor: `${theme.accent}20`, color: theme.accent },
-  detailSection: { marginBottom: 16 },
-  detailTitle: { fontSize: 12, fontWeight: 700, color: theme.text, marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${theme.border}` },
-  detailGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
-  detailItem: { display: 'flex', flexDirection: 'column', gap: 3 },
-  detailLabel: { fontSize: 10, fontWeight: 600, color: theme.muted, textTransform: 'uppercase', letterSpacing: '0.05em' },
-  detailValue: { fontSize: 12, color: theme.text },
-  driverPhoto: { width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${theme.accent}`, marginBottom: 10 },
-  driverPhotoPlaceholder: { width: 56, height: 56, borderRadius: '50%', backgroundColor: `${theme.accent}20`, color: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, marginBottom: 10, border: `2px solid ${theme.accent}40` },
-  driverName: { fontSize: 15, fontWeight: 700, color: theme.text, marginBottom: 2, textAlign: 'center' },
-  driverEmail: { fontSize: 11, color: theme.muted, textAlign: 'center', marginBottom: 4 },
-  verificationStatus: { display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 },
+const headerIcons = {
+  foto: '👤',
+  email: '✉️',
+  telefono: '📞',
+  vehiculo: '🚗',
+  ciudad: '🏢',
+  estado: '●',
+  verificacion: '✓',
 };
 
-const statusColors = { activo: theme.success, inactivo: theme.muted, pendiente: theme.warning, verificado: theme.success, no_verificado: theme.danger, rechazado: theme.danger, aprobado: theme.success };
-
-function DriversPage() {
+export default function DriversPage() {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const limit = 15;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [detailModal, setDetailModal] = useState({ open: false, driver: null });
-  const [action, setAction] = useState(null); // {type:'approve'|'reject'|'notify'|'report', driver}
+  const [action, setAction] = useState(null);
   const [nota, setNota] = useState('');
   const [toast, setToast] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const fetchDrivers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getDrivers({ page, limit, search });
+      const res = await getDrivers({ page: 1, limit: 100, search });
       const d = res.data;
       const list = Array.isArray(d) ? d : (d.drivers || d.data || []);
       setDrivers(list);
-      setTotal(Array.isArray(d) ? list.length : (d.total || list.length));
-      setTotalPages(Array.isArray(d) ? 1 : (d.totalPages || 1));
     } catch (err) {
       setError(err.response?.data?.message || 'Error al cargar conductores');
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [search]);
 
   useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
-
-  const handleSearch = (val) => { setSearch(val); setPage(1); };
 
   const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
   const handleApprove = async () => {
     try {
       await approveVerification(action.driver.usuarioId || action.driver.id);
-      showToast('Conductor aprobado');
+      showToast('Conductor verificado ✓');
       setAction(null);
       fetchDrivers();
     } catch (err) { showToast(err.response?.data?.message || 'Error al aprobar', false); }
@@ -98,7 +70,7 @@ function DriversPage() {
     try {
       const payload = nota.trim() ? { nota: nota.trim() } : {};
       await rejectVerification(action.driver.usuarioId || action.driver.id, payload);
-      showToast('Conductor rechazado');
+      showToast('Verificación rechazada');
       setAction(null); setNota('');
       fetchDrivers();
     } catch (err) { showToast(err.response?.data?.message || 'Error al rechazar', false); }
@@ -108,197 +80,306 @@ function DriversPage() {
       await notifyDriver(action.driver.usuarioId || action.driver.id);
       showToast('Notificación enviada');
       setAction(null);
-    } catch (err) {
-      const msg = err.response?.data?.message || err.response?.status === 403 ? 'Requiere rol moderador' : 'Error al notificar';
-      showToast(msg, false);
-    }
+    } catch (err) { showToast(err.response?.data?.message || 'Requiere FCM', false); }
   };
   const handleReport = async () => {
-    if (!nota.trim()) return showToast('Escribe la descripción', false);
+    if (!nota.trim()) return showToast('Escribe descripción', false);
     try {
       await reportDriver(action.driver.usuarioId || action.driver.id, { descripcion: nota.trim() });
-      showToast('Reporte enviado');
+      showToast('Reporte enviado a admin');
       setAction(null); setNota('');
-      fetchDrivers();
-    } catch (err) { showToast(err.response?.data?.message || 'Error al reportar', false); }
+    } catch (err) { showToast(err.response?.data?.message || 'Error', false); }
+  };
+
+  const handleExport = () => {
+    const csv = ['Nombre,Email,Teléfono,Vehículo,Ciudad,Estado,Verificación'].concat(
+      filtered.map((d) => {
+        const u = d.usuario || {};
+        return `"${u.nombre || ''} ${u.apellido || ''}","${u.email || ''}","${u.telefono || ''}","${d.tipoVehiculo || ''} ${d.placa || ''}","${d.ciudad || ''}","${d.online ? 'Conectado' : 'Desconectado'}","${d.estadoVerificacion || ''}"`;
+      })
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'conductores.csv'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('Exportado conductores.csv');
   };
 
   const getInitials = (row) => {
     const u = row.usuario || {};
-    const name = `${u.nombre || row.nombre || ''} ${u.apellido || row.apellido || ''}`.trim() || row.nombre || '';
+    const name = `${u.nombre || ''} ${u.apellido || ''}`.trim() || row.nombre || '';
     return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || '??';
   };
 
-  const renderStars = (rating) => {
-    const val = parseFloat(rating) || 0;
-    const full = Math.floor(val);
-    const half = val - full >= 0.5;
-    return (
-      <div style={styles.stars}>
-        {Array.from({ length: 5 }, (_, i) => (
-          <span key={i} style={{ opacity: i < full ? 1 : i === full && half ? 0.6 : 0.25 }}>★</span>
-        ))}
-        <span style={styles.starsNum}>{val.toFixed(1)}</span>
-      </div>
-    );
+  const getStatus = (row) => {
+    if (row.online && row.estadoVerificacion === 'aprobado') return { label: 'Conectado', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.25)' };
+    if (row.online) return { label: 'En Ruta', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)' };
+    return { label: 'Desconectado', color: '#64748b', bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.2)' };
+  };
+  const getVerif = (row) => {
+    const v = row.estadoVerificacion || 'pendiente';
+    if (v === 'aprobado' || v === 'verificado') return { label: 'Verificado', color: '#16a34a', bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.2)' };
+    if (v === 'rechazado') return { label: 'Rechazado', color: '#dc2626', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' };
+    return { label: 'Pendiente', color: '#d97706', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' };
   };
 
-  const columns = [
-    {
-      key: 'nombre',
-      label: 'Foto / Nombre',
-      render: (_, row) => {
-        const u = row.usuario || {};
-        const photo = row.fotoConductor || row.foto || row.photo || row.avatar;
-        const nombre = `${u.nombre || ''} ${u.apellido || ''}`.trim() || row.nombre || 'Sin nombre';
-        return (
-          <div style={styles.avatarCell}>
-            {photo ? <img src={photo} alt="" style={styles.avatarImg} /> : <div style={styles.avatar}>{getInitials(row)}</div>}
-            <span style={styles.nameText}>{nombre}</span>
-          </div>
-        );
-      },
-    },
-    { key: 'email', label: 'Email', render: (_, r) => r.usuario?.email || r.email || '-' },
-    { key: 'telefono', label: 'Teléfono', render: (_, r) => r.usuario?.telefono || r.telefono || '-' },
-    {
-      key: 'vehiculo',
-      label: 'Vehículo',
-      render: (_, r) => {
-        const placa = r.placa || r.vehicle?.placa || '';
-        const tipo = r.tipoVehiculo || r.tipo_vehiculo || '';
-        const cap = r.capacidad || '';
-        const txt = `${tipo} ${placa} ${cap ? '(' + cap + ')' : ''}`.trim();
-        return txt || placa || '-';
-      },
-    },
-    { key: 'ciudad', label: 'Ciudad', render: (_, r) => r.ciudad || r.city || '-' },
-    {
-      key: 'estado',
-      label: 'Estado',
-      render: (_, r) => {
-        const online = r.online;
-        const status = online ? 'activo' : 'inactivo';
-        const color = online ? theme.success : theme.muted;
-        return <span style={{ ...styles.badge, backgroundColor: `${color}20`, color }}>{online ? 'En línea' : 'Desconectado'}</span>;
-      },
-    },
-    {
-      key: 'verificacion',
-      label: 'Verificación',
-      render: (_, r) => {
-        const v = r.estadoVerificacion || r.estado_verificacion || 'pendiente';
-        const map = { pendiente: theme.warning, aprobado: theme.success, verificado: theme.success, rechazado: theme.danger };
-        const color = map[v] || theme.muted;
-        return <span style={{ ...styles.badge, backgroundColor: `${color}20`, color }}>{v}</span>;
-      },
-    },
-    { key: 'estrellas', label: 'Estrellas', render: (_, r) => renderStars(r.calificacion || r.rating || 0) },
-    {
-      key: 'acciones',
-      label: 'Acciones',
-      render: (_, r) => {
-        const ver = r.estadoVerificacion || 'pendiente';
-        return (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <button style={styles.actionBtn} onClick={(e) => { e.stopPropagation(); setDetailModal({ open: true, driver: r }); }}>Ver</button>
-            {ver === 'pendiente' && (
-              <>
-                <button style={{ ...styles.actionBtn, backgroundColor: `${theme.success}20`, color: theme.success }} onClick={(e) => { e.stopPropagation(); setAction({ type: 'approve', driver: r }); }}>Aprobar</button>
-                <button style={{ ...styles.actionBtn, backgroundColor: `${theme.danger}20`, color: theme.danger }} onClick={(e) => { e.stopPropagation(); setAction({ type: 'reject', driver: r }); }}>Rechazar</button>
-              </>
-            )}
-            <button style={{ ...styles.actionBtn, backgroundColor: `${theme.warning}20`, color: theme.warning }} onClick={(e) => { e.stopPropagation(); setAction({ type: 'notify', driver: r }); }}>Notificar</button>
-            <button style={{ ...styles.actionBtn, backgroundColor: `${theme.muted}20`, color: theme.muted }} onClick={(e) => { e.stopPropagation(); setNota(''); setAction({ type: 'report', driver: r }); }}>Reportar</button>
-          </div>
-        );
-      },
-    },
-  ];
+  const filtered = drivers.filter((d) => {
+    const q = search.toLowerCase();
+    const u = d.usuario || {};
+    const matchesSearch = !q || `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.telefono || '').includes(q) || (d.placa || '').toLowerCase().includes(q);
+    const status = d.online ? (d.estadoVerificacion === 'aprobado' ? 'conectado' : 'en_ruta') : 'desconectado';
+    const verif = d.estadoVerificacion || 'pendiente';
+    const matchesStatus = filterStatus === 'all' || status === filterStatus || verif === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
 
-  const driver = detailModal.driver;
-  const u = driver?.usuario || {};
-  const verification = driver?.estadoVerificacion || 'pendiente';
-  const verColor = { pendiente: theme.warning, aprobado: theme.success, verificado: theme.success, rechazado: theme.danger }[verification] || theme.muted;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const paginated = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+  useEffect(() => { setPage(1); }, [search, filterStatus, rowsPerPage]);
 
   return (
     <div style={styles.page}>
-      <Header title="Conductores" onSearch={handleSearch} />
-      <div style={styles.content}>
-        {error && <div style={{ padding: '12px 16px', borderRadius: 8, backgroundColor: `${theme.danger}15`, color: theme.danger, marginBottom: 16, fontSize: 13 }}>{error}</div>}
-        <DataTable columns={columns} data={drivers} loading={loading} emptyMessage="No se encontraron conductores" />
-        {total > 0 && (
-          <div style={styles.pagination}>
-            <span style={styles.pageInfo}>Pagina {page} de {totalPages} ({total} conductores)</span>
-            <div style={styles.pageButtons}>
-              <button style={{ ...styles.pageBtn, ...(page <= 1 ? styles.pageBtnDisabled : {}) }} disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Anterior</button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const start = Math.max(1, Math.min(page - 2, totalPages - 4));
-                const p = start + i;
-                if (p > totalPages) return null;
-                return <button key={p} style={{ ...styles.pageBtn, ...(p === page ? styles.pageBtnActive : {}) }} onClick={() => setPage(p)}>{p}</button>;
-              })}
-              <button style={{ ...styles.pageBtn, ...(page >= totalPages ? styles.pageBtnDisabled : {}) }} disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Siguiente</button>
-            </div>
-          </div>
-        )}
+      <div style={styles.titleRow}>
+        <h1 style={styles.title}>Conductores</h1>
+        <div style={styles.titleActions}>
+          <button onClick={() => setShowFilters(!showFilters)} style={styles.filterBtn}>
+            <span>⚙️</span> Filtros Avanzados
+          </button>
+        </div>
       </div>
 
-      {toast && <div style={{ position: 'fixed', bottom: 20, right: 20, background: toast.ok ? theme.success : theme.danger, color: '#fff', padding: '10px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, zIndex: 9999 }}>{toast.msg}</div>}
+      <div style={styles.toolbar}>
+        <div style={styles.searchWrap}>
+          <span style={styles.searchIcon}>🔍</span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar conductores por nombre, correo, teléfono o placa..."
+            style={styles.searchInput}
+          />
+        </div>
+        <div style={styles.toolbarActions}>
+          <button onClick={() => alert('Añadir conductor: usa Usuarios → Agregar')} style={styles.primaryBtn}>
+            <span>+</span> Añadir Conductor
+          </button>
+          <button onClick={handleExport} style={styles.secondaryBtn}>
+            <span>↓</span> Exportar
+          </button>
+        </div>
+      </div>
 
-      <ConfirmDialog isOpen={action?.type === 'approve'} onClose={() => setAction(null)} onConfirm={handleApprove} title="Aprobar conductor" message={`¿Aprobar a ${(action?.driver?.usuario?.nombre||'') + ' ' + (action?.driver?.usuario?.apellido||'')}?`} confirmText="Aprobar" />
-      <ConfirmDialog isOpen={action?.type === 'reject'} onClose={() => { setAction(null); setNota(''); }} onConfirm={handleReject} title="Rechazar conductor" message="¿Rechazar verificación? Esta acción requiere nota." confirmText="Rechazar" danger>
-        <div style={{ marginTop: 12 }}><label style={{ fontSize: 12, color: theme.muted }}>Nota (opcional)</label><textarea value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej: Documento ilegible" rows={2} style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 13 }} /></div>
+      {showFilters && (
+        <div style={styles.filtersPanel}>
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>Estado</label>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={styles.filterSelect}>
+              <option value="all">Todos</option>
+              <option value="conectado">Conectado</option>
+              <option value="desconectado">Desconectado</option>
+              <option value="en_ruta">En Ruta</option>
+              <option value="pendiente">Verificación Pendiente</option>
+              <option value="aprobado">Verificado</option>
+            </select>
+          </div>
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>Ciudad</label>
+            <select onChange={(e) => setSearch(e.target.value)} style={styles.filterSelect} defaultValue="">
+              <option value="">Todas las ciudades</option>
+              <option value="cali">Cali</option>
+              <option value="popayan">Popayán</option>
+              <option value="pasto">Pasto</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {error && <div style={styles.error}>{error}</div>}
+
+      <div style={styles.tableCard}>
+        <div style={styles.tableWrap}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}><span style={styles.thIcon}>{headerIcons.foto}</span> Foto / Nombre</th>
+                <th style={styles.th}><span style={styles.thIcon}>{headerIcons.email}</span> Email</th>
+                <th style={styles.th}><span style={styles.thIcon}>{headerIcons.telefono}</span> Teléfono</th>
+                <th style={styles.th}><span style={styles.thIcon}>{headerIcons.vehiculo}</span> Vehículo</th>
+                <th style={styles.th}><span style={styles.thIcon}>{headerIcons.ciudad}</span> Ciudad</th>
+                <th style={styles.th}><span style={styles.thIcon}>{headerIcons.estado}</span> Estado</th>
+                <th style={styles.th}><span style={styles.thIcon}>{headerIcons.verificacion}</span> Verificación</th>
+                <th style={styles.th}>Detalles</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} style={styles.tr}>
+                    <td colSpan={8} style={{ padding: 16 }}><div style={styles.skeleton} /></td>
+                  </tr>
+                ))
+              ) : paginated.length === 0 ? (
+                <tr><td colSpan={8} style={styles.empty}>No se encontraron conductores</td></tr>
+              ) : (
+                paginated.map((row, idx) => {
+                  const u = row.usuario || {};
+                  const nombre = `${u.nombre || ''} ${u.apellido || ''}`.trim() || 'Sin nombre';
+                  const st = getStatus(row);
+                  const vf = getVerif(row);
+                  return (
+                    <tr key={row.id || idx} style={{ ...styles.tr, background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                      <td style={styles.td}>
+                        <div style={styles.avatarCell}>
+                          <div style={styles.avatarWrap}>
+                            {row.fotoConductor ? (
+                              <img src={row.fotoConductor} alt="" style={styles.avatarImg} />
+                            ) : (
+                              <div style={styles.avatarFallback}>{getInitials(row)}</div>
+                            )}
+                          </div>
+                          <span style={styles.nameText}>{nombre}</span>
+                        </div>
+                      </td>
+                      <td style={styles.td}><span style={styles.cellText}>{u.email || '-'}</span></td>
+                      <td style={styles.td}><span style={styles.cellText}>{u.telefono || '-'}</span></td>
+                      <td style={styles.td}>
+                        <span style={styles.cellText}>{row.tipoVehiculo || '-'}</span>
+                        <span style={styles.cellSub}>{row.placa ? `${row.placa} ` : ''}{row.capacidad ? `(${row.capacidad})` : ''}</span>
+                      </td>
+                      <td style={styles.td}><span style={{ ...styles.cityBadge }}>{row.ciudad || '-'}</span></td>
+                      <td style={styles.td}><span style={{ ...styles.statusTag, background: st.bg, color: st.color, border: `1px solid ${st.border}` }}>{st.label}</span></td>
+                      <td style={styles.td}><span style={{ ...styles.statusTag, background: vf.bg, color: vf.color, border: `1px solid ${vf.border}` }}>{vf.label}</span></td>
+                      <td style={styles.td}>
+                        <div style={styles.actionsCell}>
+                          <button onClick={() => setDetailModal({ open: true, driver: row })} style={styles.iconBtn} title="Ver detalle">👁️</button>
+                          <button onClick={() => setDetailModal({ open: true, driver: row })} style={styles.iconBtn} title="Editar">✏️</button>
+                          {row.estadoVerificacion === 'pendiente' && (
+                            <>
+                              <button onClick={() => setAction({ type: 'approve', driver: row })} style={{ ...styles.miniBtn, background: 'rgba(34,197,94,0.12)', color: '#22c55e' }}>✓</button>
+                              <button onClick={() => setAction({ type: 'reject', driver: row })} style={{ ...styles.miniBtn, background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>✕</button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={styles.footer}>
+          <span style={styles.footerText}>
+            {filtered.length === 0 ? '0 conductores' : `${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, filtered.length)} de ${filtered.length}`}
+          </span>
+          <div style={styles.footerActions}>
+            <span style={styles.footerText}>Filas por página</span>
+            <select value={rowsPerPage} onChange={(e) => setRowsPerPage(Number(e.target.value))} style={styles.rowsSelect}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+            </select>
+            <div style={styles.pagination}>
+              <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} style={styles.pageBtn}>‹</button>
+              <span style={styles.pageInfo}>{page} de {totalPages}</span>
+              <button disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} style={styles.pageBtn}>›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {toast && <div style={styles.toast}>{toast.msg}</div>}
+
+      <ConfirmDialog isOpen={action?.type === 'approve'} onClose={() => setAction(null)} onConfirm={handleApprove} title="Aprobar conductor" message={`¿Aprobar a ${action?.driver?.usuario?.nombre || ''}?`} confirmText="Aprobar" />
+      <ConfirmDialog isOpen={action?.type === 'reject'} onClose={() => { setAction(null); setNota(''); }} onConfirm={handleReject} title="Rechazar" message="Motivo:" confirmText="Rechazar" danger>
+        <textarea value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Documento ilegible" rows={2} style={styles.textarea} />
       </ConfirmDialog>
-      <ConfirmDialog isOpen={action?.type === 'notify'} onClose={() => setAction(null)} onConfirm={handleNotify} title="Notificar conductor inactivo" message={`¿Enviar notificación a ${action?.driver?.usuario?.email || ''}?`} confirmText="Notificar" />
-      <ConfirmDialog isOpen={action?.type === 'report'} onClose={() => { setAction(null); setNota(''); }} onConfirm={handleReport} title="Reportar conductor" message="Describe el motivo del reporte" confirmText="Reportar" danger>
-        <div style={{ marginTop: 12 }}><textarea value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej: Inactivo 2 semanas" rows={3} style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 13 }} /></div>
+      <ConfirmDialog isOpen={action?.type === 'notify'} onClose={() => setAction(null)} onConfirm={handleNotify} title="Notificar" message={`¿Notificar a ${action?.driver?.usuario?.email || ''}?`} confirmText="Notificar" />
+      <ConfirmDialog isOpen={action?.type === 'report'} onClose={() => { setAction(null); setNota(''); }} onConfirm={handleReport} title="Reportar" message="Descripción:" confirmText="Reportar" danger>
+        <textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={3} style={styles.textarea} />
       </ConfirmDialog>
 
       <Modal isOpen={detailModal.open} onClose={() => setDetailModal({ open: false, driver: null })} title="Detalle del Conductor" size="md">
-        {driver && (
-          <div>
-            <div style={{ textAlign: 'center', marginBottom: 4 }}>
-              {driver.fotoConductor ? <img src={driver.fotoConductor} alt="" style={styles.driverPhoto} /> : <div style={styles.driverPhotoPlaceholder}>{getInitials(driver)}</div>}
-              <div style={styles.driverName}>{`${u.nombre || ''} ${u.apellido || ''}`.trim() || 'Sin nombre'}</div>
-              <div style={styles.driverEmail}>{u.email || driver.email || '-'}</div>
-              <div style={styles.driverEmail}>Cédula: {driver.cedula || '-'} • Ciudad: {driver.ciudad || '-'}</div>
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ ...styles.verificationStatus, backgroundColor: `${verColor}20`, color: verColor }}>
-                  {verification === 'aprobado' ? '✓' : verification === 'rechazado' ? '✕' : '○'} Verificación: {verification}
-                </span>
-                {driver.notaRechazo && <div style={{ fontSize: 12, color: theme.danger, marginTop: 6 }}>Nota: {driver.notaRechazo}</div>}
+        {detailModal.driver && (() => {
+          const d = detailModal.driver;
+          const u = d.usuario || {};
+          return (
+            <div>
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                {d.fotoConductor ? (
+                  <img src={d.fotoConductor} alt="" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid #22c55e' }} />
+                ) : (
+                  <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #334155, #1e293b)', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, margin: '0 auto', border: '3px solid #334155' }}>{getInitials(d)}</div>
+                )}
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginTop: 8 }}>{u.nombre} {u.apellido}</div>
+                <div style={{ fontSize: 12, color: '#94a3b8' }}>{u.email}</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div><p style={styles.detailLabel}>Placa</p><p style={styles.detailValue}>{d.placa || '-'}</p></div>
+                <div><p style={styles.detailLabel}>Tipo</p><p style={styles.detailValue}>{d.tipoVehiculo || '-'}</p></div>
+                <div><p style={styles.detailLabel}>Ciudad</p><p style={styles.detailValue}>{d.ciudad || '-'}</p></div>
+                <div><p style={styles.detailLabel}>Capacidad</p><p style={styles.detailValue}>{d.capacidad || '-'}</p></div>
+                <div><p style={styles.detailLabel}>Calificación</p><p style={styles.detailValue}>{d.calificacion || '0.0'} ★</p></div>
+                <div><p style={styles.detailLabel}>Viajes</p><p style={styles.detailValue}>{d.totalViajes ?? 0}</p></div>
               </div>
             </div>
-
-            <div style={styles.detailSection}>
-              <div style={styles.detailTitle}>Información Personal</div>
-              <div style={styles.detailGrid}>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Teléfono</span><span style={styles.detailValue}>{u.telefono || '-'}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Estado</span><span style={styles.detailValue}>{driver.online ? 'En línea' : 'Desconectado'}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Calificación</span><span style={styles.detailValue}>{renderStars(driver.calificacion || 0)}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Viajes Totales</span><span style={styles.detailValue}>{driver.totalViajes ?? 0}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Horas Activo</span><span style={styles.detailValue}>{driver.horasActivo || '0.0'}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Suspendido</span><span style={styles.detailValue}>{u.suspendido ? 'Sí' : 'No'}</span></div>
-              </div>
-            </div>
-
-            <div style={styles.detailSection}>
-              <div style={styles.detailTitle}>Vehículo</div>
-              <div style={styles.detailGrid}>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Placa</span><span style={styles.detailValue}>{driver.placa || '-'}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Tipo</span><span style={styles.detailValue}>{driver.tipoVehiculo || '-'}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Capacidad</span><span style={styles.detailValue}>{driver.capacidad || '-'}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Ciudad</span><span style={styles.detailValue}>{driver.ciudad || '-'}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Foto Cédula</span><span style={styles.detailValue}>{driver.fotoCedula ? <a href={driver.fotoCedula} target="_blank" rel="noreferrer" style={{ color: theme.accent }}>Ver</a> : '—'}</span></div>
-                <div style={styles.detailItem}><span style={styles.detailLabel}>Foto Licencia</span><span style={styles.detailValue}>{driver.fotoLicencia ? <a href={driver.fotoLicencia} target="_blank" rel="noreferrer" style={{ color: theme.accent }}>Ver</a> : '—'}</span></div>
-              </div>
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </Modal>
     </div>
   );
 }
 
-export default DriversPage;
+const styles = {
+  page: { display: 'flex', flexDirection: 'column', gap: 16 },
+  titleRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  title: { fontSize: 22, fontWeight: 800, color: '#f1f5f9', margin: 0, letterSpacing: '-0.02em' },
+  titleActions: { display: 'flex', gap: 8 },
+  filterBtn: { padding: '8px 14px', borderRadius: 8, border: '1px solid #334155', background: '#1e293b', color: '#94a3b8', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 },
+  toolbar: { display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
+  searchWrap: { flex: 1, minWidth: 280, position: 'relative', display: 'flex', alignItems: 'center' },
+  searchIcon: { position: 'absolute', left: 12, fontSize: 14, opacity: 0.6 },
+  searchInput: { width: '100%', padding: '10px 14px 10px 36px', borderRadius: 10, border: '1px solid #334155', background: '#111827', color: '#f1f5f9', fontSize: 13, outline: 'none' },
+  toolbarActions: { display: 'flex', gap: 8 },
+  primaryBtn: { display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(34,197,94,0.25)' },
+  secondaryBtn: { display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 10, border: '1px solid #334155', background: '#1e293b', color: '#e2e8f0', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  filtersPanel: { display: 'flex', gap: 16, padding: 14, background: '#111827', border: '1px solid #1e293b', borderRadius: 10, flexWrap: 'wrap' },
+  filterGroup: { display: 'flex', flexDirection: 'column', gap: 6 },
+  filterLabel: { fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' },
+  filterSelect: { padding: '7px 10px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: 12 },
+  error: { padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: 13 },
+  tableCard: { background: '#111827', border: '1px solid #1e293b', borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' },
+  tableWrap: { overflowX: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
+  th: { padding: '12px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #1e293b', background: '#0f172a', whiteSpace: 'nowrap' },
+  thIcon: { marginRight: 6, opacity: 0.7 },
+  tr: { borderBottom: '1px solid rgba(30,41,59,0.5)', transition: 'background 0.15s' },
+  td: { padding: '10px 14px', verticalAlign: 'middle' },
+  avatarCell: { display: 'flex', alignItems: 'center', gap: 10 },
+  avatarWrap: { position: 'relative', width: 32, height: 32, flexShrink: 0 },
+  avatarImg: { width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #334155' },
+  avatarFallback: { width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #334155, #1e293b)', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, border: '2px solid #334155' },
+  nameText: { fontWeight: 600, color: '#f1f5f9', fontSize: 13 },
+  cellText: { color: '#cbd5e1', fontSize: 13 },
+  cellSub: { color: '#64748b', fontSize: 11, display: 'block' },
+  cityBadge: { padding: '3px 8px', borderRadius: 12, background: 'rgba(148,163,184,0.12)', color: '#94a3b8', fontSize: 11, textTransform: 'capitalize' },
+  statusTag: { display: 'inline-flex', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' },
+  actionsCell: { display: 'flex', gap: 6 },
+  iconBtn: { width: 28, height: 28, borderRadius: 6, border: '1px solid #334155', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12 },
+  miniBtn: { padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' },
+  footer: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderTop: '1px solid #1e293b', background: '#0f172a', flexWrap: 'wrap', gap: 12 },
+  footerText: { fontSize: 12, color: '#64748b' },
+  footerActions: { display: 'flex', alignItems: 'center', gap: 12 },
+  rowsSelect: { padding: '5px 8px', borderRadius: 6, border: '1px solid #334155', background: '#111827', color: '#e2e8f0', fontSize: 12 },
+  pagination: { display: 'flex', alignItems: 'center', gap: 8 },
+  pageBtn: { width: 28, height: 28, borderRadius: 6, border: '1px solid #334155', background: '#1e293b', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  pageInfo: { fontSize: 12, color: '#94a3b8', minWidth: 60, textAlign: 'center' },
+  skeleton: { height: 16, background: '#1e293b', borderRadius: 6, animation: 'pulse 1.5s infinite' },
+  empty: { padding: 32, textAlign: 'center', color: '#64748b', fontSize: 13 },
+  toast: { position: 'fixed', bottom: 20, right: 20, background: '#22c55e', color: '#fff', padding: '10px 16px', borderRadius: 8, fontSize: 13, zIndex: 9999 },
+  textarea: { width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #1e293b', background: '#0a0e14', color: '#f1f5f9', fontSize: 13 },
+  detailLabel: { fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' },
+  detailValue: { fontSize: 13, color: '#f1f5f9' },
+};

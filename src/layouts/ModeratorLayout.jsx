@@ -68,7 +68,7 @@ export default function ModeratorLayout() {
           <span style={styles.topTitle}>{pageTitle}</span>
           <div style={styles.topActions}>
             {!isDashboard && <button style={styles.backBtn} onClick={() => navigate('/moderator')}>← Panel</button>}
-            <span style={styles.cityBadge}>{user?.zonaModerador || user?.zona_moderador || 'Sin zona'}</span>
+            <span style={styles.cityBadge}>{((z) => z === 'california' ? 'cali' : z)(user?.zonaModerador || user?.zona_moderador || 'Sin zona')}</span>
             <button style={styles.logoutTop} onClick={logout}>Salir</button>
           </div>
         </div>

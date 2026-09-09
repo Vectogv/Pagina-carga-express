@@ -11,6 +11,11 @@ export default function ModeratorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [edit, setEdit] = useState({ open: false, user: null, zona: 'cali' });
+  const [addOpen, setAddOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedZona, setSelectedZona] = useState('cali');
 
   const fetchMods = useCallback(async () => {
     setLoading(true);
@@ -46,6 +51,27 @@ export default function ModeratorsPage() {
     } catch (err) { alert(err.response?.data?.message || 'Error al modificar'); }
   };
 
+  const handleSearch = async () => {
+    if (!search.trim()) return;
+    setSearching(true);
+    try {
+      const res = await getUsers({ page: 1, limit: 20, search: search.trim() });
+      const d = res.data;
+      const list = Array.isArray(d) ? d : (d.users || d.data || []);
+      // Solo usuarios que NO son moderadores y NO son admin
+      setSearchResults(list.filter((u) => !u.esModerador && !u.es_moderador && (u.rol || '').toLowerCase() !== 'admin'));
+    } catch (err) { setSearchResults([]); }
+    finally { setSearching(false); }
+  };
+
+  const handleAddModerador = async (u) => {
+    try {
+      await setModerator(u.id || u._id, { esModerador: true, zonaModerador: selectedZona });
+      setAddOpen(false); setSearch(''); setSearchResults([]);
+      fetchMods();
+    } catch (err) { alert(err.response?.data?.message || 'Error al asignar'); }
+  };
+
   const columns = [
     { key: 'nombre', label: 'Nombre', render: (_, u) => `${u.nombre || ''} ${u.apellido || ''}`.trim() || '-' },
     { key: 'email', label: 'Email', render: (_, u) => u.email || '-' },
@@ -63,6 +89,32 @@ export default function ModeratorsPage() {
     <div style={{ minHeight:'100vh', background:theme.bg, color:theme.text }}>
       <Header title="Moderadores" />
       <div style={{ padding:16 }}>
+        <div style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: theme.text, margin: 0 }}>Agregar Moderador — buscar usuario y asignar zona</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} placeholder="Buscar por nombre o email (ej: Carlos)" style={{ flex: 1, minWidth: 200, padding: '8px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }} />
+            <select value={selectedZona} onChange={(e) => setSelectedZona(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }}>
+              <option value="cali">Cali</option>
+              <option value="popayan">Popayán</option>
+              <option value="pasto">Pasto</option>
+            </select>
+            <button onClick={handleSearch} disabled={searching} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: theme.accent, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: searching ? 0.6 : 1 }}>{searching ? 'Buscando...' : 'Buscar'}</button>
+          </div>
+          {searchResults.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+              {searchResults.map((u) => (
+                <div key={u.id || u._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}` }}>
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: theme.text, margin: 0 }}>{u.nombre} {u.apellido}</p>
+                    <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>{u.email} • {u.rol}</p>
+                  </div>
+                  <button onClick={() => handleAddModerador(u)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: theme.success, color: '#fff', fontSize: 11, cursor: 'pointer' }}>Asignar → {selectedZona}</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {search && searchResults.length === 0 && !searching && <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>Sin resultados. Prueba otro nombre/email.</p>}
+        </div>
         {error && <div style={{ padding:10, background:`${theme.danger}15`, color:theme.danger, borderRadius:8, marginBottom:12, fontSize:13 }}>{error}</div>}
         <DataTable columns={columns} data={mods} loading={loading} emptyMessage="No hay moderadores" />
       </div>

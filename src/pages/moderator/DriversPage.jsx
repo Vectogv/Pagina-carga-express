@@ -12,6 +12,7 @@ export default function ModeratorDriversPage() {
   const [action, setAction] = useState(null);
   const [nota, setNota] = useState('');
   const [toast, setToast] = useState(null);
+  const [filter, setFilter] = useState('');
 
   const fetch = useCallback(async () => {
     setLoading(true); setError(null);
@@ -41,7 +42,7 @@ export default function ModeratorDriversPage() {
     { key: 'email', label: 'Email', render: (_, r) => r.usuario?.email || r.email || '-' },
     { key: 'telefono', label: 'Teléfono', render: (_, r) => r.usuario?.telefono || '-' },
     { key: 'placa', label: 'Placa', render: (_, r) => r.placa || '-' },
-    { key: 'ciudad', label: 'Ciudad', render: (_, r) => r.ciudad || '-' },
+    { key: 'ciudad', label: 'Ciudad', render: (_, r) => ((c) => c === 'california' ? 'cali' : c)(r.ciudad || '-') },
     { key: 'online', label: 'Estado', render: (_, r) => <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, background: r.online ? 'rgba(34,197,94,0.15)' : 'rgba(100,116,139,0.15)', color: r.online ? '#22c55e' : '#64748b' }}>{r.online ? 'En línea' : 'Offline'}</span> },
     {
       key: 'acciones', label: 'Acciones', render: (_, r) => (
@@ -53,10 +54,18 @@ export default function ModeratorDriversPage() {
     },
   ];
 
+  const filtered = drivers.filter((d) => {
+    if (!filter.trim()) return true;
+    const q = filter.toLowerCase();
+    const u = d.usuario || {};
+    return `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.telefono || '').includes(q) || (d.placa || '').toLowerCase().includes(q);
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Buscar por nombre, placa, correo o teléfono..." style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }} />
       {error && <div style={{ padding: 10, background: 'rgba(239,68,68,0.1)', color: theme.danger, borderRadius: 8, fontSize: 13 }}>{error}</div>}
-      <DataTable columns={columns} data={drivers} loading={loading} emptyMessage="No hay conductores en tu ciudad" />
+      <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={filter ? `Sin resultados para "${filter}"` : 'No hay conductores en tu ciudad'} />
       {toast && <div style={{ position: 'fixed', bottom: 16, right: 16, background: toast.ok ? theme.success : theme.danger, color: '#fff', padding: '8px 14px', borderRadius: 8, fontSize: 13, zIndex: 9999 }}>{toast.msg}</div>}
       <ConfirmDialog isOpen={action?.type==='notify'} onClose={()=>setAction(null)} onConfirm={handleNotify} title="Notificar conductor" message={`¿Enviar push a ${action?.usuario?.email || ''}?`} confirmText="Notificar" />
       <ConfirmDialog isOpen={action?.type==='report'} onClose={()=>{setAction(null);setNota('');}} onConfirm={handleReport} title="Reportar a admin" message="Será visible en /admin/moderator-reports" confirmText="Reportar" danger>
