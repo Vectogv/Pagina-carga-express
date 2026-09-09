@@ -82,10 +82,9 @@ function DashboardPage() {
   if (error) return <ErrorState message={error} />;
 
   const stats = [
-    { title: 'Clientes', value: data?.totalUsers ? '→' : '→', icon: '👤', color: '#22c55e', to: '/admin/clients' },
-    { title: 'Conductores', value: data?.totalDrivers ?? data?.drivers ?? 0, icon: '🚗', color: '#8b5cf6', to: '/admin/drivers' },
-    { title: 'Moderadores', value: '→', icon: '🛡️', color: '#f59e0b', to: '/admin/moderators' },
-    { title: 'Total Usuarios', value: data?.totalUsers ?? data?.users ?? 0, icon: '👥', color: theme.accent, to: '/admin/users' },
+    { title: 'Clientes', value: '→', icon: '👤', color: '#22c55e', to: '/admin/clients' },
+    { title: 'Conductores', value: '→', icon: '🚗', color: '#8b5cf6', to: '/admin/drivers' },
+    { title: 'Moderación', value: '→', icon: '🛡️', color: '#f59e0b', to: '/admin/moderators' },
     { title: 'Viajes Activos', value: data?.activeTrips ?? data?.trips ?? 0, icon: '🛣️', color: theme.success, to: '/admin/trips' },
     { title: 'Ingresos Totales', value: formatCurrency(data?.totalEarnings ?? data?.earnings ?? 0), icon: '💰', color: '#f59e0b', to: '/admin/earnings' },
     { title: 'Emergencias Pendientes', value: data?.pendingEmergencies ?? data?.emergencies ?? 0, icon: '🚨', color: theme.danger, to: '/admin/emergencies' },
@@ -128,16 +127,6 @@ function DashboardPage() {
         <div style={styles.userStatsSection}>
           <h2 style={styles.sectionTitle}>Estadísticas de Usuarios — lo importante</h2>
           <div style={styles.userStatsGrid}>
-            <div style={styles.userStatCard}>
-              <p style={styles.userStatLabel}>Total Usuarios</p>
-              <p style={styles.userStatValue}>{userStats.total}</p>
-              <div style={styles.miniBars}>
-                <div style={{ flex: userStats.byRol.cliente || 0, background: '#6366f1', height: 6, borderRadius: 3 }} title={`Clientes: ${userStats.byRol.cliente}`} />
-                <div style={{ flex: userStats.byRol.conductor || 0, background: '#8b5cf6', height: 6, borderRadius: 3 }} title={`Conductores: ${userStats.byRol.conductor}`} />
-                <div style={{ flex: userStats.byRol.admin || 0, background: '#ef4444', height: 6, borderRadius: 3 }} title={`Admin: ${userStats.byRol.admin}`} />
-              </div>
-              <p style={styles.userStatSub}>👥 Clientes {userStats.byRol.cliente} • 🚗 Conductores {userStats.byRol.conductor} • 👑 Admin {userStats.byRol.admin}</p>
-            </div>
             <div style={styles.userStatCard}>
               <p style={styles.userStatLabel}>Estado</p>
               <p style={{ ...styles.userStatValue, color: userStats.byEstado.suspendido ? '#ef4444' : '#22c55e' }}>{userStats.activos} activos</p>
