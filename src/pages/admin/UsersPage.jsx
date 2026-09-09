@@ -188,6 +188,7 @@ function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const [rolFilter, setRolFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -209,20 +210,23 @@ function UsersPage() {
     try {
       const res = await getUsers({ page, limit, search });
       const d = res.data;
-      const list = Array.isArray(d) ? d : (d.users || d.data || []);
+      let list = Array.isArray(d) ? d : (d.users || d.data || []);
+      if (rolFilter !== 'all') {
+        list = list.filter((u) => (u.rol || u.role || '').toLowerCase() === rolFilter);
+      }
       setUsers(list);
-      setTotal(Array.isArray(d) ? d.length : (d.total || list.length));
-      setTotalPages(Array.isArray(d) ? 1 : (d.totalPages || 1));
+      setTotal(Array.isArray(d) && rolFilter === 'all' ? d.length : list.length);
+      setTotalPages(1);
     } catch (err) {
       setError(err.response?.data?.message || 'Error al cargar usuarios');
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, rolFilter]);
 
   useEffect(() => {
     fetchUsers();
-  }, [page, search]);
+  }, [fetchUsers]);
 
   const handleSearch = (val) => {
     setSearch(val);
@@ -468,11 +472,32 @@ function UsersPage() {
     },
   ];
 
+  const rolTabs = [
+    { key: 'all', label: 'Todos' },
+    { key: 'cliente', label: 'Clientes' },
+    { key: 'conductor', label: 'Conductores' },
+    { key: 'admin', label: 'Admins' },
+  ];
+
   return (
     <div style={styles.page}>
-      <Header title="Usuarios" onSearch={handleSearch} />
-      <div style={{ padding: '0 16px', display: 'flex', justifyContent: 'flex-end' }}>
+      <Header title={users.length > 0 ? `Usuarios — ${rolFilter === 'all' ? 'Todos' : rolFilter}` : 'Usuarios'} onSearch={handleSearch} />
+      <div style={{ padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {rolTabs.map((t) => (
+            <button key={t.key} onClick={() => { setRolFilter(t.key); setPage(1); }} style={{ padding: '6px 12px', borderRadius: 20, border: `1px solid ${rolFilter === t.key ? theme.accent : theme.border}`, background: rolFilter === t.key ? `${theme.accent}20` : 'transparent', color: rolFilter === t.key ? theme.accent : theme.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{t.label}</button>
+          ))}
+        </div>
         <button onClick={() => setAddModal(true)} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: theme.accent, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ Agregar Usuario / Moderador</button>
+      </div>
+      <div style={{ padding: '0 16px', marginTop: 8, display: 'flex', gap: 8, fontSize: 11, color: theme.muted }}>
+        <span>👥 Clientes: {users.filter((u) => (u.rol||'').toLowerCase()==='cliente').length}</span>
+        <span>•</span>
+        <span>🚗 Conductores: {users.filter((u) => (u.rol||'').toLowerCase()==='conductor').length}</span>
+        <span>•</span>
+        <span>👑 Admin: {users.filter((u) => (u.rol||'').toLowerCase()==='admin').length}</span>
+        <span>• Para conductores ve a</span>
+        <a href="/admin/drivers" style={{ color: theme.accent, textDecoration: 'underline' }}>Conductores →</a>
       </div>
       <div style={styles.content}>
         {toast && <div style={{ position: 'fixed', bottom: 16, right: 16, background: toast.ok ? theme.success : theme.danger, color: '#fff', padding: '10px 14px', borderRadius: 8, fontSize: 13, zIndex: 9999 }}>{toast.msg}</div>}
