@@ -83,7 +83,6 @@ function DashboardPage() {
 
   const stats = [
     { title: 'Total Usuarios', value: data?.totalUsers ?? data?.users ?? 0, icon: '👥', color: theme.accent, to: '/admin/users' },
-    { title: 'Total Conductores', value: data?.totalDrivers ?? data?.drivers ?? 0, icon: '🚗', color: '#8b5cf6', to: '/admin/drivers' },
     { title: 'Viajes Activos', value: data?.activeTrips ?? data?.trips ?? 0, icon: '🛣️', color: theme.success, to: '/admin/trips' },
     { title: 'Ingresos Totales', value: formatCurrency(data?.totalEarnings ?? data?.earnings ?? 0), icon: '💰', color: '#f59e0b', to: '/admin/earnings' },
     { title: 'Emergencias Pendientes', value: data?.pendingEmergencies ?? data?.emergencies ?? 0, icon: '🚨', color: theme.danger, to: '/admin/emergencies' },
