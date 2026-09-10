@@ -1,5 +1,6 @@
 import { Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import Header from '../components/admin/Header';
+import EmergencyBanner from '../components/moderator/EmergencyBanner';
 import { useAuth } from '../contexts/AuthContext';
 
 const theme = {
@@ -16,6 +17,7 @@ const navItems = [
   { icon: '👥', label: 'Conductores', to: '/moderator/drivers' },
   { icon: '😴', label: 'Inactivos', to: '/moderator/drivers/inactive' },
   { icon: '🛣️', label: 'Viajes', to: '/moderator/trips' },
+  { icon: '🚨', label: 'Emergencias', to: '/moderator/emergencies' },
   { icon: '📢', label: 'Comunicados', to: '/moderator/comunicados' },
   { icon: '📊', label: 'Encuestas', to: '/moderator/encuestas' },
   { icon: '📌', label: 'Avisos', to: '/moderator/avisos' },
@@ -75,7 +77,12 @@ export default function ModeratorLayout() {
         </div>
         <Header title={pageTitle} user={user} />
         <div style={styles.content}>
-          <div style={styles.centered}><Outlet /></div>
+          <div style={styles.centered}>
+            <div style={{ marginBottom: 12 }}>
+              <EmergencyBanner />
+            </div>
+            <Outlet />
+          </div>
         </div>
       </div>
     </div>

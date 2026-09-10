@@ -31,6 +31,12 @@ export const getModeratorDashboard = () => api.get('/api/moderator/dashboard')
 
 // Viajes — nuevo GET /api/moderator/trips filtrado por ciudad del moderador
 export const getModeratorTrips = (params) => api.get('/api/moderator/trips', { params })
+export const getModeratorTripDetail = (id) => api.get(`/api/moderator/trips/${id}`)
+
+// Emergencias — GET /api/moderator/emergency, POST acknowledge/resolve
+export const getModeratorEmergencies = (params) => api.get('/api/moderator/emergency', { params })
+export const acknowledgeEmergency = (id) => api.post(`/api/moderator/emergency/${id}/acknowledge`)
+export const resolveEmergency = (id) => api.post(`/api/moderator/emergency/${id}/resolve`)
 
 // Perfil (usa mismo endpoint que admin/users/profile pero con rol moderador)
 export const getModeratorProfile = () => api.get('/api/users/profile')
