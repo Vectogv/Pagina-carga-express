@@ -32,6 +32,7 @@ import ModeratorAvisos from './pages/moderator/AvisosPage'
 import ModeratorProfile from './pages/moderator/ProfilePage'
 import ModeratorTrips from './pages/moderator/TripsPage'
 import ModeratorEmergencias from './pages/moderator/EmergenciasPage'
+import ModeratorConversations from './pages/moderator/ConversationsPage'
 
 function ProtectedRoute({ children, requireModerator, requireAdmin }) {
   const { isAuthenticated, loading, user } = useAuth()
@@ -108,6 +109,7 @@ function AppRoutes() {
         <Route path="profile" element={<ModeratorProfile />} />
         <Route path="trips" element={<ModeratorTrips />} />
         <Route path="emergencies" element={<ModeratorEmergencias />} />
+        <Route path="conversations" element={<ModeratorConversations />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/admin" replace />} />

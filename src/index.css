@@ -5,31 +5,33 @@
 }
 
 :root {
-  --bg: #020208;
-  --sidebar-bg: #070a12;
-  --card-bg: #0f1220;
-  --accent: #6366f1;
-  --accent-hover: #5855eb;
-  --text: #e2e8f0;
-  --text-muted: #64748b;
-  --border: #1e2238;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --input-bg: #090b16;
+  /* Legacy aliases → design tokens (keep existing pages working) */
+  --bg: var(--bg-primary);
+  --sidebar-bg: var(--bg-surface);
+  --card-bg: var(--bg-surface);
+  --accent: var(--primary);
+  --accent-hover: var(--primary-hover);
+  --text: var(--text-primary);
+  --text-muted: var(--text-muted);
+  --border: var(--border);
+  --success: var(--success);
+  --warning: var(--warning);
+  --danger: var(--danger);
+  --input-bg: var(--bg-elevated);
 }
 
+/* Base */
 html {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: #020208;
+  background: var(--bg-primary);
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #020208;
-  color: var(--text);
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   height: 100%;

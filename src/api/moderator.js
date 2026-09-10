@@ -42,5 +42,12 @@ export const getModeratorEmergencies = (params) => api.get('/api/moderator/emerg
 export const acknowledgeEmergency = (id) => api.post(`/api/moderator/emergency/${id}/acknowledge`)
 export const resolveEmergency = (id) => api.post(`/api/moderator/emergency/${id}/resolve`)
 
+// Conversatorio — GET /moderator/conversations, unread-count, messages
+export const getConversations = (params) => api.get('/api/moderator/conversations', { params })
+export const getUnreadCount = () => api.get('/api/moderator/conversations/unread-count')
+export const getConversationMessages = (id) => api.get(`/api/moderator/conversations/${id}/messages`)
+export const createConversation = (data) => api.post('/api/moderator/conversations', data)
+export const sendConversationMessage = (id, data) => api.post(`/api/moderator/conversations/${id}/messages`, data)
+
 // Perfil (usa mismo endpoint que admin/users/profile pero con rol moderador)
 export const getModeratorProfile = () => api.get('/api/users/profile')
