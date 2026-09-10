@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
-import { getModeratorEmergencies, acknowledgeEmergency, resolveEmergency, getModeratorTripDetail } from '../../api/moderator';
+import { getModeratorEmergencies, acknowledgeEmergency, resolveEmergency, getModeratorTripDetail, getEmergencyMessages, sendEmergencyMessage } from '../../api/moderator';
 import { io } from 'socket.io-client';
 
 const theme = { bg: '#0d1117', cards: '#161b22', border: '#21262d', text: '#f0f6fc', muted: '#8b949e', danger: '#f85149', warning: '#d29922', success: '#2ea043' };
@@ -17,6 +17,12 @@ export default function ModeratorEmergenciasPage() {
   const [selected, setSelected] = useState(null);
   const [tripDetail, setTripDetail] = useState(null);
   const [observacion, setObservacion] = useState('');
+  const [mensajes, setMensajes] = useState([]);
+  const [nuevoTexto, setNuevoTexto] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [mensajesLoading, setMensajesLoading] = useState(false);
+  const [mensajesError, setMensajesError] = useState(null);
+  const chatEndRef = useRef(null);
   const limit = 10;
 
   const fetchEmergencies = useCallback(async () => {
@@ -52,20 +58,22 @@ export default function ModeratorEmergenciasPage() {
       setEmergencies((prev) => {
         const idx = prev.findIndex((e) => String(e.id) === String(payload.id));
         if (idx >= 0) {
-          // Si cambia de activa a resuelta y estamos en activas, elimínalo
           const isActivas = tab === 'activas';
           const isResuelta = payload.estado === 'resuelta';
           if (isActivas && isResuelta) return prev.filter((e) => String(e.id) !== String(payload.id));
           const n = [...prev]; n[idx] = { ...n[idx], ...payload }; return n;
         }
-        const isActivas = tab === 'activas';
-        if (payload.estado === 'pendiente' && isActivas) return [payload, ...prev];
+        if (payload.estado === 'pendiente' && tab === 'activas') return [payload, ...prev];
         return prev;
       });
       if (selected && String(selected.id) === String(payload.id)) setSelected((prev) => ({ ...prev, ...payload }));
     });
     socket.on('emergency:alert', (payload) => {
       if (tab === 'activas') setEmergencies((prev) => prev.some((e) => String(e.id) === String(payload.id)) ? prev : [payload, ...prev]);
+    });
+    socket.on('emergency:message', (data) => {
+      if (!selected || String(data.alertaId) !== String(selected.id)) return;
+      setMensajes((prev) => (prev.some((m) => String(m.id) === String(data.id)) ? prev : [...prev, data]));
     });
     return () => { socket.disconnect(); };
   }, [tab, selected]);
@@ -75,11 +83,44 @@ export default function ModeratorEmergenciasPage() {
   const openDetail = async (row) => {
     setSelected(row);
     setTripDetail(null);
+    setMensajes([]); setMensajesError(null);
     try {
       const res = await getModeratorTripDetail(row.viajeId || row.tripId || row.viaje?.id);
       const d = res.data?.data || res.data;
       setTripDetail(d);
     } catch {}
+    // Carga historial de chat
+    try {
+      setMensajesLoading(true);
+      const r = await getEmergencyMessages(row.id);
+      const d = r.data;
+      setMensajes(Array.isArray(d) ? d : (d.messages || d.data || []));
+    } catch (err) {
+      if (err.response?.status === 403) setMensajesError('No participas en este caso');
+      else if (err.response?.status === 404) setMensajesError('Alerta no encontrada');
+      else setMensajesError(err.response?.data?.message || 'Error al cargar mensajes');
+    } finally { setMensajesLoading(false); }
+  };
+
+  useEffect(() => {
+    if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  }, [mensajes]);
+
+  const enviarMensaje = async () => {
+    if (!nuevoTexto.trim() || enviando || !selected) return;
+    if (selected.estado === 'resuelta') return;
+    setEnviando(true);
+    try {
+      const res = await sendEmergencyMessage(selected.id, { mensaje: nuevoTexto.trim() });
+      const msg = res.data;
+      setMensajes((prev) => (prev.some((m) => String(m.id) === String(msg.id)) ? prev : [...prev, msg]));
+      setNuevoTexto('');
+    } catch (err) {
+      const s = err.response?.status;
+      if (s === 403) showToast('No participas en este caso', false);
+      else if (s === 422) showToast(err.response?.data?.message || 'Mensaje vacío', false);
+      else showToast(err.response?.data?.message || 'Error al enviar', false);
+    } finally { setEnviando(false); }
   };
 
   const handleAcknowledge = async () => {
@@ -166,28 +207,106 @@ export default function ModeratorEmergenciasPage() {
               <p style={{ fontSize: 11, color: theme.muted, margin: '6px 0 0' }}>Lat {selected.lat}, Lng {selected.lng} <button onClick={() => window.open(`https://www.google.com/maps?q=${selected.lat},${selected.lng}`, '_blank')} style={{ marginLeft: 6, padding: '2px 6px', borderRadius: 6, border: '1px solid #30363d', background: '#21262d', color: '#58a6ff', fontSize: 10, cursor: 'pointer' }}>Ver mapa</button></p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: theme.muted, textTransform: 'uppercase', margin: '0 0 6px' }}>Quién activó</p>
-                <p style={{ fontSize: 13, color: theme.text, margin: 0 }}>{selected.usuario?.nombre || '-'}</p>
-                <a href={`tel:${selected.usuario?.telefono || ''}`} style={{ fontSize: 12, color: '#58a6ff' }}>{selected.usuario?.telefono || ''}</a>
-              </div>
-              <div style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: theme.muted, textTransform: 'uppercase', margin: '0 0 6px' }}>Viaje #{String(selected.viajeId || '').slice(0, 8)}</p>
-                <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>{selected.viaje?.origenDireccion || ''} → {selected.viaje?.destinoDireccion || ''}</p>
-                <p style={{ fontSize: 11, color: theme.muted, margin: '4px 0 0' }}>Cliente: {selected.viaje?.cliente?.nombre || '-'} {selected.viaje?.cliente?.telefono || ''}</p>
-              </div>
-            </div>
+            {(() => {
+              const alerta = selected;
+              const viaje = tripDetail;
+              if (!viaje) return null;
+              const esConductorSolicitante = (viaje.conductor?.telefono && alerta.usuario?.telefono && viaje.conductor.telefono === alerta.usuario.telefono) || viaje.conductor?.nombre === alerta.usuario?.nombre;
+              const solicitante = esConductorSolicitante ? viaje.conductor : viaje.cliente;
+              const contraparte = esConductorSolicitante ? viaje.cliente : viaje.conductor;
+              const solicitanteRol = esConductorSolicitante ? 'Conductor' : 'Cliente';
+              const contraparteRol = esConductorSolicitante ? 'Cliente' : 'Conductor';
+              return (
+                <>
+                  <div style={{ background: 'rgba(248,81,73,0.08)', border: '1px solid rgba(248,81,73,0.25)', borderRadius: 10, padding: 12 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: '#f85149', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>★ Solicitante — quien activó el SOS</p>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(248,81,73,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, border: '2px solid #f85149' }}>🚨</div>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: 0 }}>{solicitante?.nombre || alerta.usuario?.nombre || '-'} <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 10, background: '#f85149', color: '#fff', marginLeft: 6 }}>{solicitanteRol}</span></p>
+                        <a href={`tel:${solicitante?.telefono || alerta.usuario?.telefono || ''}`} style={{ fontSize: 12, color: '#58a6ff' }}>{solicitante?.telefono || alerta.usuario?.telefono || ''}</a>
+                        {solicitante?.email && <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>{solicitante.email}</p>}
+                        {solicitante?.placa && <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>Placa: {solicitante.placa} • {solicitante.tipoVehiculo || ''} • ⭐{solicitante.calificacion || '0.0'}</p>}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: theme.muted, textTransform: 'uppercase', margin: '0 0 6px' }}>Contraparte — {contraparteRol}</p>
+                    <p style={{ fontSize: 13, color: theme.text, margin: 0 }}>{contraparte?.nombre || '-'}</p>
+                    <a href={`tel:${contraparte?.telefono || ''}`} style={{ fontSize: 12, color: '#58a6ff' }}>{contraparte?.telefono || ''}</a>
+                    {contraparte?.placa && <p style={{ fontSize: 11, color: theme.muted, margin: '2px 0 0' }}>Placa: {contraparte.placa} • {contraparte.tipoVehiculo || ''}</p>}
+                  </div>
+                </>
+              );
+            })()}
 
             {tripDetail && (
               <div style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: theme.muted, textTransform: 'uppercase', margin: '0 0 8px' }}>Detalle del viaje</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: theme.muted, textTransform: 'uppercase', margin: '0 0 8px' }}>Conductor</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11 }}>
-                  <div><span style={{ color: theme.muted }}>Conductor:</span> {tripDetail.conductor?.nombre || '-'} {tripDetail.conductor?.placa ? `(${tripDetail.conductor.placa})` : ''} {tripDetail.conductor?.calificacion ? `⭐${tripDetail.conductor.calificacion}` : ''}</div>
+                  <div><span style={{ color: theme.muted }}>Nombre:</span> {tripDetail.conductor?.nombre || '-'}</div>
+                  <div><span style={{ color: theme.muted }}>Placa:</span> {tripDetail.conductor?.placa || '-'}</div>
+                  <div><span style={{ color: theme.muted }}>Cédula:</span> {tripDetail.conductor?.cedula || tripDetail.conductor?.cedulaConductor || '-'}</div>
+                  <div><span style={{ color: theme.muted }}>Teléfono:</span> <a href={`tel:${tripDetail.conductor?.telefono || ''}`} style={{ color: '#58a6ff' }}>{tripDetail.conductor?.telefono || '-'}</a></div>
+                  <div><span style={{ color: theme.muted }}>Tipo:</span> {tripDetail.conductor?.tipoVehiculo || '-'}</div>
+                  <div><span style={{ color: theme.muted }}>Ciudad:</span> {tripDetail.conductor?.ciudad || '-'}</div>
+                  <div><span style={{ color: theme.muted }}>Calificación:</span> ⭐{tripDetail.conductor?.calificacion || '0.0'}</div>
                   <div><span style={{ color: theme.muted }}>Precio:</span> ${Number(tripDetail.dinero?.precioFinal || tripDetail.dinero?.precioCliente || 0).toLocaleString('es-CO')}</div>
                 </div>
               </div>
             )}
+
+            {/* Chat de emergencia — privado con solicitante */}
+            {(() => {
+              const alerta = selected;
+              const viaje = tripDetail;
+              const esConductorSolicitante = viaje && ((viaje.conductor?.telefono && alerta.usuario?.telefono && viaje.conductor.telefono === alerta.usuario.telefono) || viaje.conductor?.nombre === alerta.usuario?.nombre);
+              const solicitante = viaje ? (esConductorSolicitante ? viaje.conductor : viaje.cliente) : null;
+              const chatTitle = solicitante ? `Chat con ${solicitante.nombre || alerta.usuario?.nombre || 'solicitante'}` : 'Chat de emergencia';
+              return (
+                <div style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: theme.muted, textTransform: 'uppercase', margin: '0 0 8px' }}>{chatTitle} {selected.estado === 'resuelta' ? '(solo lectura)' : ''}</p>
+              <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+                {mensajesLoading && <p style={{ fontSize: 11, color: theme.muted, textAlign: 'center' }}>Cargando mensajes...</p>}
+                {mensajesError && <div style={{ padding: 8, background: 'rgba(248,81,73,0.1)', color: theme.danger, borderRadius: 6, fontSize: 11 }}>{mensajesError} <button onClick={() => { setMensajes([]); setMensajesError(null); openDetail(selected); }} style={{ marginLeft: 6, padding: '2px 6px', borderRadius: 4, border: `1px solid ${theme.border}`, background: 'transparent', color: theme.muted, fontSize: 10, cursor: 'pointer' }}>Reintentar</button></div>}
+                {!mensajesLoading && !mensajesError && mensajes.length === 0 && <p style={{ fontSize: 11, color: theme.muted, textAlign: 'center', fontStyle: 'italic' }}>Sin mensajes aún. Saluda al conductor o cliente…</p>}
+                {mensajes.map((m) => {
+                  const isMod = !!m.remitente?.esModerador;
+                  return (
+                    <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMod ? 'flex-end' : 'flex-start', gap: 2 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 10, color: theme.muted }}>
+                        <span style={{ fontWeight: 600, color: isMod ? '#58a6ff' : theme.text }}>{m.remitente?.nombre || (isMod ? 'Tú' : 'Usuario')}</span>
+                        {m.remitente?.rol && <span style={{ padding: '1px 4px', borderRadius: 4, background: `${theme.border}`, fontSize: 9 }}>{m.remitente.rol}</span>}
+                        <span>{new Date(m.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div style={{ maxWidth: '75%', padding: '6px 10px', borderRadius: isMod ? '12px 12px 2px 12px' : '12px 12px 12px 2px', background: isMod ? '#1f6feb' : '#21262d', color: '#fff', fontSize: 12, wordBreak: 'break-word' }}>
+                        {m.mensaje}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={chatEndRef} />
+              </div>
+              {selected.estado !== 'resuelta' ? (
+                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                  <input
+                    value={nuevoTexto}
+                    onChange={(e) => setNuevoTexto(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && enviarMensaje()}
+                    placeholder="Escribe un mensaje..."
+                    disabled={enviando}
+                    style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }}
+                  />
+                  <button onClick={enviarMensaje} disabled={!nuevoTexto.trim() || enviando} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: !nuevoTexto.trim() || enviando ? '#30363d' : '#58a6ff', color: '#fff', fontSize: 12, fontWeight: 600, cursor: !nuevoTexto.trim() || enviando ? 'not-allowed' : 'pointer' }}>
+                    {enviando ? '...' : '➤ Enviar'}
+                  </button>
+                </div>
+              ) : (
+                <p style={{ fontSize: 11, color: theme.muted, textAlign: 'center', margin: '8px 0 0', fontStyle: 'italic' }}>Caso resuelto — chat en solo lectura</p>
+              )}
+            </div>
+              );
+            })()}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {selected.estado === 'pendiente' && (

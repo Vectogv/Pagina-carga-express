@@ -28,7 +28,7 @@ const special = {
   cancelado: { icon: '⚠', label: 'Viaje cancelado', color: '#f85149', bg: 'rgba(248,81,73,0.12)' },
   rechazado: { icon: '⚠', label: 'Viaje rechazado', color: '#f85149', bg: 'rgba(248,81,73,0.12)' },
   disputa: { icon: '⚠', label: 'Disputa abierta', color: '#d29922', bg: 'rgba(210,153,34,0.12)' },
-  sos: { icon: '🚨', label: 'BOTÓN DE PÁNICO — Atender con urgencia', color: '#f85149', bg: 'rgba(248,81,73,0.18)' },
+  sos: { icon: '🚨', label: 'Emergencia — Atender con urgencia', color: '#f85149', bg: 'rgba(248,81,73,0.18)' },
 };
 
 export default function ServiceStatusTimeline({ estado }) {

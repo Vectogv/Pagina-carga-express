@@ -33,6 +33,10 @@ export const getModeratorDashboard = () => api.get('/api/moderator/dashboard')
 export const getModeratorTrips = (params) => api.get('/api/moderator/trips', { params })
 export const getModeratorTripDetail = (id) => api.get(`/api/moderator/trips/${id}`)
 
+// Chat de emergencia — GET/POST /api/emergency/:alertaId/messages
+export const getEmergencyMessages = (alertaId) => api.get(`/api/emergency/${alertaId}/messages`)
+export const sendEmergencyMessage = (alertaId, data) => api.post(`/api/emergency/${alertaId}/messages`, data)
+
 // Emergencias — GET /api/moderator/emergency, POST acknowledge/resolve
 export const getModeratorEmergencies = (params) => api.get('/api/moderator/emergency', { params })
 export const acknowledgeEmergency = (id) => api.post(`/api/moderator/emergency/${id}/acknowledge`)

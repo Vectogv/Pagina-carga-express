@@ -215,19 +215,8 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: 14,
-    ...{
-      '@media (max-width: 1200px)': {
-        gridTemplateColumns: 'repeat(3, 1fr)',
-      },
-      '@media (max-width: 900px)': {
-        gridTemplateColumns: 'repeat(2, 1fr)',
-      },
-      '@media (max-width: 600px)': {
-        gridTemplateColumns: '1fr',
-      },
-    },
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+    gap: 12,
   },
   section: { display: 'flex', flexDirection: 'column', gap: 12 },
   sectionTitle: { fontSize: 16, fontWeight: 700, color: theme.text, margin: 0 },

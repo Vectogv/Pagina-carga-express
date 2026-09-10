@@ -174,7 +174,7 @@ export default function ModeratorTripsPage() {
         <div style={{ background: 'rgba(248,81,73,0.15)', border: '1px solid #f85149', borderRadius: 10, padding: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
           <span style={{ fontSize: 20 }}>🚨</span>
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 800, color: '#f85149', margin: 0 }}>BOTÓN DE PÁNICO — {emergencyBanner.usuario?.nombre || ''} • {emergencyBanner.motivo || 'Emergencia'}</p>
+            <p style={{ fontSize: 13, fontWeight: 800, color: '#f85149', margin: 0 }}>Emergencia — {emergencyBanner.usuario?.nombre || ''} • {emergencyBanner.motivo || 'Emergencia'}</p>
             <p style={{ fontSize: 11, color: theme.muted, margin: '2px 0 0' }}>Viaje #{emergencyBanner.viajeId || '—'} • {emergencyBanner.createdAt ? new Date(emergencyBanner.createdAt).toLocaleString('es-CO') : ''}</p>
           </div>
           <button onClick={() => setEmergencyBanner(null)} style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#f85149', color: '#fff', fontSize: 11, cursor: 'pointer' }}>Atendido</button>
@@ -281,7 +281,7 @@ export default function ModeratorTripsPage() {
                 <p style={{ fontSize: 11, fontWeight: 700, color: theme.danger, textTransform: 'uppercase', margin: 0 }}>🚨 Emergencias</p>
                 {detail.alertas.map((a) => (
                   <div key={a.id} style={{ background: a.estado === 'pendiente' ? 'rgba(248,81,73,0.08)' : a.estado === 'atendida' ? 'rgba(210,153,34,0.08)' : 'rgba(46,160,67,0.08)', border: `1px solid ${a.estado === 'pendiente' ? '#f85149' : a.estado === 'atendida' ? '#d29922' : '#2ea043'}40`, borderRadius: 8, padding: 10 }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: theme.text, margin: 0 }}>{a.motivo || 'Botón de pánico'}</p>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: theme.text, margin: 0 }}>{a.motivo || 'Emergencia'}</p>
                     <p style={{ fontSize: 11, color: theme.muted, margin: '4px 0 0' }}>Estado: <b style={{ color: a.estado === 'pendiente' ? '#f85149' : a.estado === 'atendida' ? '#d29922' : '#2ea043' }}>{a.estadoLabel || a.estado}</b> {a.atendidoPor ? `• Atendido por ${a.atendidoPor} ${a.atendidaAt ? formatFecha(a.atendidaAt) : ''}` : ''} {a.resueltoPor ? `• Resuelto por ${a.resueltoPor} ${a.resueltaAt ? formatFecha(a.resueltaAt) : ''}` : ''}</p>
                     <p style={{ fontSize: 11, color: theme.muted, margin: '2px 0 0' }}>Usuario: {a.usuario?.nombre || ''} {a.usuario?.telefono || ''} • lat {a.lat}, lng {a.lng} • {formatFecha(a.createdAt)}</p>
                     {a.estado === 'pendiente' && <button onClick={async () => { await acknowledgeEmergency(a.id); const r = await getModeratorTripDetail(detail.id); setDetail(r.data?.data || r.data); }} style={{ marginTop: 6, padding: '5px 10px', borderRadius: 6, border: 'none', background: '#f85149', color: '#fff', fontSize: 11, cursor: 'pointer' }}>Atender emergencia</button>}

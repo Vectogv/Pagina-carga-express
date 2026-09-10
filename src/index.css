@@ -109,3 +109,23 @@ a {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+  #root { width: 100vw; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+@media (max-width: 640px) {
+  /* Reduce padding general en móvil */
+  body { font-size: 14px; }
+  /* TopBar en móvil: apila y oculta texto largo */
+  header, [class*="topBar"] { flex-wrap: wrap; gap: 8px !important; padding: 10px 12px !important; }
+}
+
+/* Móvil: tablas como cards si es muy estrecho */
+@media (max-width: 480px) {
+  h1 { font-size: 20px !important; }
+  /* Fuerza modales a casi pantalla completa */
+  [role="dialog"], [style*="maxWidth: 420"] { max-width: 95vw !important; margin: 10px !important; }
+}
