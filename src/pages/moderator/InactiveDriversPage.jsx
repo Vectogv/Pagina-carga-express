@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import DataTable from '../../components/admin/DataTable';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import { getInactiveDrivers, notifyDriver } from '../../api/moderator';
+import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 
 const theme = { bg: '#020208', cards: '#0f1220', accent: '#f59e0b', text: '#e2e8f0', muted: '#64748b', border: '#1e2238', success: '#22c55e', danger: '#ef4444' };
 
 export default function InactiveDriversPage() {
+  const { ciudadParams } = useModeratorCity();
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,13 +17,16 @@ export default function InactiveDriversPage() {
   const fetch = async () => {
     setLoading(true); setError(null);
     try {
-      const res = await getInactiveDrivers({ page: 1, limit: 50 });
+      const res = await getInactiveDrivers({ page: 1, limit: 50, ...ciudadParams });
       const d = res.data;
       setDrivers(Array.isArray(d) ? d : (d.drivers || d.data || []));
-    } catch (err) { setError(err.response?.data?.message || 'Error al cargar inactivos'); }
+    } catch (err) {
+      if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
+      else setError(err.response?.data?.message || 'Error al cargar inactivos');
+    }
     finally { setLoading(false); }
   };
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetch(); }, [ciudadParams]);
 
   const handleNotify = async () => {
     try { await notifyDriver(action.id || action.usuarioId); setToast({ msg: 'Notificación enviada', ok: true }); setAction(null); setTimeout(()=>setToast(null),2500); }

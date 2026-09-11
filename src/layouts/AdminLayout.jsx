@@ -18,6 +18,8 @@ const pathTitleMap = {
   '/admin/cancellation-requests': 'Cancelaciones',
   '/admin/comunicados': 'Comunicados',
   '/admin/encuestas': 'Encuestas',
+  '/admin/avisos': 'Avisos',
+  '/admin/conversations': 'Conversatorio',
   '/admin/moderator-reports': 'Reportes Moderador',
   '/admin/config': 'Configuración',
   '/admin/backups': 'Backups',

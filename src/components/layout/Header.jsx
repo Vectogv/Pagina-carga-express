@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import './Header.css';
 
-export default function Header({ title = '', subtitle = '', onMenuToggle = null, showBack = false }) {
+export default function Header({ title = '', subtitle = '', onMenuToggle = null, showBack = false, right = null }) {
   const navigate = useNavigate();
 
   return (
@@ -17,13 +17,14 @@ export default function Header({ title = '', subtitle = '', onMenuToggle = null,
           {subtitle && <p className="header__subtitle">{subtitle}</p>}
         </div>
       </div>
-      {showBack && (
-        <div className="header__actions">
+      <div className="header__actions">
+        {right}
+        {showBack && (
           <button className="header__back" onClick={() => navigate('..')}>
             ← Volver
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

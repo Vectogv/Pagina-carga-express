@@ -1,13 +1,11 @@
 import ConversationsBoard from '../../components/conversations/ConversationsBoard';
 import { getContactableUsers } from '../../api/moderator';
-import { useModeratorBadges } from '../../contexts/ModeratorBadgesContext';
 
-export default function ConversationsPage() {
-  const { setOpenConversation } = useModeratorBadges();
+export default function AdminConversationsPage() {
   return (
     <ConversationsBoard
       getContacts={() => getContactableUsers({ limit: 50 })}
-      onOpenConversation={setOpenConversation}
+      createCity={(contact) => (contact?.zonaModerador || contact?.zona_moderador || contact?.ciudad || 'cali')}
     />
   );
 }

@@ -34,9 +34,15 @@ export function AuthProvider({ children }) {
             try {
               await api.get('/api/moderator/drivers', { params: { page: 1, limit: 1 } })
               isMod = true
-              zona = zona || 'cali'
-            } catch {}
+            } catch { /* no es moderador */ }
           }
+          if (isMod && !zona) {
+            try {
+              const dash = await api.get('/api/moderator/dashboard')
+              zona = dash.data?.ciudad || dash.data?.data?.ciudad
+            } catch { /* sin dashboard disponible */ }
+          }
+          if (isMod && !zona) zona = 'cali'
           const enriched = isMod ? { ...u2, esModerador: true, zonaModerador: zona || 'cali' } : u2
           setUser(enriched)
           localStorage.setItem('user', JSON.stringify(enriched))
@@ -44,7 +50,7 @@ export function AuthProvider({ children }) {
             setIsAuthenticated(true)
             return true
           }
-        } catch {}
+        } catch { /* no se pudo resolver moderador */ }
         setUser(null)
         setIsAuthenticated(false)
         return false
@@ -106,7 +112,7 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
-    try { await apiLogout() } catch {}
+    try { await apiLogout() } catch { /* logout local de todos modos */ }
     finally {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')

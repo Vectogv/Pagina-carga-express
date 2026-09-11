@@ -8,6 +8,9 @@ export const getModeratorDrivers = (params) => api.get('/api/moderator/drivers',
 export const getInactiveDrivers = (params) => api.get('/api/moderator/drivers/inactive', { params })
 export const notifyDriver = (id) => api.post(`/api/moderator/drivers/${id}/notify`)
 export const reportDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/report`, data)
+export const approveDriver = (id) => api.post(`/api/moderator/drivers/${id}/approve`)
+export const rejectDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/reject`, data)
+export const getMapboxToken = () => api.get('/api/config/mapbox')
 
 // Comunicados
 export const createComunicado = (data) => api.post('/api/moderator/comunicados', data)
@@ -27,7 +30,7 @@ export const deleteAviso = (id) => api.delete(`/api/avisos/${id}`)
 // Nuevos — requieren backend con los 3 bloques que pegaste
 export const getMyEncuestas = (params) => api.get('/api/moderator/encuestas', { params })
 export const getMyReports = (params) => api.get('/api/moderator/reports', { params })
-export const getModeratorDashboard = () => api.get('/api/moderator/dashboard')
+export const getModeratorDashboard = (ciudad) => api.get('/api/moderator/dashboard', { params: ciudad ? { ciudad } : {} })
 
 // Viajes — nuevo GET /api/moderator/trips filtrado por ciudad del moderador
 export const getModeratorTrips = (params) => api.get('/api/moderator/trips', { params })
@@ -48,6 +51,9 @@ export const getUnreadCount = () => api.get('/api/moderator/conversations/unread
 export const getConversationMessages = (id) => api.get(`/api/moderator/conversations/${id}/messages`)
 export const createConversation = (data) => api.post('/api/moderator/conversations', data)
 export const sendConversationMessage = (id, data) => api.post(`/api/moderator/conversations/${id}/messages`, data)
+
+// Contactos buscables (chatapp/móvil) — clientes, conductores y moderadores. Admin y moderador.
+export const getContactableUsers = (params) => api.get('/api/moderator/contactable-users', { params })
 
 // Perfil (usa mismo endpoint que admin/users/profile pero con rol moderador)
 export const getModeratorProfile = () => api.get('/api/users/profile')

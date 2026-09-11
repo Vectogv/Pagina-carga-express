@@ -3,6 +3,7 @@ import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
 import ServiceStatusTimeline from '../../components/moderator/ServiceStatusTimeline';
 import { getModeratorTrips, getModeratorTripDetail, getModeratorEmergencies, acknowledgeEmergency, resolveEmergency } from '../../api/moderator';
+import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { io } from 'socket.io-client';
 import api from '../../api/axios';
 
@@ -34,27 +35,28 @@ export default function ModeratorTripsPage() {
   const [emergencyBanner, setEmergencyBanner] = useState(null);
   const [socketStatus, setSocketStatus] = useState('desconectado');
   const [mapboxToken, setMapboxToken] = useState(null);
+  const { ciudadParams } = useModeratorCity();
   const audioRef = useRef(null);
 
   const fetchTrips = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const params = { page: 1, limit: 50 };
+      const params = { page: 1, limit: 50, ...ciudadParams };
       if (estado) params.estado = estado;
       const res = await getModeratorTrips(params);
       const d = res.data;
       setTrips(Array.isArray(d) ? d : (d.trips || d.data || []));
     } catch (err) { setError(err.response?.data?.message || 'Error al cargar viajes'); }
     finally { setLoading(false); }
-  }, [estado]);
+  }, [estado, ciudadParams]);
 
   const fetchEmergencies = useCallback(async () => {
     try {
-      const res = await getModeratorEmergencies({ page: 1, limit: 20 });
+      const res = await getModeratorEmergencies({ page: 1, limit: 20, ...ciudadParams });
       const d = res.data;
       setEmergencies(Array.isArray(d) ? d : (d.emergencies || d.data || []));
     } catch {}
-  }, []);
+  }, [ciudadParams]);
 
   const fetchDetail = useCallback(async (id) => {
     if (!id) return;

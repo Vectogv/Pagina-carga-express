@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
 import { createComunicado, getModeratorComunicados } from '../../api/moderator';
+import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 
 const theme = { bg: '#020208', cards: '#0f1220', accent: '#f59e0b', text: '#e2e8f0', muted: '#64748b', border: '#1e2238', success: '#22c55e', danger: '#ef4444' };
 
 export default function ModeratorComunicadosPage() {
+  const { ciudadParams } = useModeratorCity();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,13 +19,16 @@ export default function ModeratorComunicadosPage() {
   const fetch = async () => {
     setLoading(true); setError(null);
     try {
-      const res = await getModeratorComunicados({ page: 1, limit: 50 });
+      const res = await getModeratorComunicados({ page: 1, limit: 50, ...ciudadParams });
       const d = res.data;
       setList(Array.isArray(d) ? d : (d.comunicados || d.data || []));
-    } catch (err) { setError(err.response?.data?.message || 'Error al cargar comunicados'); }
+    } catch (err) {
+      if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
+      else setError(err.response?.data?.message || 'Error al cargar comunicados');
+    }
     finally { setLoading(false); }
   };
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetch(); }, [ciudadParams]);
 
   const handleCreate = async (e) => {
     e.preventDefault();

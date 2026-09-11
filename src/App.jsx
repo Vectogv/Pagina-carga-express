@@ -23,6 +23,8 @@ import BackupsPage from './pages/admin/BackupsPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
 import ModeratorsPage from './pages/admin/ModeratorsPage'
 import ClientsPage from './pages/admin/ClientsPage'
+import AdminConversations from './pages/admin/ConversationsPage'
+import AdminAvisos from './pages/admin/AvisosPage'
 import ModeratorDashboard from './pages/moderator/DashboardPage'
 import ModeratorDrivers from './pages/moderator/DriversPage'
 import ModeratorInactive from './pages/moderator/InactiveDriversPage'
@@ -33,6 +35,8 @@ import ModeratorProfile from './pages/moderator/ProfilePage'
 import ModeratorTrips from './pages/moderator/TripsPage'
 import ModeratorEmergencias from './pages/moderator/EmergenciasPage'
 import ModeratorConversations from './pages/moderator/ConversationsPage'
+import ModeratorCompaneros from './pages/moderator/CompanerosPage'
+import ModeratorNotificaciones from './pages/moderator/NotificacionesPage'
 
 function ProtectedRoute({ children, requireModerator, requireAdmin }) {
   const { isAuthenticated, loading, user } = useAuth()
@@ -86,6 +90,8 @@ function AppRoutes() {
         <Route path="cancellation-requests" element={<CancellationRequestsPage />} />
         <Route path="comunicados" element={<ComunicadosPage />} />
         <Route path="encuestas" element={<EncuestasPage />} />
+        <Route path="conversations" element={<AdminConversations />} />
+        <Route path="avisos" element={<AdminAvisos />} />
         <Route path="moderator-reports" element={<ModeratorReportsPage />} />
         <Route path="config" element={<ConfigPage />} />
         <Route path="profile" element={<ProfilePage />} />
@@ -110,6 +116,8 @@ function AppRoutes() {
         <Route path="trips" element={<ModeratorTrips />} />
         <Route path="emergencies" element={<ModeratorEmergencias />} />
         <Route path="conversations" element={<ModeratorConversations />} />
+        <Route path="companeros" element={<ModeratorCompaneros />} />
+        <Route path="reports" element={<ModeratorNotificaciones />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/admin" replace />} />

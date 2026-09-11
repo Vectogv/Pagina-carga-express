@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import EmergencyBanner from '../components/moderator/EmergencyBanner';
 import '../components/layout/Layout.css';
 import { moderatorNavItems } from '../components/layout/sidebarContent';
+import { ModeratorBadgesProvider, useModeratorBadges } from '../contexts/ModeratorBadgesContext';
+import { ModeratorCityProvider, useModeratorCity } from '../contexts/ModeratorCityContext';
+import { MODERATOR_CITY_LABELS } from '../constants/cities';
+import { useAuth } from '../contexts/AuthContext';
 
 const pathTitleMap = {
   '/moderator': 'Dashboard',
@@ -12,38 +16,58 @@ const pathTitleMap = {
   '/moderator/drivers/inactive': 'Conductores Inactivos',
   '/moderator/trips': 'Viajes',
   '/moderator/emergencies': 'Emergencias',
+  '/moderator/companeros': 'Compañeros (contactables)',
   '/moderator/conversations': 'Conversatorio',
   '/moderator/comunicados': 'Comunicados',
   '/moderator/encuestas': 'Encuestas',
   '/moderator/avisos': 'Avisos',
+  '/moderator/reports': 'Notificaciones',
   '/moderator/profile': 'Mi Perfil',
 };
 
-export default function ModeratorLayout() {
-  const location = useLocation();
-  const [unread, setUnread] = useState(0);
+function CitySelector() {
+  const { user } = useAuth();
+  const isAdmin = user?.rol === 'admin' || user?.role === 'admin';
+  const { ciudad, setCiudad } = useModeratorCity();
+  if (!isAdmin) return null;
+  return (
+    <select
+      value={ciudad}
+      onChange={(e) => setCiudad(e.target.value)}
+      aria-label="Ciudad"
+      style={{
+        padding: '7px 12px',
+        borderRadius: 8,
+        border: '1px solid #1e2238',
+        backgroundColor: '#0f1220',
+        color: '#e2e8f0',
+        fontSize: 13,
+        fontWeight: 600,
+        cursor: 'pointer',
+      }}
+    >
+      {Object.entries(MODERATOR_CITY_LABELS).map(([key, label]) => (
+        <option key={key} value={key}>{label}</option>
+      ))}
+    </select>
+  );
+}
 
+function ModeratorShell() {
+  const location = useLocation();
+  const { emergencyBadge, unreadBadge, clearEmergency, clearUnread } = useModeratorBadges();
+  const { isAdmin, ciudadLabel } = useModeratorCity();
+
+  // Al entrar a cada sección, su badge se pone en 0 (los mensajes/hilos leídos se marcan en el backend).
   useEffect(() => {
-    let cancelled = false;
-    const fetchUnread = async () => {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
-        const res = await fetch('/api/moderator/conversations/unread-count', { headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) { const d = await res.json(); if (!cancelled) setUnread(d.total ?? d.count ?? 0); }
-      } catch { /* ignore */ }
-    };
-    fetchUnread();
-    const id = setInterval(fetchUnread, 60000);
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      import('socket.io-client').then(({ io }) => {
-        const socket = io('https://bakend-cargaexpress-production.up.railway.app', { transports: ['websocket'], auth: { token: `Bearer ${token}` }, query: { token: `Bearer ${token}` } });
-        socket.on('conversation:message', () => fetchUnread());
-      });
-    }
-    return () => { cancelled = true; clearInterval(id); };
-  }, [location.pathname]);
+    if (location.pathname === '/moderator/emergencies') clearEmergency();
+    if (location.pathname === '/moderator/conversations') clearUnread();
+  }, [location.pathname, clearEmergency, clearUnread]);
+
+  const badges = {
+    '/moderator/emergencies': emergencyBadge,
+    '/moderator/conversations': unreadBadge,
+  };
 
   const isEmptyLabel = (label) => label === 'Dashboard' && location.pathname !== '/moderator';
 
@@ -53,13 +77,18 @@ export default function ModeratorLayout() {
   return (
     <div className="app-shell">
       <Sidebar
-        items={moderatorNavItems.map((i) => i.to === '/moderator/conversations' ? { ...i, showUnread: true } : i)}
+        items={moderatorNavItems}
         title="Moderación"
-        subtitle="Carga Express"
-        unreadCount={unread}
+        subtitle={isAdmin ? `Carga Express · Viendo: ${ciudadLabel}` : 'Carga Express'}
+        badges={badges}
       />
       <div className="app-main">
-        <Header title={isEmptyLabel(pageTitle) ? 'Dashboard' : pageTitle} subtitle={!isHome ? undefined : 'Panel del moderador'} showBack={!isHome} />
+        <Header
+          title={isEmptyLabel(pageTitle) ? 'Dashboard' : pageTitle}
+          subtitle={!isHome ? undefined : 'Centro de Control Operativo'}
+          showBack={!isHome}
+          right={<CitySelector />}
+        />
         <div className="app-content">
           <div className="app-centered">
             <div className="app-emergency">
@@ -70,5 +99,15 @@ export default function ModeratorLayout() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ModeratorLayout() {
+  return (
+    <ModeratorBadgesProvider>
+      <ModeratorCityProvider>
+        <ModeratorShell />
+      </ModeratorCityProvider>
+    </ModeratorBadgesProvider>
   );
 }

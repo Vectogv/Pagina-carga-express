@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
-import { getEmergencies, resolveEmergency } from '../../api/admin';
+import { getEmergencies, resolveEmergency, getTripById, getEmergencyChat, sendEmergencyMessage } from '../../api/admin';
 
 const theme = {
   bg: '#020208',
@@ -205,18 +205,23 @@ function EmergenciesPage() {
   const [emergencies, setEmergencies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
   const [detailModal, setDetailModal] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [tripDetail, setTripDetail] = useState(null);
+  const [chatMensajes, setChatMensajes] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState(null);
 
   const fetchEmergencies = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await getEmergencies();
-      setEmergencies(Array.isArray(res.data) ? res.data : (res.data.data || res.data || []));
+      const res = await getEmergencies({ page: 1, limit: 100 });
+      const d = res.data;
+      const list = (Array.isArray(d) ? d : (d.data || d.emergencies || []));
+      setEmergencies(list.map((e) => ({ ...e, status: e.atendida ? 'resolved' : 'pending' })));
     } catch (err) {
       setError(err.response?.data?.message || 'Error al cargar las emergencias');
     } finally {
@@ -226,15 +231,11 @@ function EmergenciesPage() {
 
   useEffect(() => {
     fetchEmergencies();
+    const id = setInterval(fetchEmergencies, 20000);
+    return () => clearInterval(id);
   }, []);
 
-  const filtered = useMemo(() => {
-    if (filter === 'all') return emergencies;
-    return emergencies.filter((e) => e.status === filter);
-  }, [emergencies, filter]);
-
   const counts = useMemo(() => ({
-    all: emergencies.length,
     pending: emergencies.filter((e) => e.status === 'pending').length,
     resolved: emergencies.filter((e) => e.status === 'resolved').length,
   }), [emergencies]);
@@ -243,7 +244,11 @@ function EmergenciesPage() {
     if (!confirmModal) return;
     setSubmitting(true);
     try {
-      await resolveEmergency(confirmModal.id, notes.trim() || undefined);
+      const nota = notes.trim();
+      await resolveEmergency(confirmModal.id);
+      try {
+        await sendEmergencyMessage(confirmModal.id, `Emergencia resuelta por Admin CargaExpress${nota ? ` - ${nota}` : ''}`);
+      } catch { /* la constancia en el chat es opcional */ }
       await fetchEmergencies();
       setConfirmModal(null);
       setNotes('');
@@ -259,6 +264,35 @@ function EmergenciesPage() {
     setNotes('');
   };
 
+  const userName = (row) => {
+    const u = row.usuario;
+    if (u) return `${u.nombre || ''} ${u.apellido || ''}`.trim() || u.telefono || '—';
+    return row.userName || row.user?.name || '—';
+  };
+  const ruta = (row) => (row.viaje && (row.viaje.origen || row.viaje.destino)) ? `${row.viaje.origen || '?'} → ${row.viaje.destino || '?'}` : null;
+  const coords = (row) => (row.lat || row.lng) ? `${row.lat || '-'}, ${row.lng || '-'}` : null;
+
+  const openDetail = async (row) => {
+    setDetailModal(row);
+    setTripDetail(null);
+    setChatMensajes([]);
+    setChatError(null);
+    if (row.viajeId) {
+      try {
+        const r = await getTripById(row.viajeId);
+        setTripDetail(r.data?.data || r.data);
+      } catch { /* sin detalle del viaje */ }
+    }
+    try {
+      setChatLoading(true);
+      const r = await getEmergencyChat(row.id);
+      const d = r.data;
+      setChatMensajes(Array.isArray(d) ? d : (d.messages || d.data || []));
+    } catch (err) {
+      setChatError(err.response?.data?.message || 'No se pudo cargar el chat');
+    } finally { setChatLoading(false); }
+  };
+
   const columns = [
     {
       key: 'id',
@@ -268,32 +302,30 @@ function EmergenciesPage() {
       ),
     },
     {
-      key: 'user',
+      key: 'usuario',
       label: 'Usuario',
-      render: (val, row) => (
-        <span style={{ fontWeight: 600 }}>
-          {row.userName || val?.name || val || '—'}
-        </span>
+      render: (_, row) => (
+        <span style={{ fontWeight: 600 }}>{userName(row)}</span>
       ),
     },
     {
-      key: 'type',
-      label: 'Tipo',
-      render: (val) => (
-        <span style={{ textTransform: 'capitalize' }}>{val || '—'}</span>
+      key: 'viaje',
+      label: 'Ruta',
+      render: (_, row) => (
+        <span>{ruta(row) || '—'}</span>
       ),
     },
     {
-      key: 'location',
+      key: 'ubicacion',
       label: 'Ubicación',
-      render: (val, row) => (
-        <span>{val || row.ubicacion || '—'}</span>
+      render: (_, row) => (
+        <span>{coords(row) || row.ubicacion || '—'}</span>
       ),
     },
     {
       key: 'status',
       label: 'Estado',
-      render: (val) => <StatusBadge status={val} />,
+      render: (val, row) => <StatusBadge status={row.status || val} />,
     },
     {
       key: 'createdAt',
@@ -312,7 +344,7 @@ function EmergenciesPage() {
             style={styles.detailBtn}
             onClick={(e) => {
               e.stopPropagation();
-              setDetailModal(row);
+              openDetail(row);
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = `${theme.muted}40`;
@@ -381,44 +413,33 @@ function EmergenciesPage() {
         </div>
       )}
 
-      <div style={styles.filterBar}>
-        {[
-          { key: 'all', label: 'Todas' },
-          { key: 'pending', label: 'Pendientes' },
-          { key: 'resolved', label: 'Resueltas' },
-        ].map((f) => (
-          <button
-            key={f.key}
-            style={{
-              ...styles.filterBtn,
-              ...(filter === f.key ? styles.filterBtnActive : {}),
-            }}
-            onClick={() => setFilter(f.key)}
-            onMouseEnter={(e) => {
-              if (filter !== f.key) {
-                e.currentTarget.style.borderColor = theme.muted;
-                e.currentTarget.style.color = theme.text;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (filter !== f.key) {
-                e.currentTarget.style.borderColor = theme.border;
-                e.currentTarget.style.color = theme.muted;
-              }
-            }}
-          >
-            {f.label}
-            <span style={{ marginLeft: 8, opacity: 0.6 }}>{counts[f.key]}</span>
-          </button>
-        ))}
+      <div style={{ marginBottom: 34 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: theme.text, margin: 0 }}>🚨 Activas</h2>
+          <span style={{ padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, backgroundColor: `${theme.danger}20`, color: theme.danger }}>{counts.pending} pendientes</span>
+        </div>
+        <DataTable
+          columns={columns}
+          data={emergencies.filter((e) => e.status === 'pending')}
+          loading={loading}
+          onRowClick={openDetail}
+          emptyMessage="No hay emergencias activas"
+        />
       </div>
 
-      <DataTable
-        columns={columns}
-        data={filtered}
-        loading={loading}
-        emptyMessage="No hay emergencias para mostrar"
-      />
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: theme.text, margin: 0 }}>✅ Resueltas</h2>
+          <span style={{ padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, backgroundColor: `${theme.success}20`, color: theme.success }}>{counts.resolved} resueltas</span>
+        </div>
+        <DataTable
+          columns={columns}
+          data={emergencies.filter((e) => e.status === 'resolved')}
+          loading={loading}
+          onRowClick={openDetail}
+          emptyMessage="Aún no hay emergencias resueltas"
+        />
+      </div>
 
       {/* Detail Modal */}
       <Modal
@@ -436,21 +457,23 @@ function EmergenciesPage() {
               </div>
               <div style={styles.detailCard}>
                 <p style={styles.detailLabel}>Usuario</p>
-                <p style={styles.detailValue}>
-                  {detailModal.userName || detailModal.user?.name || '—'}
-                </p>
+                <p style={styles.detailValue}>{userName(detailModal)}</p>
               </div>
               <div style={styles.detailCard}>
                 <p style={styles.detailLabel}>Tipo</p>
-                <p style={styles.detailValue}>{detailModal.type || '—'}</p>
+                <p style={styles.detailValue}>🚨 SOS</p>
+              </div>
+              <div style={styles.detailCard}>
+                <p style={styles.detailLabel}>Ruta del viaje</p>
+                <p style={styles.detailValue}>{ruta(detailModal) || detailModal.viaje?.estado || '—'}</p>
               </div>
               <div style={styles.detailCard}>
                 <p style={styles.detailLabel}>Ubicación</p>
-                <p style={styles.detailValue}>{detailModal.location || detailModal.ubicacion || '—'}</p>
+                <p style={styles.detailValue}>{coords(detailModal) || detailModal.ubicacion || '—'}</p>
               </div>
               <div style={styles.detailCard}>
                 <p style={styles.detailLabel}>Estado</p>
-                <StatusBadge status={detailModal.status} />
+                <StatusBadge status={detailModal.status || (detailModal.atendida ? 'resolved' : 'pending')} />
               </div>
               <div style={styles.detailCard}>
                 <p style={styles.detailLabel}>Fecha</p>
@@ -460,6 +483,8 @@ function EmergenciesPage() {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
                       })
                     : '—'}
                 </p>
@@ -483,6 +508,89 @@ function EmergenciesPage() {
                 </p>
               </div>
             )}
+
+            {tripDetail && (() => {
+              const viaje = tripDetail;
+              const activador = detailModal.usuario;
+              const esConductorSolicitante = viaje.conductor?.telefono && activador?.telefono === viaje.conductor.telefono;
+              const solicitante = esConductorSolicitante ? viaje.conductor : viaje.cliente;
+              const contraparte = esConductorSolicitante ? viaje.cliente : viaje.conductor;
+              return (
+                <>
+                  <div style={{ marginTop: 16, background: `${theme.accent}10`, border: `1px solid ${theme.accent}40`, borderRadius: 10, padding: 14 }}>
+                    <p style={styles.detailLabel}>🛣️ Ruta de emergencia</p>
+                    <p style={{ fontSize: 13, color: theme.text, margin: '0 0 8px', lineHeight: 1.6 }}>
+                      <b style={{ color: theme.success }}>Salida:</b> {viaje.origen?.direccion || '—'}<br />
+                      <b style={{ color: theme.danger }}>Destino:</b> {viaje.destino?.direccion || '—'}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {viaje.origen?.lat != null && <button onClick={() => window.open(`https://www.google.com/maps?q=${viaje.origen.lat},${viaje.origen.lng}`, '_blank')} style={styles.detailBtn}>🔎 Salida en mapa</button>}
+                      {viaje.destino?.lat != null && <button onClick={() => window.open(`https://www.google.com/maps?q=${viaje.destino.lat},${viaje.destino.lng}`, '_blank')} style={styles.detailBtn}>🔎 Destino en mapa</button>}
+                      {detailModal.lat && detailModal.lng && <button onClick={() => window.open(`https://www.google.com/maps?q=${detailModal.lat},${detailModal.lng}`, '_blank')} style={{ ...styles.detailBtn, borderColor: theme.danger, color: theme.danger }}>SOS en mapa</button>}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12, marginTop: 10 }}>
+                      <div><span style={{ color: theme.muted }}>Estado viaje:</span> <b>{viaje.estado || '—'}</b></div>
+                      <div><span style={{ color: theme.muted }}>Carga:</span> {viaje.carga || 'SOS'}</div>
+                      <div><span style={{ color: theme.muted }}>Precio:</span> ${Number(viaje.precioFinal ?? viaje.precioEstimado ?? 0).toLocaleString('es-CO')}</div>
+                      <div><span style={{ color: theme.muted }}>Tiempo est.:</span> {viaje.tiempoEstimadoMinutos != null ? `${viaje.tiempoEstimadoMinutos} min` : '—'}</div>
+                    </div>
+                  </div>
+
+                  {(solicitante || contraparte) && (
+                    <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div style={{ background: theme.bg, borderRadius: 10, border: `1px solid ${theme.border}`, padding: 12 }}>
+                        <p style={styles.detailLabel}>★ Solicitante ({esConductorSolicitante ? 'conductor' : 'cliente'})</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: 0 }}>{solicitante?.nombre || '—'}</p>
+                        <a href={`tel:${solicitante?.telefono || ''}`} style={{ fontSize: 12, color: theme.accent }}>{solicitante?.telefono || '—'}</a>
+                        {solicitante?.placa && <p style={{ fontSize: 12, color: theme.muted, margin: '4px 0 0' }}>Placa: {solicitante.placa} • {solicitante.tipoVehiculo || ''}</p>}
+                      </div>
+                      <div style={{ background: theme.bg, borderRadius: 10, border: `1px solid ${theme.border}`, padding: 12 }}>
+                        <p style={styles.detailLabel}>Contraparte ({esConductorSolicitante ? 'cliente' : 'conductor'})</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: 0 }}>{contraparte?.nombre || '—'}</p>
+                        <a href={`tel:${contraparte?.telefono || ''}`} style={{ fontSize: 12, color: theme.accent }}>{contraparte?.telefono || '—'}</a>
+                        {contraparte?.placa && <p style={{ fontSize: 12, color: theme.muted, margin: '4px 0 0' }}>Placa: {contraparte.placa} • {contraparte.tipoVehiculo || ''}</p>}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            <div style={{ marginTop: 16, background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12 }}>
+              <p style={styles.detailLabel}>💬 Chat de emergencia — quien lo atendió</p>
+              {chatLoading && <p style={{ fontSize: 11, color: theme.muted }}>Cargando chat...</p>}
+              {chatError && <p style={{ fontSize: 11, color: theme.danger }}>{chatError}</p>}
+              {!chatLoading && !chatError && chatMensajes.length === 0 && <p style={{ fontSize: 11, color: theme.muted, fontStyle: 'italic' }}>Sin mensajes en el chat.</p>}
+              {(() => {
+                const atendidoPor = [...new Set(
+                  chatMensajes
+                    .filter((m) => m.remitente && m.remitente.id !== detailModal.userId && m.remitente.nombre !== userName(detailModal))
+                    .map((m) => m.remitente.nombre)
+                )];
+                return atendidoPor.length > 0 ? (
+                  <p style={{ fontSize: 12, color: theme.warning, fontWeight: 700, margin: '0 0 8px' }}>
+                    🛡️ Atendido por: {atendidoPor.join(', ')} <span style={{ fontWeight: 500, color: theme.success }}>{detailModal.atendida ? '✓ resuelta' : 'en gestión'}</span>
+                  </p>
+                ) : detailModal.atendida ? (
+                  <p style={{ fontSize: 12, color: theme.success, fontWeight: 700, margin: '0 0 8px' }}>✓ Emergencia atendida</p>
+                ) : null;
+              })()}
+              <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {chatMensajes.map((m) => {
+                  const isMod = m.remitente && m.remitente.id !== detailModal.userId;
+                  return (
+                    <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMod ? 'flex-end' : 'flex-start', gap: 2 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 10, color: theme.muted }}>
+                        <span style={{ fontWeight: 600, color: isMod ? theme.accent : theme.text }}>{m.remitente?.nombre || (isMod ? 'Moderador' : 'Usuario')}</span>
+                        {m.remitente?.esModerador && <span style={{ padding: '1px 4px', borderRadius: 4, background: theme.warning, color: '#fff', fontSize: 9 }}>MODERADOR</span>}
+                        <span>{new Date(m.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div style={{ maxWidth: '78%', padding: '6px 10px', borderRadius: isMod ? '12px 12px 2px 12px' : '12px 12px 12px 2px', background: isMod ? theme.accent : '#21262d', color: '#fff', fontSize: 12, wordBreak: 'break-word' }}>{m.mensaje}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </Modal>

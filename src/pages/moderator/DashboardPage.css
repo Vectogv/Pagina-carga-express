@@ -1,0 +1,314 @@
+.ccop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+/* ── Hero ─────────────────────────────────────────── */
+.ccop-hero {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.ccop-hero__badges {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.ccop-hero__title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-extrabold);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.ccop-hero__desc {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  margin: var(--space-2) 0 0;
+  line-height: 1.5;
+  max-width: 60ch;
+}
+
+.ccop-hero__user {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: var(--space-3) 0 0;
+}
+
+.ccop-hero__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.ccop-live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.ccop-live--on {
+  color: var(--success);
+  border-color: var(--success-border);
+  background: var(--success-subtle);
+}
+
+.ccop-live--off {
+  color: var(--warning);
+  border-color: var(--warning-border);
+  background: var(--warning-subtle);
+}
+
+.ccop-live__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: ccop-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ccop-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.ccop-updated {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── KPIs ─────────────────────────────────────────── */
+.ccop-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+/* ── Grid de paneles ──────────────────────────────── */
+.ccop-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+/* ── Listas dentro de paneles ─────────────────────── */
+.ccop-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ccop-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.ccop-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ccop-item__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.ccop-item__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ccop-item__title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ccop-item__sub {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ccop-item__time {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.ccop-item__extra {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+/* Barra de disponibilidad de conductores */
+.ccop-bar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.ccop-bar__seg {
+  height: 100%;
+  min-width: 0;
+  transition: flex-basis var(--transition-base);
+}
+
+.ccop-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.ccop-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.ccop-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Actividad reciente */
+.ccop-activity {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.ccop-activity__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.ccop-activity__text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Acciones rápidas */
+.ccop-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.ccop-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--primary);
+  background: var(--primary-subtle);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.ccop-footer-link:hover {
+  background: color-mix(in srgb, var(--primary) 20%, var(--bg-elevated));
+  border-color: var(--primary);
+}
+
+.ccop-footer-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media (max-width: 960px) {
+  .ccop-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .ccop-hero {
+    flex-direction: column;
+  }
+
+  .ccop-hero__status {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .ccop-actions {
+    grid-template-columns: 1fr;
+  }
+}

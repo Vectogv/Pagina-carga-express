@@ -2,11 +2,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
 import { getModeratorEmergencies, acknowledgeEmergency, resolveEmergency, getModeratorTripDetail, getEmergencyMessages, sendEmergencyMessage } from '../../api/moderator';
+import { useModeratorBadges } from '../../contexts/ModeratorBadgesContext';
+import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { io } from 'socket.io-client';
 
 const theme = { bg: '#0d1117', cards: '#161b22', border: '#21262d', text: '#f0f6fc', muted: '#8b949e', danger: '#f85149', warning: '#d29922', success: '#2ea043' };
 
 export default function ModeratorEmergenciasPage() {
+  const { setOpenEmergency } = useModeratorBadges();
+  const { ciudadParams } = useModeratorCity();
   const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'activas');
   const [emergencies, setEmergencies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +35,7 @@ export default function ModeratorEmergenciasPage() {
       let estado = undefined;
       if (tab === 'activas') estado = 'pendiente,atendida';
       else if (tab === 'historico') estado = 'resuelta';
-      const params = { page, limit };
+      const params = { page, limit, ...ciudadParams };
       if (estado) params.estado = estado;
       const res = await getModeratorEmergencies(params);
       const d = res.data;
@@ -41,10 +45,11 @@ export default function ModeratorEmergenciasPage() {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
       else setError(err.response?.data?.message || 'Error al cargar emergencias');
     } finally { setLoading(false); }
-  }, [tab, page]);
+  }, [tab, page, ciudadParams]);
 
   useEffect(() => { fetchEmergencies(); }, [fetchEmergencies]);
   useEffect(() => { setPage(1); const url = new URL(window.location.href); if (tab === 'activas') url.searchParams.delete('tab'); else url.searchParams.set('tab', tab); window.history.replaceState({}, '', url); }, [tab]);
+  useEffect(() => { setOpenEmergency(selected?.id ?? null); }, [selected, setOpenEmergency]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');

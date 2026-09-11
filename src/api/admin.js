@@ -39,6 +39,18 @@ export const uploadAvatar = (formData) =>
 export const getEmergencies = (params) => api.get(`${BASE}/emergencies`, { params })
 export const resolveEmergency = (id) => api.put(`${BASE}/emergencies/${id}/resolve`)
 
+// Detalle de viaje y chat SOS — endpoints generales accesibles con rol admin
+export const getTripById = (id) => api.get(`/api/trips/${id}`)
+export const getEmergencyChat = (alertaId) => api.get(`/api/emergency/${alertaId}/messages`)
+export const sendEmergencyMessage = (alertaId, mensaje) => api.post(`/api/emergency/${alertaId}/messages`, { mensaje })
+
+// Conversaciones generales (admin ↔ moderadores) — mismo chat del chatapp.
+// El backend NO permite crear conversaciones como admin (solo listar/leer/responder).
+export const getConversations = () => api.get('/api/conversations')
+export const getConversationsUnreadCount = () => api.get('/api/conversations/unread-count')
+export const getConversationMessages = (id) => api.get(`/api/conversations/${id}/messages`)
+export const sendConversationMessage = (id, data) => api.post(`/api/conversations/${id}/messages`, data)
+
 // Commissions
 export const getCommissions = () => api.get(`${BASE}/commissions`)
 export const markCommissionPaid = (conductorId) =>

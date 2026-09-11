@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
 import { createEncuesta, getEncuestaResults, getMyEncuestas } from '../../api/moderator';
+import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 
 const theme = { bg: '#020208', cards: '#0f1220', accent: '#f59e0b', text: '#e2e8f0', muted: '#64748b', border: '#1e2238', success: '#22c55e', danger: '#ef4444' };
 
 export default function ModeratorEncuestasPage() {
+  const { ciudadParams } = useModeratorCity();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,14 +20,17 @@ export default function ModeratorEncuestasPage() {
   const fetch = async () => {
     setLoading(true); setError(null);
     try {
-      const res = await getMyEncuestas({ page: 1, limit: 50 });
+      const res = await getMyEncuestas({ page: 1, limit: 50, ...ciudadParams });
       const d = res.data;
       const all = Array.isArray(d) ? d : (d.data || d.encuestas || []);
       setList(all);
-    } catch (err) { setError(err.response?.data?.message || 'Error al cargar encuestas'); }
+    } catch (err) {
+      if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
+      else setError(err.response?.data?.message || 'Error al cargar encuestas');
+    }
     finally { setLoading(false); }
   };
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetch(); }, [ciudadParams]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -47,7 +52,7 @@ export default function ModeratorEncuestasPage() {
     try {
       const res = await getEncuestaResults(row.id || row._id);
       setResults(res.data);
-    } catch (err) { setToast({ msg: 'No se pudo cargar resultados', ok: false }); setTimeout(()=>setToast(null),2500); }
+    } catch { setToast({ msg: 'No se pudo cargar resultados', ok: false }); setTimeout(()=>setToast(null),2500); }
   };
 
   const columns = [

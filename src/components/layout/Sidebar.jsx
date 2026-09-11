@@ -2,7 +2,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import './Sidebar.css';
 
-export default function Sidebar({ items = [], title = 'Carga Express', subtitle = '', unreadCount = 0 }) {
+export default function Sidebar({ items = [], title = 'Carga Express', subtitle = '', badges = {} }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,6 +28,7 @@ export default function Sidebar({ items = [], title = 'Carga Express', subtitle 
           const isActive = item.to === '/'
             ? location.pathname === item.to
             : location.pathname.startsWith(item.to);
+          const badgeCount = badges[item.to] || 0;
           return (
             <NavLink
               key={item.to}
@@ -38,9 +39,7 @@ export default function Sidebar({ items = [], title = 'Carga Express', subtitle 
               <span className="sidebar__icon">{item.icon}</span>
               <span className="sidebar__label">{item.label}</span>
               {item.badge && <span className="sidebar__badge">{item.badge}</span>}
-              {item.showUnread && unreadCount > 0 && (
-                <span className="sidebar__unread">{unreadCount}</span>
-              )}
+              {badgeCount > 0 && <span className="sidebar__unread">{badgeCount}</span>}
             </NavLink>
           );
         })}

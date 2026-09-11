@@ -20,12 +20,13 @@ function LoginPage() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('admin@cargaexpress.com');
-  const [password, setPassword] = useState('Admin123456');
+  const [password, setPassword] = useState('Admin123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const fillAdmin = () => { setEmail('admin@cargaexpress.com'); setPassword('Admin123456'); };
-  const fillModerador = () => { setEmail('moderador@gmail.com'); setPassword('123456'); };
+  const fillAdmin = () => { setEmail('admin@cargaexpress.com'); setPassword('Admin123'); };
+  const fillCali = () => { setEmail('admin.cali@cargaexpress.com'); setPassword('AdminCali123'); };
+  const fillPopayan = () => { setEmail('admin.popayan@cargaexpress.com'); setPassword('Admin123'); };
 
   const getRedirect = (u) => {
     if (!u) return '/admin';
@@ -65,16 +66,34 @@ function LoginPage() {
         setError('Login ok pero sin token. Revisa consola F12.');
         return;
       }
-      const u2 = result?.user || result?.data?.user || result;
-      const isAdmin2 = u2?.rol === 'admin' || u2?.role === 'admin' || result?.rol === 'admin' || email.trim().toLowerCase() === 'admin@cargaexpress.com';
-      const isMod2 = u2?.esModerador || u2?.es_moderador || email.trim().toLowerCase() === 'moderador@gmail.com';
-      const dest2 = isMod2 && !isAdmin2 ? '/moderator' : '/admin';
-      if (isMod2 && email.trim().toLowerCase() === 'moderador@gmail.com') {
-        const raw2 = localStorage.getItem('user');
-        const cur2 = raw2 ? JSON.parse(raw2) : {};
-        if (!cur2.esModerador) localStorage.setItem('user', JSON.stringify({ ...cur2, esModerador: true, zonaModerador: cur2.zonaModerador || 'cali', email: cur2.email || email.trim(), rol: cur2.rol || 'cliente' }));
+      const authHeaders = { Authorization: `Bearer ${token}` };
+      const r = result?.user || result?.data?.user || result;
+      const isAdminAcc = r?.rol === 'admin' || r?.role === 'admin' || email.trim().toLowerCase() === 'admin@cargaexpress.com';
+
+      let dest = '/admin';
+      if (!isAdminAcc) {
+        // Moderador (su ciudad se mantiene en backend): detectar y marcar esModerador
+        let isModAcc = false;
+        let zona = null;
+        try {
+          const probe = await fetch('/api/moderator/drivers?page=1&limit=1', { headers: authHeaders });
+          isModAcc = probe.ok;
+        } catch { /* silencioso */ }
+        if (isModAcc) {
+          try {
+            const dash = await fetch('/api/moderator/dashboard', { headers: authHeaders });
+            if (dash.ok) {
+              const dj = await dash.json();
+              zona = dj.ciudad || dj.data?.ciudad;
+            }
+          } catch { /* silencioso */ }
+          const raw2 = localStorage.getItem('user');
+          const cur2 = raw2 ? JSON.parse(raw2) : {};
+          localStorage.setItem('user', JSON.stringify({ ...cur2, esModerador: true, zonaModerador: cur2.zonaModerador || zona || 'cali', email: cur2.email || email.trim(), rol: cur2.rol || 'cliente' }));
+          dest = '/moderator';
+        }
       }
-      navigate(dest2, { replace: true });
+      navigate(dest, { replace: true });
     } catch (err) {
       console.error('Login error completo:', err);
       console.error('Response:', err?.response?.data);
@@ -85,10 +104,11 @@ function LoginPage() {
       // Si viene array de errors (Adonis)
       if (data?.errors?.[0]?.message) msg = data.errors[0].message;
       if (!msg) {
-        if (status === 400) msg = 'Credenciales inválidas (400)';
-        else if (status === 401) msg = 'No autorizado (401) - verifica email/password';
-        else if (status === 403) msg = 'Tu cuenta no es admin (403) - necesitas rol admin';
+        if (status === 400 || status === 401) msg = 'Credenciales inválidas, verifica email y contraseña';
+        else if (status === 403) msg = 'Cuenta suspendida o sin acceso (403)';
         else if (status === 404) msg = 'Ruta no encontrada (404)';
+        else if (status === 422) msg = 'Datos de acceso inválidos (422)';
+        else if (status === 500) msg = 'Error interno del servidor (500)';
         else if (!status) msg = 'Sin respuesta del servidor - revisa red/CORS (F12 > Network)';
         else msg = `Error ${status}: ${JSON.stringify(data)}`;
       }
@@ -115,11 +135,12 @@ function LoginPage() {
           <p style={styles.subtitle}>Panel de administración</p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-          <button type="button" onClick={fillAdmin} style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: email === 'admin@cargaexpress.com' ? `1px solid ${theme.accent}` : `1px solid ${theme.border}`, background: email === 'admin@cargaexpress.com' ? `${theme.accent}20` : theme.bg, color: email === 'admin@cargaexpress.com' ? theme.accent : theme.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>👑 Admin</button>
-          <button type="button" onClick={fillModerador} style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: email === 'moderador@gmail.com' ? `1px solid #f59e0b` : `1px solid ${theme.border}`, background: email === 'moderador@gmail.com' ? 'rgba(245,158,11,0.15)' : theme.bg, color: email === 'moderador@gmail.com' ? '#f59e0b' : theme.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>🛡️ Moderador</button>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+          <button type="button" onClick={fillAdmin} style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: email === 'admin@cargaexpress.com' ? `1px solid ${theme.accent}` : `1px solid ${theme.border}`, background: email === 'admin@cargaexpress.com' ? `${theme.accent}20` : theme.bg, color: email === 'admin@cargaexpress.com' ? theme.accent : theme.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>👑 Admin</button>
+          <button type="button" onClick={fillCali} style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: email === 'admin.cali@cargaexpress.com' ? `1px solid #f59e0b` : `1px solid ${theme.border}`, background: email === 'admin.cali@cargaexpress.com' ? 'rgba(245,158,11,0.15)' : theme.bg, color: email === 'admin.cali@cargaexpress.com' ? '#f59e0b' : theme.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>🛡️ Cali</button>
+          <button type="button" onClick={fillPopayan} style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: email === 'admin.popayan@cargaexpress.com' ? `1px solid #22c55e` : `1px solid ${theme.border}`, background: email === 'admin.popayan@cargaexpress.com' ? 'rgba(34,197,94,0.15)' : theme.bg, color: email === 'admin.popayan@cargaexpress.com' ? '#22c55e' : theme.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>🛡️ Popayán</button>
         </div>
-        <p style={{ fontSize: 11, color: theme.muted, textAlign: 'center', margin: 0 }}>Moderador → redirige a <b style={{ color: '#f59e0b' }}>/moderator</b></p>
+        <p style={{ fontSize: 11, color: theme.muted, textAlign: 'center', margin: 0 }}>Admin ve todas las ciudades · Moderadores solo su ciudad</p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           {error && <div style={styles.error}>{error}</div>}

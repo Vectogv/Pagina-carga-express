@@ -1,27 +1,17 @@
-const theme = {
-  bg: '#020208',
-  sidebar: '#070a12',
-  cards: '#0f1220',
-  accent: '#6366f1',
-  text: '#e2e8f0',
-  muted: '#64748b',
-  success: '#22c55e',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  border: '#1e2238',
-};
+import { useNavigate } from 'react-router-dom';
 
 const styles = {
   card: {
-    backgroundColor: theme.cards,
-    borderRadius: 12,
-    padding: 16,
-    border: `1px solid ${theme.border}`,
+    backgroundColor: 'var(--bg-surface)',
+    borderRadius: 'var(--radius-lg)',
+    padding: 'var(--space-5)',
+    border: '1px solid var(--border)',
     display: 'flex',
     flexDirection: 'column',
-    gap: 12,
-    transition: 'border-color 0.2s ease, transform 0.2s ease',
+    gap: 'var(--space-3)',
+    transition: 'border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast)',
     cursor: 'default',
+    minWidth: 0,
   },
   topRow: {
     display: 'flex',
@@ -35,60 +25,73 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: 14,
+    fontSize: 16,
+    flexShrink: 0,
   },
   trendBadge: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 4,
     padding: '4px 10px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
+    borderRadius: 'var(--radius-pill)',
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--font-semibold)',
   },
   title: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: theme.muted,
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--font-semibold)',
+    color: 'var(--text-muted)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     margin: 0,
   },
   value: {
-    fontSize: 14,
-    fontWeight: 800,
-    color: theme.text,
+    fontSize: 'var(--text-2xl)',
+    fontWeight: 'var(--font-extrabold)',
+    color: 'var(--text-primary)',
     margin: 0,
-    lineHeight: 1.2,
+    lineHeight: 1.1,
+  },
+  subtitle: {
+    fontSize: 'var(--text-sm)',
+    color: 'var(--text-secondary)',
+    margin: 0,
   },
 };
 
-function StatsCard({ title, value, icon, color, trend, trendUp, to, onClick }) {
-  const accentColor = color || theme.accent;
+function StatsCard({ title, value, icon, color, subtitle = null, trend, trendUp, to, onClick }) {
+  const navigate = useNavigate();
+  const accentColor = color || 'var(--primary)';
   const clickable = !!(to || onClick);
+
+  const handleClick = () => {
+    if (onClick) return onClick();
+    if (to) navigate(to);
+  };
 
   const trendStyles = trend
     ? {
         ...styles.trendBadge,
-        backgroundColor: trendUp ? `${theme.success}20` : `${theme.danger}20`,
-        color: trendUp ? theme.success : theme.danger,
+        backgroundColor: `color-mix(in srgb, ${accentColor} 14%, transparent)`,
+        color: accentColor,
       }
     : {};
 
   return (
     <div
-      onClick={onClick}
-      style={{
-        ...styles.card,
-        cursor: clickable ? 'pointer' : 'default',
-      }}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={handleClick}
+      onKeyDown={(e) => { if (clickable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleClick(); } }}
+      style={{ ...styles.card, cursor: clickable ? 'pointer' : 'default' }}
       onMouseEnter={(e) => {
+        if (!clickable) return;
         e.currentTarget.style.borderColor = accentColor;
         e.currentTarget.style.transform = 'translateY(-3px)';
-        e.currentTarget.style.boxShadow = `0 12px 28px rgba(0,0,0,0.4), 0 0 0 1px ${accentColor}30`;
+        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = theme.border;
+        e.currentTarget.style.borderColor = 'var(--border)';
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.boxShadow = 'none';
       }}
@@ -97,7 +100,8 @@ function StatsCard({ title, value, icon, color, trend, trendUp, to, onClick }) {
         <div
           style={{
             ...styles.iconCircle,
-            backgroundColor: `${accentColor}20`,
+            backgroundColor: `color-mix(in srgb, ${accentColor} 12%, transparent)`,
+            color: accentColor,
           }}
         >
           {icon}
@@ -108,9 +112,10 @@ function StatsCard({ title, value, icon, color, trend, trendUp, to, onClick }) {
           </span>
         )}
       </div>
-      <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <p style={styles.title}>{title}</p>
         <p style={styles.value}>{value}</p>
+        {subtitle && <p style={styles.subtitle}>{subtitle}</p>}
       </div>
     </div>
   );

@@ -15,6 +15,8 @@ export const adminNavItems = [
   { icon: '💳', label: 'Pagos', to: '/admin/payments' },
   { icon: '📢', label: 'Comunicados', to: '/admin/comunicados' },
   { icon: '📊', label: 'Encuestas', to: '/admin/encuestas' },
+  { icon: '📌', label: 'Avisos', to: '/admin/avisos' },
+  { icon: '💬', label: 'Conversatorio', to: '/admin/conversations' },
   { icon: '🗒️', label: 'Reportes Moderador', to: '/admin/moderator-reports' },
   { icon: '⚙️', label: 'Configuración', to: '/admin/config' },
   { icon: '📦', label: 'Backups', to: '/admin/backups' },
@@ -23,13 +25,15 @@ export const adminNavItems = [
 
 export const moderatorNavItems = [
   { icon: '📊', label: 'Dashboard', to: '/moderator' },
-  { icon: '👥', label: 'Conductores', to: '/moderator/drivers' },
-  { icon: '😴', label: 'Inactivos', to: '/moderator/drivers/inactive' },
   { icon: '🛣️', label: 'Viajes', to: '/moderator/trips' },
   { icon: '🚨', label: 'Emergencias', to: '/moderator/emergencies' },
+  { icon: '👥', label: 'Conductores', to: '/moderator/drivers' },
+  { icon: '😴', label: 'Inactivos', to: '/moderator/drivers/inactive' },
+  { icon: '🤝', label: 'Compañeros', to: '/moderator/companeros' },
   { icon: '💬', label: 'Conversatorio', to: '/moderator/conversations' },
+  { icon: '📌', label: 'Avisos', to: '/moderator/avisos' },
   { icon: '📢', label: 'Comunicados', to: '/moderator/comunicados' },
   { icon: '📊', label: 'Encuestas', to: '/moderator/encuestas' },
-  { icon: '📌', label: 'Avisos', to: '/moderator/avisos' },
+  { icon: '🔔', label: 'Notificaciones', to: '/moderator/reports' },
   { icon: '👤', label: 'Mi Perfil', to: '/moderator/profile' },
 ];

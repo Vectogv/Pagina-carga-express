@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDashboard, getUsers, getDrivers } from '../../api/admin';
+import { getModeratorDashboard } from '../../api/moderator';
 import StatsCard from '../../components/admin/StatsCard';
 import { getRolUsuario } from '../../utils/roles';
 
@@ -27,6 +28,23 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userStats, setUserStats] = useState(null);
+  const [ciudad, setCiudad] = useState('todas');
+  const [ciudadStats, setCiudadStats] = useState(null);
+  const [ciudadError, setCiudadError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (ciudad === 'todas') return () => { cancelled = true; };
+    (async () => {
+      try {
+        const res = await getModeratorDashboard(ciudad);
+        if (!cancelled) setCiudadStats(res.data?.data || res.data);
+      } catch (err) {
+        if (!cancelled) setCiudadError({ ciudad, msg: err?.response?.data?.message || err?.response?.data?.error || 'Error al cargar métricas de la ciudad' });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ciudad]);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,7 +78,7 @@ function DashboardPage() {
         users.forEach((u) => { const r = getRolUsuario(u); if (byRol[r] !== undefined) byRol[r]++; else byRol.otro++; if (u.esModerador) moderadores++; });
         const drivers = Array.isArray(dRes.data) ? dRes.data : (dRes.data.drivers || dRes.data.data || []);
         setUserStats({ byRol, moderadores, driversTotal: drivers.length });
-      } catch {}
+      } catch {/* sin stats de usuarios */}
     })();
     return () => { cancelled = true; };
   }, []);
@@ -97,18 +115,65 @@ function DashboardPage() {
         }
       `}</style>
 
-      <div style={styles.grid}>
-        {stats.map((stat) => (
-          <StatsCard
-            key={stat.title}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color}
-            onClick={() => navigate(stat.to)}
-          />
-        ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: theme.muted }}>Ciudad:</span>
+        <select
+          value={ciudad}
+          onChange={(e) => setCiudad(e.target.value)}
+          style={{
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: `1px solid ${theme.border}`,
+            backgroundColor: '#0f1220',
+            color: theme.text,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          <option value="todas">Todas (general)</option>
+          <option value="cali">Cali</option>
+          <option value="popayan">Popayán</option>
+          <option value="pasto">Pasto</option>
+        </select>
+        {ciudad !== 'todas' && <span style={{ fontSize: 12, color: theme.muted }}>Métricas de moderación para esta ciudad</span>}
       </div>
+
+      {ciudad === 'todas' ? (
+        <div style={styles.grid}>
+          {stats.map((stat) => (
+            <StatsCard
+              key={stat.title}
+              title={stat.title}
+              value={stat.value}
+              icon={stat.icon}
+              color={stat.color}
+              onClick={() => navigate(stat.to)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div style={styles.grid}>
+          {ciudadStats && ciudadStats.ciudad === ciudad ? (
+            <>
+              <StatsCard title="Conductores" value={ciudadStats.totalDrivers ?? '—'} icon="🚗" color="#8b5cf6" onClick={() => navigate('/admin/drivers')} />
+              <StatsCard title="Online" value={ciudadStats.onlineDrivers ?? '—'} icon="🟢" color={theme.success} onClick={() => navigate('/admin/drivers')} />
+              <StatsCard title="Inactivos" value={ciudadStats.inactiveDrivers ?? '—'} icon="💤" color={theme.danger} onClick={() => navigate('/admin/drivers')} />
+              <StatsCard title="Comunicados" value={ciudadStats.totalComunicados ?? '—'} icon="📢" color="#06b6d4" onClick={() => navigate('/admin/comunicados')} />
+              <StatsCard title="Avisos" value={ciudadStats.totalAvisos ?? '—'} icon="📌" color="#f59e0b" onClick={() => navigate('/admin/avisos')} />
+              <StatsCard title="Reportes" value={ciudadStats.totalReports ?? '—'} icon="⚠️" color="#eab308" onClick={() => navigate('/admin/reports')} />
+            </>
+          ) : (
+            <p style={{ fontSize: 13, color: theme.muted }}>Cargando métricas de {ciudad}...</p>
+          )}
+        </div>
+      )}
+
+      {ciudad !== 'todas' && ciudadError?.ciudad === ciudad && (
+        <div style={{ padding: '14px 18px', borderRadius: 10, backgroundColor: `${theme.danger}15`, border: `1px solid ${theme.danger}40`, color: theme.danger, fontSize: 13 }}>
+          ⚠️ {ciudadError.msg}
+        </div>
+      )}
 
 
 
