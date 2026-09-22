@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getPendingPayments, confirmPayment, rejectPayment } from '../../api/admin';
+import { resolveStorageUrl } from '../../utils/storage';
 import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
@@ -379,7 +380,7 @@ function PaymentsPage() {
             <div style={{ marginTop: 20 }}>
               {(proofPayment.proof || proofPayment.proofUrl || proofPayment.comprobante || proofPayment.receipt) ? (
                 <img
-                  src={proofPayment.proof || proofPayment.proofUrl || proofPayment.comprobante || proofPayment.receipt}
+                  src={resolveStorageUrl(proofPayment.proof || proofPayment.proofUrl || proofPayment.comprobante || proofPayment.receipt)}
                   alt="Comprobante de pago"
                   style={styles.proofImage}
                   onError={(e) => {

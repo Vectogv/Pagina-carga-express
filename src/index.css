@@ -131,3 +131,29 @@ a {
   /* Fuerza modales a casi pantalla completa */
   [role="dialog"], [style*="maxWidth: 420"] { max-width: 95vw !important; margin: 10px !important; }
 }
+
+/* Modales admin responsive */
+.admin-modal-overlay {
+  padding: 24px;
+}
+
+.admin-modal {
+  max-width: min(720px, calc(100vw - 48px)) !important;
+}
+
+@media (max-width: 640px) {
+  .admin-modal-overlay {
+    padding: 12px !important;
+  }
+  .admin-modal {
+    max-height: 94vh;
+  }
+}
+
+/* Contenido de páginas con tablas: scroll horizontal apto para táctil */
+.table-wrap,
+[class*="tableWrap"],
+[class*="table-wrap"] {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

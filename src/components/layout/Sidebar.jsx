@@ -2,7 +2,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import './Sidebar.css';
 
-export default function Sidebar({ items = [], title = 'Carga Express', subtitle = '', badges = {} }) {
+export default function Sidebar({ items = [], title = 'Carga Express', subtitle = '', badges = {}, open = false, onClose = null }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -12,7 +12,13 @@ export default function Sidebar({ items = [], title = 'Carga Express', subtitle 
   const city = user?.zonaModerador || user?.zona_moderador || '';
 
   return (
-    <aside className="sidebar">
+    <>
+      <div
+        className={`sidebar__backdrop ${open ? 'sidebar__backdrop--visible' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside className={`sidebar ${open ? 'sidebar--open' : ''}`}>
       <div className="sidebar__header" onClick={() => navigate(items[0]?.to || '/')} style={{ cursor: 'pointer' }}>
         <div className="sidebar__logo-icon">
           <span className="sidebar__logo-emoji">{user?.esModerador ? '🛡️' : '🚚'}</span>
@@ -35,6 +41,7 @@ export default function Sidebar({ items = [], title = 'Carga Express', subtitle 
               to={item.to}
               end={item.to === '/'}
               className={`sidebar__link ${isActive ? 'sidebar__link--active' : ''}`}
+              onClick={() => onClose && onClose()}
             >
               <span className="sidebar__icon">{item.icon}</span>
               <span className="sidebar__label">{item.label}</span>
@@ -66,5 +73,6 @@ export default function Sidebar({ items = [], title = 'Carga Express', subtitle 
         </button>
       </div>
     </aside>
+    </>
   );
 }

@@ -117,8 +117,9 @@ function Modal({ isOpen, onClose, title, children, size = 'md' }) {
   return (
     <>
       <style>{keyframes}</style>
-      <div style={styles.overlay} onClick={onClose}>
+      <div className="admin-modal-overlay" style={styles.overlay} onClick={onClose}>
         <div
+          className="admin-modal"
           style={{ ...styles.modal, maxWidth: sizes[size] || sizes.md }}
           onClick={(e) => e.stopPropagation()}
         >

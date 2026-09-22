@@ -3,6 +3,7 @@ import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import { getVerifications, approveVerification, rejectVerification } from '../../api/admin';
+import { resolveStorageUrl } from '../../utils/storage';
 
 const theme = {
   bg: '#020208',
@@ -410,7 +411,7 @@ function VerificationsPage() {
                     <div style={styles.detailCard}>
                       <p style={styles.detailLabel}>Cédula</p>
                       <img
-                        src={selected.cedulaImage}
+                        src={resolveStorageUrl(selected.cedulaImage)}
                         alt="Cédula"
                         style={styles.docImage}
                       />
@@ -420,7 +421,7 @@ function VerificationsPage() {
                     <div style={styles.detailCard}>
                       <p style={styles.detailLabel}>Licencia</p>
                       <img
-                        src={selected.licenciaImage}
+                        src={resolveStorageUrl(selected.licenciaImage)}
                         alt="Licencia"
                         style={styles.docImage}
                       />
@@ -430,7 +431,7 @@ function VerificationsPage() {
                     <div style={styles.detailCard}>
                       <p style={styles.detailLabel}>Vehículo</p>
                       <img
-                        src={selected.vehiculoImage}
+                        src={resolveStorageUrl(selected.vehiculoImage)}
                         alt="Vehículo"
                         style={styles.docImage}
                       />
@@ -440,10 +441,10 @@ function VerificationsPage() {
                     <div key={i} style={styles.detailCard}>
                       <p style={styles.detailLabel}>{doc.label || `Documento ${i + 1}`}</p>
                       {doc.type === 'image' || doc.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                        <img src={doc.url} alt={doc.label} style={styles.docImage} />
+                        <img src={resolveStorageUrl(doc.url)} alt={doc.label} style={styles.docImage} />
                       ) : (
                         <a
-                          href={doc.url}
+                          href={resolveStorageUrl(doc.url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{ color: theme.accent, fontSize: 13 }}

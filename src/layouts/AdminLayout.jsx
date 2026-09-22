@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import '../components/layout/Layout.css';
@@ -31,17 +32,19 @@ const pathTitleMap = {
 
 function AdminLayout() {
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
   const isDashboard = location.pathname === '/admin';
   const pageTitle = pathTitleMap[location.pathname] || location.pathname.split('/').pop().replace(/-/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 
   return (
     <div className="app-shell">
-      <Sidebar items={adminNavItems} title="Carga Express" subtitle="Panel Administrativo" />
+      <Sidebar items={adminNavItems} title="Carga Express" subtitle="Panel Administrativo" open={menuOpen} onClose={() => setMenuOpen(false)} />
       <div className="app-main">
         <Header
           title={pageTitle}
           subtitle={isDashboard ? 'Visión general de la operación' : undefined}
           showBack={!isDashboard}
+          onMenuToggle={() => setMenuOpen(true)}
         />
         <div className="app-content">
           <div className="app-centered">

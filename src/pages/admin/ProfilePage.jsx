@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getProfile, updateProfile, uploadAvatar } from '../../api/admin';
+import { resolveStorageUrl } from '../../utils/storage';
 
 const theme = {
   bg: '#020208',
@@ -88,7 +89,7 @@ function ProfilePage() {
       fd.append('file', file);
       const res = await uploadAvatar(fd);
       const newUrl = res.data?.url || res.data?.avatar || URL.createObjectURL(file);
-      setProfile((prev) => ({ ...prev, avatar: newUrl }));
+      setProfile((prev) => ({ ...prev, avatar: resolveStorageUrl(newUrl) }));
       showToast('Foto de perfil actualizada');
     } catch {
       showToast('Error al subir la foto', 'error');
@@ -118,7 +119,7 @@ function ProfilePage() {
           <div style={styles.avatarWrapper} onClick={handleAvatarClick}>
             {profile?.avatar ? (
               <img
-                src={profile.avatar}
+                src={resolveStorageUrl(profile.avatar)}
                 alt="Avatar"
                 style={styles.avatar}
               />

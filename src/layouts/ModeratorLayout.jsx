@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
@@ -57,6 +57,7 @@ function ModeratorShell() {
   const location = useLocation();
   const { emergencyBadge, unreadBadge, clearEmergency, clearUnread } = useModeratorBadges();
   const { isAdmin, ciudadLabel } = useModeratorCity();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Al entrar a cada sección, su badge se pone en 0 (los mensajes/hilos leídos se marcan en el backend).
   useEffect(() => {
@@ -81,12 +82,15 @@ function ModeratorShell() {
         title="Moderación"
         subtitle={isAdmin ? `Carga Express · Viendo: ${ciudadLabel}` : 'Carga Express'}
         badges={badges}
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
       />
       <div className="app-main">
         <Header
           title={isEmptyLabel(pageTitle) ? 'Dashboard' : pageTitle}
           subtitle={!isHome ? undefined : 'Centro de Control Operativo'}
           showBack={!isHome}
+          onMenuToggle={() => setMenuOpen(true)}
           right={<CitySelector />}
         />
         <div className="app-content">

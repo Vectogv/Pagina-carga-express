@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getDrivers, approveVerification, rejectVerification, notifyDriver, reportDriver } from '../../api/admin';
+import { getDrivers, approveVerification, rejectVerification, notifyDriver, reportDriver, updateUser, deleteUser, suspendUser, setLeader, updateDriverCity } from '../../api/admin';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import Modal from '../../components/admin/Modal';
+import { resolveStorageUrl } from '../../utils/storage';
 
 const theme = {
   bg: '#0a0e14',
@@ -34,6 +35,9 @@ export default function DriversPage() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [detailModal, setDetailModal] = useState({ open: false, driver: null });
+  const [editModal, setEditModal] = useState({ open: false, driver: null });
+  const [editForm, setEditForm] = useState({ nombre: '', apellido: '', email: '', telefono: '', ciudad: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
   const [action, setAction] = useState(null);
   const [nota, setNota] = useState('');
   const [toast, setToast] = useState(null);
@@ -60,7 +64,7 @@ export default function DriversPage() {
 
   const handleApprove = async () => {
     try {
-      await approveVerification(action.driver.usuarioId || action.driver.id);
+      await approveVerification(action.driver.id);
       showToast('Conductor verificado ✓');
       setAction(null);
       fetchDrivers();
@@ -69,7 +73,7 @@ export default function DriversPage() {
   const handleReject = async () => {
     try {
       const payload = nota.trim() ? { nota: nota.trim() } : {};
-      await rejectVerification(action.driver.usuarioId || action.driver.id, payload);
+      await rejectVerification(action.driver.id, payload);
       showToast('Verificación rechazada');
       setAction(null); setNota('');
       fetchDrivers();
@@ -77,7 +81,7 @@ export default function DriversPage() {
   };
   const handleNotify = async () => {
     try {
-      await notifyDriver(action.driver.usuarioId || action.driver.id);
+      await notifyDriver(action.driver.id);
       showToast('Notificación enviada');
       setAction(null);
     } catch (err) { showToast(err.response?.data?.message || 'Requiere FCM', false); }
@@ -85,10 +89,68 @@ export default function DriversPage() {
   const handleReport = async () => {
     if (!nota.trim()) return showToast('Escribe descripción', false);
     try {
-      await reportDriver(action.driver.usuarioId || action.driver.id, { descripcion: nota.trim() });
+      await reportDriver(action.driver.id, { descripcion: nota.trim() });
       showToast('Reporte enviado a admin');
       setAction(null); setNota('');
     } catch (err) { showToast(err.response?.data?.message || 'Error', false); }
+  };
+  const handleDelete = async () => {
+    try {
+      await deleteUser(action.driver.usuarioId || action.driver.usuario?.id);
+      showToast('Conductor eliminado');
+      setAction(null);
+      fetchDrivers();
+    } catch (err) { showToast(err.response?.data?.message || 'Error al eliminar', false); }
+  };
+  const handleSuspend = async () => {
+    try {
+      await suspendUser(action.driver.usuarioId || action.driver.usuario?.id);
+      showToast(action.driver.usuario?.suspendido ? 'Conductor activado' : 'Conductor suspendido');
+      setAction(null);
+      fetchDrivers();
+    } catch (err) { showToast(err.response?.data?.message || 'Error', false); }
+  };
+  const handleLeader = async () => {
+    try {
+      const esLider = action.driver.usuario?.esLider ? false : true;
+      await setLeader(action.driver.usuarioId || action.driver.usuario?.id, { esLider });
+      showToast(esLider ? 'Marcado como líder ⭐' : 'Líder retirado');
+      setAction(null);
+      fetchDrivers();
+    } catch (err) { showToast(err.response?.data?.message || 'Error', false); }
+  };
+  const openEdit = (driver) => {
+    const u = driver.usuario || {};
+    setEditForm({
+      nombre: u.nombre || '',
+      apellido: u.apellido || '',
+      email: u.email || '',
+      telefono: u.telefono || '',
+      ciudad: driver.ciudad || '',
+    });
+    setEditModal({ open: true, driver });
+  };
+  const handleEditSave = async () => {
+    const driver = editModal.driver;
+    if (!driver) return;
+    setSavingEdit(true);
+    try {
+      const usuarioId = driver.usuarioId || driver.usuario?.id;
+      const payload = {};
+      if (editForm.nombre.trim()) payload.nombre = editForm.nombre.trim();
+      if (editForm.apellido.trim()) payload.apellido = editForm.apellido.trim();
+      if (editForm.email.trim()) payload.email = editForm.email.trim();
+      if (editForm.telefono.trim()) payload.telefono = editForm.telefono.trim();
+      if (Object.keys(payload).length) await updateUser(usuarioId, payload);
+      const ciudad = editForm.ciudad.trim().toLowerCase();
+      if (ciudad && ciudad !== String(driver.ciudad || '').toLowerCase()) {
+        await updateDriverCity(driver.id, { ciudad });
+      }
+      showToast('Conductor actualizado ✓');
+      setEditModal({ open: false, driver: null });
+      fetchDrivers();
+    } catch (err) { showToast(err.response?.data?.message || 'Error al editar', false); }
+    finally { setSavingEdit(false); }
   };
 
   const handleExport = () => {
@@ -197,9 +259,18 @@ export default function DriversPage() {
 
       {error && <div style={styles.error}>{error}</div>}
 
+      <style>{`
+        .drivers-table-wrap { overflow-x: auto; }
+        .drivers-table-wrap::-webkit-scrollbar { height: 10px; }
+        .drivers-table-wrap::-webkit-scrollbar-track { background: #0f172a; border-radius: 6px; }
+        .drivers-table-wrap::-webkit-scrollbar-thumb { background: #334155; border-radius: 6px; border: 2px solid #0f172a; }
+        .drivers-table-wrap::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .drivers-table-wrap { scrollbar-width: thin; scrollbar-color: #334155 #0f172a; }
+      `}</style>
+
       <div style={styles.tableCard}>
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div style={{ ...styles.tableWrap, ...{ minWidth: 0 } }} className="drivers-table-wrap">
+          <table style={{ ...styles.table, minWidth: 900 }}>
             <thead>
               <tr>
                 <th style={styles.th}><span style={styles.thIcon}>{headerIcons.foto}</span> Foto / Nombre</th>
@@ -233,7 +304,7 @@ export default function DriversPage() {
                         <div style={styles.avatarCell}>
                           <div style={styles.avatarWrap}>
                             {row.fotoConductor ? (
-                              <img src={row.fotoConductor} alt="" style={styles.avatarImg} />
+                              <img src={resolveStorageUrl(row.fotoConductor)} alt="" style={styles.avatarImg} />
                             ) : (
                               <div style={styles.avatarFallback}>{getInitials(row)}</div>
                             )}
@@ -252,8 +323,15 @@ export default function DriversPage() {
                       <td style={styles.td}><span style={{ ...styles.statusTag, background: vf.bg, color: vf.color, border: `1px solid ${vf.border}` }}>{vf.label}</span></td>
                       <td style={styles.td}>
                         <div style={styles.actionsCell}>
-                          <button onClick={() => setDetailModal({ open: true, driver: row })} style={styles.iconBtn} title="Ver detalle">👁️</button>
-                          <button onClick={() => setDetailModal({ open: true, driver: row })} style={styles.iconBtn} title="Editar">✏️</button>
+                          <div style={styles.actionsCell}>
+                            <button onClick={() => setDetailModal({ open: true, driver: row })} style={styles.iconBtn} title="Ver detalle">👁️</button>
+                            <button onClick={() => openEdit(row)} style={styles.iconBtn} title="Editar">✏️</button>
+                            <button onClick={() => setAction({ type: 'delete', driver: row })} style={styles.iconBtnDanger} title="Eliminar">🗑️</button>
+                            <button onClick={() => setAction({ type: 'suspend', driver: row })} style={styles.iconBtn} title={u.suspendido ? 'Activar' : 'Suspender'}>{u.suspendido ? '▶️' : '⏸️'}</button>
+                            <button onClick={() => setAction({ type: 'leader', driver: row })} style={{ ...styles.iconBtn, color: u.esLider ? '#f59e0b' : undefined }} title={u.esLider ? 'Quitar líder' : 'Hacer líder'}>⭐</button>
+                            <button onClick={() => setAction({ type: 'notify', driver: row })} style={styles.iconBtn} title="Notificar">🔔</button>
+                            <button onClick={() => setAction({ type: 'report', driver: row })} style={styles.iconBtn} title="Reportar">⚠️</button>
+                          </div>
                           {row.estadoVerificacion === 'pendiente' && (
                             <>
                               <button onClick={() => setAction({ type: 'approve', driver: row })} style={{ ...styles.miniBtn, background: 'rgba(34,197,94,0.12)', color: '#22c55e' }}>✓</button>
@@ -300,6 +378,9 @@ export default function DriversPage() {
       <ConfirmDialog isOpen={action?.type === 'report'} onClose={() => { setAction(null); setNota(''); }} onConfirm={handleReport} title="Reportar" message="Descripción:" confirmText="Reportar" danger>
         <textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={3} style={styles.textarea} />
       </ConfirmDialog>
+      <ConfirmDialog isOpen={action?.type === 'delete'} onClose={() => setAction(null)} onConfirm={handleDelete} title="Eliminar conductor" message={`¿Eliminar definitivamente a ${action?.driver?.usuario?.nombre || ''} ${action?.driver?.usuario?.apellido || ''}? Se borrarán sus viajes, ganancias y datos.`} confirmText="Eliminar" danger />
+      <ConfirmDialog isOpen={action?.type === 'suspend'} onClose={() => setAction(null)} onConfirm={handleSuspend} title={action?.driver?.usuario?.suspendido ? 'Activar conductor' : 'Suspender conductor'} message={action?.driver?.usuario?.suspendido ? '¿Activar la cuenta de este conductor para que pueda usar la app?' : '¿Suspender la cuenta de este conductor? No podrá usar la app.'} confirmText={action?.driver?.usuario?.suspendido ? 'Activar' : 'Suspender'} danger={!action?.driver?.usuario?.suspendido} />
+      <ConfirmDialog isOpen={action?.type === 'leader'} onClose={() => setAction(null)} onConfirm={handleLeader} title={action?.driver?.usuario?.esLider ? 'Quitar líder' : 'Marcar como líder'} message={action?.driver?.usuario?.esLider ? '¿Quitar el rol de líder a este conductor?' : '¿Marcar a este conductor como líder?'} confirmText={action?.driver?.usuario?.esLider ? 'Quitar' : 'Marcar'} />
 
       <Modal isOpen={detailModal.open} onClose={() => setDetailModal({ open: false, driver: null })} title="Detalle del Conductor" size="md">
         {detailModal.driver && (() => {
@@ -309,7 +390,7 @@ export default function DriversPage() {
             <div>
               <div style={{ textAlign: 'center', marginBottom: 16 }}>
                 {d.fotoConductor ? (
-                  <img src={d.fotoConductor} alt="" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid #22c55e' }} />
+                  <img src={resolveStorageUrl(d.fotoConductor)} alt="" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid #22c55e' }} />
                 ) : (
                   <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #334155, #1e293b)', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, margin: '0 auto', border: '3px solid #334155' }}>{getInitials(d)}</div>
                 )}
@@ -327,6 +408,49 @@ export default function DriversPage() {
             </div>
           );
         })()}
+      </Modal>
+
+      <Modal isOpen={editModal.open} onClose={() => setEditModal({ open: false, driver: null })} title="Editar Conductor" size="md">
+        {editModal.driver && (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <p style={styles.editLabel}>Nombre</p>
+                <input value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} style={styles.editInput} placeholder="Nombre" />
+              </div>
+              <div>
+                <p style={styles.editLabel}>Apellido</p>
+                <input value={editForm.apellido} onChange={(e) => setEditForm({ ...editForm, apellido: e.target.value })} style={styles.editInput} placeholder="Apellido" />
+              </div>
+              <div>
+                <p style={styles.editLabel}>Email</p>
+                <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} style={styles.editInput} placeholder="Email" />
+              </div>
+              <div>
+                <p style={styles.editLabel}>Teléfono</p>
+                <input value={editForm.telefono} onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })} style={styles.editInput} placeholder="Teléfono" />
+              </div>
+              <div>
+                <p style={styles.editLabel}>Ciudad</p>
+                <select value={editForm.ciudad} onChange={(e) => setEditForm({ ...editForm, ciudad: e.target.value })} style={styles.editInput}>
+                  <option value="">Selecciona ciudad</option>
+                  <option value="cali">Cali</option>
+                  <option value="popayan">Popayán</option>
+                  <option value="pasto">Pasto</option>
+                  <option value="medellin">Medellín</option>
+                  <option value="bogota">Bogotá</option>
+                  <option value="cartagena">Cartagena</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <button onClick={() => setEditModal({ open: false, driver: null })} style={styles.cancelBtn}>Cancelar</button>
+              <button onClick={handleEditSave} disabled={savingEdit} style={{ ...styles.saveBtn, opacity: savingEdit ? 0.6 : 1 }}>
+                {savingEdit ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
@@ -351,8 +475,8 @@ const styles = {
   filterSelect: { padding: '7px 10px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: 12 },
   error: { padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: 13 },
   tableCard: { background: '#111827', border: '1px solid #1e293b', borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' },
-  tableWrap: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
+  tableWrap: { overflowX: 'auto', minWidth: 0 },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 },
   th: { padding: '12px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #1e293b', background: '#0f172a', whiteSpace: 'nowrap' },
   thIcon: { marginRight: 6, opacity: 0.7 },
   tr: { borderBottom: '1px solid rgba(30,41,59,0.5)', transition: 'background 0.15s' },
@@ -366,9 +490,14 @@ const styles = {
   cellSub: { color: '#64748b', fontSize: 11, display: 'block' },
   cityBadge: { padding: '3px 8px', borderRadius: 12, background: 'rgba(148,163,184,0.12)', color: '#94a3b8', fontSize: 11, textTransform: 'capitalize' },
   statusTag: { display: 'inline-flex', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' },
-  actionsCell: { display: 'flex', gap: 6 },
+  actionsCell: { display: 'flex', gap: 6, alignItems: 'flex-start' },
   iconBtn: { width: 28, height: 28, borderRadius: 6, border: '1px solid #334155', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12 },
+  iconBtnDanger: { width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12 },
   miniBtn: { padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' },
+  editLabel: { fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', margin: '0 0 6px' },
+  editInput: { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0a0e14', color: '#f1f5f9', fontSize: 13, outline: 'none', boxSizing: 'border-box' },
+  cancelBtn: { padding: '9px 18px', borderRadius: 8, border: '1px solid #334155', background: '#1e293b', color: '#e2e8f0', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  saveBtn: { padding: '9px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
   footer: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderTop: '1px solid #1e293b', background: '#0f172a', flexWrap: 'wrap', gap: 12 },
   footerText: { fontSize: 12, color: '#64748b' },
   footerActions: { display: 'flex', alignItems: 'center', gap: 12 },

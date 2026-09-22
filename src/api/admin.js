@@ -16,7 +16,8 @@ export const updateUserAvatar = (id, formData) =>
   })
 export const clearDebt = (id) => api.put(`${BASE}/users/${id}/clear-debt`)
 export const setModerator = (id, data) => api.put(`${BASE}/users/${id}/moderator`, data)
-export const setLeader = (id) => api.put(`${BASE}/users/${id}/leader`)
+export const setLeader = (id, data = {}) => api.put(`${BASE}/users/${id}/leader`, data)
+export const updateDriverCity = (conductorId, data) => api.put(`${BASE}/drivers/${conductorId}/city`, data)
 
 // Drivers
 export const getDrivers = (params) => api.get(`${BASE}/drivers`, { params })
