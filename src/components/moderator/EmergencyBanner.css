@@ -1,0 +1,80 @@
+.emergency-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--danger-border);
+  background: var(--danger-subtle);
+  color: var(--danger);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.emergency-banner:hover { border-color: var(--danger); }
+.emergency-banner:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.emergency-banner__icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--danger-subtle);
+  border: 1px solid var(--danger-border);
+}
+.emergency-banner__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.emergency-banner__title { font-size: var(--text-base); font-weight: var(--font-semibold); color: var(--text-primary); }
+.emergency-banner__meta { font-size: var(--text-sm); color: var(--text-secondary); }
+.emergency-banner__cta {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+/* Emergencia nueva: peligro, con pulso sutil del icono */
+.emergency-banner--new {
+  border-color: var(--danger);
+  background: linear-gradient(90deg, var(--danger-subtle), var(--bg-surface) 70%);
+  color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger-border), var(--shadow-md);
+}
+.emergency-banner--new:hover { border-color: var(--danger-hover); }
+.emergency-banner--new .emergency-banner__icon {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--primary-contrast);
+  animation: emergency-pulse 1.4s ease-out infinite;
+}
+.emergency-banner--new .emergency-banner__cta {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: var(--primary-contrast);
+}
+
+/* Emergencia resuelta */
+.emergency-banner--resolved { border-color: var(--success-border); background: var(--success-subtle); color: var(--success); }
+.emergency-banner--resolved:hover { border-color: var(--success); }
+.emergency-banner--resolved .emergency-banner__icon { background: var(--success-subtle); border-color: var(--success-border); }
+
+@keyframes emergency-pulse {
+  0% { box-shadow: 0 0 0 0 var(--danger-border); }
+  70% { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emergency-banner--new .emergency-banner__icon { animation: none; }
+}
+
+@media (max-width: 480px) {
+  .emergency-banner__cta-text { display: none; }
+}

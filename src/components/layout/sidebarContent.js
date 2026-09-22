@@ -1,39 +1,105 @@
-export const adminNavItems = [
-  { icon: '📊', label: 'Dashboard', to: '/admin' },
-  { icon: '👥', label: 'Usuarios', to: '/admin/users' },
-  { icon: '🤝', label: 'Clientes', to: '/admin/clients' },
-  { icon: '🚚', label: 'Conductores', to: '/admin/drivers' },
-  { icon: '🛡️', label: 'Moderadores', to: '/admin/moderators' },
-  { icon: '🛣️', label: 'Viajes', to: '/admin/trips' },
-  { icon: '💰', label: 'Ganancias', to: '/admin/earnings' },
-  { icon: '📈', label: 'Comisiones', to: '/admin/commissions' },
-  { icon: '✅', label: 'Verificaciones', to: '/admin/verifications' },
-  { icon: '📄', label: 'Reportes', to: '/admin/reports' },
-  { icon: '⚖️', label: 'Disputas', to: '/admin/disputes' },
-  { icon: '🚨', label: 'Emergencias', to: '/admin/emergencies' },
-  { icon: '❌', label: 'Cancelaciones', to: '/admin/cancellation-requests' },
-  { icon: '💳', label: 'Pagos', to: '/admin/payments' },
-  { icon: '📢', label: 'Comunicados', to: '/admin/comunicados' },
-  { icon: '📊', label: 'Encuestas', to: '/admin/encuestas' },
-  { icon: '📌', label: 'Avisos', to: '/admin/avisos' },
-  { icon: '💬', label: 'Conversatorio', to: '/admin/conversations' },
-  { icon: '🗒️', label: 'Reportes Moderador', to: '/admin/moderator-reports' },
-  { icon: '⚙️', label: 'Configuración', to: '/admin/config' },
-  { icon: '📦', label: 'Backups', to: '/admin/backups' },
-  { icon: '👤', label: 'Mi Perfil', to: '/admin/profile' },
+import {
+  LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, Wallet, TrendingUp, BadgeCheck,
+  Flag, Scale, Siren, CircleX, CreditCard, Megaphone, ChartColumn, Pin, MessagesSquare,
+  ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, Bell,
+} from 'lucide-react';
+
+// Navegación agrupada. Cada item: { icon, label, to, end? }
+export const adminNav = [
+  {
+    items: [{ icon: LayoutDashboard, label: 'Dashboard', to: '/admin', end: true }],
+  },
+  {
+    title: 'Personas',
+    items: [
+      { icon: Users, label: 'Usuarios', to: '/admin/users' },
+      { icon: Handshake, label: 'Clientes', to: '/admin/clients' },
+      { icon: Truck, label: 'Conductores', to: '/admin/drivers' },
+      { icon: ShieldCheck, label: 'Moderadores', to: '/admin/moderators' },
+      { icon: BadgeCheck, label: 'Verificaciones', to: '/admin/verifications' },
+    ],
+  },
+  {
+    title: 'Operación',
+    items: [
+      { icon: Route, label: 'Viajes', to: '/admin/trips' },
+      { icon: Siren, label: 'Emergencias', to: '/admin/emergencies' },
+      { icon: Scale, label: 'Disputas', to: '/admin/disputes' },
+      { icon: CircleX, label: 'Cancelaciones', to: '/admin/cancellation-requests' },
+      { icon: Flag, label: 'Reportes', to: '/admin/reports' },
+    ],
+  },
+  {
+    title: 'Finanzas',
+    items: [
+      { icon: Wallet, label: 'Ganancias', to: '/admin/earnings' },
+      { icon: TrendingUp, label: 'Comisiones', to: '/admin/commissions' },
+      { icon: CreditCard, label: 'Pagos', to: '/admin/payments' },
+    ],
+  },
+  {
+    title: 'Comunicación',
+    items: [
+      { icon: Megaphone, label: 'Comunicados', to: '/admin/comunicados' },
+      { icon: ChartColumn, label: 'Encuestas', to: '/admin/encuestas' },
+      { icon: Pin, label: 'Avisos', to: '/admin/avisos' },
+      { icon: MessagesSquare, label: 'Conversatorio', to: '/admin/conversations' },
+      { icon: ClipboardList, label: 'Reportes de moderación', to: '/admin/moderator-reports' },
+    ],
+  },
+  {
+    title: 'Sistema',
+    items: [
+      { icon: Settings, label: 'Configuración', to: '/admin/config' },
+      { icon: DatabaseBackup, label: 'Backups', to: '/admin/backups' },
+      { icon: UserRound, label: 'Mi perfil', to: '/admin/profile' },
+    ],
+  },
 ];
 
-export const moderatorNavItems = [
-  { icon: '📊', label: 'Dashboard', to: '/moderator' },
-  { icon: '🛣️', label: 'Viajes', to: '/moderator/trips' },
-  { icon: '🚨', label: 'Emergencias', to: '/moderator/emergencies' },
-  { icon: '👥', label: 'Conductores', to: '/moderator/drivers' },
-  { icon: '😴', label: 'Inactivos', to: '/moderator/drivers/inactive' },
-  { icon: '🤝', label: 'Compañeros', to: '/moderator/companeros' },
-  { icon: '💬', label: 'Conversatorio', to: '/moderator/conversations' },
-  { icon: '📌', label: 'Avisos', to: '/moderator/avisos' },
-  { icon: '📢', label: 'Comunicados', to: '/moderator/comunicados' },
-  { icon: '📊', label: 'Encuestas', to: '/moderator/encuestas' },
-  { icon: '🔔', label: 'Notificaciones', to: '/moderator/reports' },
-  { icon: '👤', label: 'Mi Perfil', to: '/moderator/profile' },
+export const moderatorNav = [
+  {
+    items: [{ icon: LayoutDashboard, label: 'Centro de control', to: '/moderator', end: true }],
+  },
+  {
+    title: 'Operación',
+    items: [
+      { icon: Route, label: 'Viajes', to: '/moderator/trips' },
+      { icon: Siren, label: 'Emergencias', to: '/moderator/emergencies' },
+    ],
+  },
+  {
+    title: 'Conductores',
+    items: [
+      { icon: Truck, label: 'Conductores', to: '/moderator/drivers', end: true },
+      { icon: BedDouble, label: 'Inactivos', to: '/moderator/drivers/inactive' },
+    ],
+  },
+  {
+    title: 'Comunicación',
+    items: [
+      { icon: MessagesSquare, label: 'Conversatorio', to: '/moderator/conversations' },
+      { icon: UsersRound, label: 'Compañeros', to: '/moderator/companeros' },
+      { icon: Pin, label: 'Avisos', to: '/moderator/avisos' },
+      { icon: Megaphone, label: 'Comunicados', to: '/moderator/comunicados' },
+      { icon: ChartColumn, label: 'Encuestas', to: '/moderator/encuestas' },
+      { icon: Bell, label: 'Mis reportes', to: '/moderator/reports' },
+    ],
+  },
+  {
+    title: 'Cuenta',
+    items: [{ icon: UserRound, label: 'Mi perfil', to: '/moderator/profile' }],
+  },
 ];
+
+/** Devuelve { group, label } de la ruta actual según la navegación. */
+export function findNavEntry(nav, pathname) {
+  let best = null;
+  for (const group of nav) {
+    for (const item of group.items) {
+      const match = item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`);
+      if (match && (!best || item.to.length > best.item.to.length)) best = { group: group.title, item };
+    }
+  }
+  return best ? { group: best.group, label: best.item.label } : { group: null, label: '' };
+}

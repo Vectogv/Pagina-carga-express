@@ -5,18 +5,13 @@
 }
 
 :root {
-  /* Legacy aliases → design tokens (keep existing pages working) */
+  /* Alias heredados → tokens (páginas aún no migradas) */
   --bg: var(--bg-primary);
   --sidebar-bg: var(--bg-surface);
   --card-bg: var(--bg-surface);
   --accent: var(--primary);
   --accent-hover: var(--primary-hover);
   --text: var(--text-primary);
-  --text-muted: var(--text-muted);
-  --border: var(--border);
-  --success: var(--success);
-  --warning: var(--warning);
-  --danger: var(--danger);
   --input-bg: var(--bg-elevated);
 }
 
@@ -30,10 +25,16 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background: var(--bg-primary);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(59, 130, 246, 0.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(167, 139, 250, 0.05), transparent 60%),
+    var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
   height: 100%;
   width: 100%;
   overflow: hidden;
@@ -41,58 +42,27 @@ body {
   position: relative;
 }
 
-/* Fondo negro profesional con puntos animados */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px);
-  background-size: 22px 22px;
-  background-position: 0 0;
-  animation: dots-move 90s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(99,102,241,0.045) 1.2px, transparent 1.2px);
-  background-size: 44px 44px;
-  background-position: 11px 11px;
-  animation: dots-move-slow 140s linear infinite reverse;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@keyframes dots-move {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(22px, 22px); }
-}
-
-@keyframes dots-move-slow {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-44px, 44px); }
-}
-
 #root {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
   position: relative;
-  z-index: 1;
 }
 
 input, textarea, select, button {
   font-family: inherit;
   font-size: inherit;
+  color: inherit;
 }
 
 a {
   color: inherit;
   text-decoration: none;
 }
+
+img { max-width: 100%; }
+
+::selection { background: var(--primary-subtle); }
 
 ::-webkit-scrollbar {
   width: 8px;
@@ -104,7 +74,7 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a2f4a;
+  background: var(--border-strong);
   border-radius: 4px;
 }
 
@@ -116,63 +86,28 @@ a {
   background: transparent;
 }
 
-/* Firefox: barras visibles y finas */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a2f4a transparent;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  #root { width: 100vw; }
-  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@keyframes pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
 }
 
-@media (max-width: 640px) {
-  /* Reduce padding general en móvil */
-  body { font-size: 14px; }
-  /* TopBar en móvil: apila y oculta texto largo */
-  header, [class*="topBar"] { flex-wrap: wrap; gap: 8px !important; padding: 10px 12px !important; }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Móvil: tablas como cards si es muy estrecho */
-@media (max-width: 480px) {
-  h1 { font-size: 20px !important; }
-  /* Fuerza modales a casi pantalla completa */
-  [role="dialog"], [style*="maxWidth: 420"] { max-width: 95vw !important; margin: 10px !important; }
-}
-
-/* Modales admin responsive */
-.admin-modal-overlay {
-  padding: 24px;
-}
-
-.admin-modal {
-  max-width: min(720px, calc(100vw - 48px)) !important;
-}
-
-@media (max-width: 640px) {
-  .admin-modal-overlay {
-    padding: 12px !important;
-  }
-  .admin-modal {
-    max-height: 94vh;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
-/* Contenido de páginas con tablas: scroll horizontal apto para táctil */
-.table-wrap,
-[class*="tableWrap"],
-[class*="table-wrap"] {
+/* Tablas heredadas: scroll horizontal apto para táctil */
+.table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 6px;
-}
-
-/* Tablas internas siempre desbordan según su contenido para que la barra aparezca */
-.table-wrap table,
-[class*="tableWrap"] table,
-[class*="table-wrap"] table {
-  width: max-content;
-  min-width: 100%;
 }

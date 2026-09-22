@@ -86,6 +86,7 @@ export const rejectPayment = (userId) => api.put(`${BASE}/payments/${userId}/rej
 
 // Config - doc: PUT {nequiNumero?,nequiNombre?}, PUT coverage {zonasCobertura:[]}, PUT banner multipart banner_imagen
 export const updateConfig = (data) => api.put(`${BASE}/config`, data)
+export const getCoverage = () => api.get(`${BASE}/config/coverage`)
 export const updateCoverage = (data) => api.put(`${BASE}/config/coverage`, data)
 export const updateBanner = (formData) =>
   api.put(`${BASE}/config/banner`, formData, {
@@ -109,14 +110,9 @@ export const getCancellationRequests = (params) => api.get(`${BASE}/cancellation
 export const approveCancellation = (id) => api.post(`${BASE}/cancellation-requests/${id}/approve`)
 export const rejectCancellation = (id) => api.post(`${BASE}/cancellation-requests/${id}/reject`)
 
-// Auth - doc §1: {email,password} y {refreshToken}
+// Auth
 export const registerUser = (data) => api.post('/api/auth/register', data)
-export const login = (email, password) =>
-  api.post('/api/auth/login', { email, password })
 
-export const refreshToken = () => {
-  const token = localStorage.getItem('refreshToken')
-  return api.post('/api/auth/refresh-token', { refreshToken: token })
-}
-
-export const logout = () => api.post('/api/auth/logout')
+// Listados dedicados de comunicados y encuestas (params: page, limit). Respuesta: array plano.
+export const getAdminComunicados = (params) => api.get(`${BASE}/comunicados`, { params })
+export const getAdminEncuestas = (params) => api.get(`${BASE}/encuestas`, { params })

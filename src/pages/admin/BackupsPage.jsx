@@ -1,332 +1,139 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Clock, DatabaseBackup, Plus, RefreshCw } from 'lucide-react';
 import { getBackups, runBackup } from '../../api/admin';
+import { errorMessage, formatBytes, formatDateTime, toList } from '../../utils/format';
+import {
+  PageHeader, DataTable, Badge, Button, StatCard, Toast, ToastContainer,
+} from '../../components/ui';
 
-const theme = {
-  bg: '#020208',
-  cards: '#0f1220',
-  accent: '#6366f1',
-  text: '#e2e8f0',
-  muted: '#64748b',
-  success: '#22c55e',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  border: '#1e2238',
+const STATUS_VARIANT = {
+  completado: 'success', completed: 'success', exitoso: 'success', success: 'success',
+  pendiente: 'warning', pending: 'warning', 'en progreso': 'warning', running: 'warning',
+  error: 'danger', fallido: 'danger', failed: 'danger',
 };
 
-function BackupsPage() {
+const statusOf = (b) => b.status || b.estado || '';
+const dateOf = (b) => b.createdAt || b.fecha || b.date;
+
+const columns = [
+  {
+    key: 'id',
+    label: 'ID',
+    render: (_, b) => <span className="text-mono text-muted">{String(b.id || b._id || '—').slice(0, 8)}</span>,
+  },
+  { key: 'createdAt', label: 'Fecha', render: (_, b) => <span className="nowrap">{formatDateTime(dateOf(b))}</span> },
+  {
+    key: 'size',
+    label: 'Tamaño',
+    align: 'right',
+    render: (_, b) => {
+      const size = b.size || b.tamano;
+      return size ? formatBytes(size) : '—';
+    },
+  },
+  {
+    key: 'status',
+    label: 'Estado',
+    render: (_, b) => {
+      const s = statusOf(b);
+      const variant = STATUS_VARIANT[s.toLowerCase()] || 'neutral';
+      return (
+        <Badge variant={variant}>
+          <span className="badge__dot" aria-hidden="true" />
+          {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Desconocido'}
+        </Badge>
+      );
+    },
+  },
+];
+
+export default function BackupsPage() {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
-  const [toasts, setToasts] = useState([]);
+  const [toast, setToast] = useState(null);
 
-  const fetchBackups = async () => {
+  const fetchBackups = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await getBackups();
-      setBackups(Array.isArray(res.data) ? res.data : (res.data?.backups || res.data?.data || res.data || []));
+      setBackups(toList(res.data, 'backups'));
     } catch (err) {
-      setError(err?.response?.data?.message || 'Error al cargar los backups');
+      setError(errorMessage(err, 'Error al cargar los backups'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchBackups();
-  }, []);
+  }, [fetchBackups]);
 
-  const showToast = (message, type = 'success') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  };
+  const closeToast = useCallback(() => setToast(null), []);
 
   const handleCreateBackup = async () => {
     setCreating(true);
     try {
       await runBackup();
-      showToast('Backup creado exitosamente');
+      setToast({ message: 'Backup creado exitosamente', variant: 'success' });
       await fetchBackups();
-    } catch {
-      showToast('Error al crear el backup', 'error');
+    } catch (err) {
+      setToast({ message: errorMessage(err, 'Error al crear el backup'), variant: 'danger' });
     } finally {
       setCreating(false);
     }
   };
 
-  const formatSize = (bytes) => {
-    if (!bytes) return '--';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / 1048576).toFixed(1)} MB`;
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '--';
-    try {
-      return new Date(dateStr).toLocaleString('es-CO', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const getStatusStyle = (status) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'completado' || s === 'completed' || s === 'exitoso' || s === 'success') {
-      return { color: theme.success, bg: `${theme.success}22` };
-    }
-    if (s === 'pendiente' || s === 'pending' || s === 'en progreso' || s === 'running') {
-      return { color: theme.warning, bg: `${theme.warning}22` };
-    }
-    if (s === 'error' || s === 'fallido' || s === 'failed') {
-      return { color: theme.danger, bg: `${theme.danger}22` };
-    }
-    return { color: theme.muted, bg: `${theme.muted}22` };
-  };
-
-  if (loading) return <LoadingSkeleton />;
+  const latest = backups.reduce((acc, b) => {
+    const d = dateOf(b);
+    return d && (!acc || new Date(d) > new Date(acc)) ? d : acc;
+  }, null);
 
   return (
-    <div style={styles.page}>
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
+    <div className="page">
+      <PageHeader
+        title="Backups"
+        description="Copias de seguridad de la base de datos del sistema."
+        actions={(
+          <>
+            <Button variant="secondary" size="icon" onClick={fetchBackups} disabled={loading} aria-label="Actualizar lista">
+              <RefreshCw size={15} />
+            </Button>
+            <Button icon={<Plus size={15} />} onClick={handleCreateBackup} loading={creating}>
+              {creating ? 'Creando...' : 'Crear backup'}
+            </Button>
+          </>
+        )}
+      />
 
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Gestión de Backups</h1>
-          <p style={styles.subtitle}>Crea y administra copias de seguridad del sistema</p>
-        </div>
-        <button
-          onClick={handleCreateBackup}
-          disabled={creating}
-          style={{
-            ...styles.btn,
-            ...styles.btnPrimary,
-            opacity: creating ? 0.6 : 1,
-          }}
-        >
-          {creating ? '⏳ Creando...' : '+ Crear Backup'}
-        </button>
+      <div className="stats-grid">
+        <StatCard title="Backups registrados" value={loading ? '—' : backups.length} icon={<DatabaseBackup size={16} />} color="var(--primary)" />
+        <StatCard title="Último backup" value={loading ? '—' : formatDateTime(latest)} icon={<Clock size={16} />} color="var(--success)" />
       </div>
 
       {error && (
-        <div style={styles.errorBanner}>
-          <span>⚠️ {error}</span>
+        <div className="page-error" role="alert">
+          <span>{error}</span>
+          <Button size="sm" variant="ghost" onClick={fetchBackups}>Reintentar</Button>
         </div>
       )}
 
-      <div style={styles.card}>
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>ID</th>
-                <th style={styles.th}>Fecha</th>
-                <th style={styles.th}>Tamaño</th>
-                <th style={styles.th}>Estado</th>
-              </tr>
-            </thead>
-          <tbody>
-            {backups.length === 0 ? (
-              <tr>
-                <td colSpan={4} style={styles.emptyCell}>
-                  No hay backups registrados
-                </td>
-              </tr>
-            ) : (
-              backups.map((backup, idx) => {
-                const status = getStatusStyle(backup.status || backup.estado);
-                return (
-                  <tr
-                    key={backup.id || backup._id || idx}
-                    style={idx % 2 === 0 ? styles.rowEven : styles.rowOdd}
-                  >
-                    <td style={styles.td}>
-                      <span style={{ color: theme.muted, fontSize: 13, fontFamily: 'monospace' }}>
-                        {(backup.id || backup._id || idx + 1).toString().slice(0, 8)}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      {formatDate(backup.createdAt || backup.fecha || backup.date)}
-                    </td>
-                    <td style={styles.td}>{formatSize(backup.size || backup.tamano)}</td>
-                    <td style={styles.td}>
-                      <span
-                        style={{
-                          ...styles.statusBadge,
-                          color: status.color,
-                          backgroundColor: status.bg,
-                        }}
-                      >
-                        {backup.status || backup.estado || 'Desconocido'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      <DataTable
+        columns={columns}
+        data={backups}
+        loading={loading}
+        rowKey={(b, i) => b.id || b._id || i}
+        emptyMessage="No hay backups registrados"
+        emptyDescription="Crea el primer backup con el botón superior."
+      />
 
-      <div style={styles.toastContainer}>
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            style={{
-              ...styles.toast,
-              borderLeftColor: toast.type === 'success' ? theme.success : theme.danger,
-            }}
-          >
-            <span>{toast.type === 'success' ? '✅' : '❌'}</span>
-            <span style={{ flex: 1, fontSize: 14, color: theme.text }}>{toast.message}</span>
-          </div>
-        ))}
-      </div>
+      {toast && (
+        <ToastContainer>
+          <Toast message={toast.message} variant={toast.variant} onClose={closeToast} />
+        </ToastContainer>
+      )}
     </div>
   );
 }
-
-function LoadingSkeleton() {
-  return (
-    <div style={styles.page}>
-      <div style={{ ...styles.header, marginBottom: 24 }}>
-        <div>
-          <div style={{ ...styles.skeletonLine, width: 200, height: 28 }} />
-          <div style={{ ...styles.skeletonLine, width: 280, height: 16, marginTop: 8 }} />
-        </div>
-        <div style={{ ...styles.skeletonLine, width: 150, height: 42, borderRadius: 10 }} />
-      </div>
-      <div style={styles.card}>
-        <div style={styles.skeletonRow}>
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} style={{ ...styles.skeletonLine, flex: 1, height: 14 }} />
-          ))}
-        </div>
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} style={styles.skeletonRow}>
-            {[1, 2, 3, 4].map((j) => (
-              <div key={j} style={{ ...styles.skeletonLine, flex: 1, height: 14 }} />
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const styles = {
-  page: { padding: 32 },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  title: { fontSize: 24, fontWeight: 700, color: theme.text, margin: 0 },
-  subtitle: { fontSize: 14, color: theme.muted, margin: '4px 0 0' },
-  card: {
-    backgroundColor: theme.cards,
-    borderRadius: 14,
-    border: `1px solid ${theme.border}`,
-    overflow: 'hidden',
-  },
-  tableWrap: { overflowX: 'auto', WebkitOverflowScrolling: 'touch', minWidth: 0 },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: {
-    padding: '14px 20px',
-    textAlign: 'left',
-    fontSize: 12,
-    fontWeight: 700,
-    color: theme.muted,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    borderBottom: `1px solid ${theme.border}`,
-    backgroundColor: `${"#020208"}`,
-  },
-  td: {
-    padding: '14px 20px',
-    fontSize: 14,
-    color: theme.text,
-    borderBottom: `1px solid ${theme.border}`,
-  },
-  rowEven: { backgroundColor: 'transparent' },
-  rowOdd: { backgroundColor: `${"#020208"}44` },
-  emptyCell: {
-    padding: 48,
-    textAlign: 'center',
-    color: theme.muted,
-    fontSize: 14,
-  },
-  statusBadge: {
-    display: 'inline-flex',
-    padding: '4px 12px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
-  },
-  errorBanner: {
-    backgroundColor: `${theme.danger}22`,
-    border: `1px solid ${theme.danger}`,
-    borderRadius: 10,
-    padding: '12px 20px',
-    color: theme.danger,
-    fontSize: 14,
-    marginBottom: 20,
-  },
-  btn: {
-    padding: '12px 24px',
-    borderRadius: 10,
-    border: 'none',
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  btnPrimary: { backgroundColor: theme.accent, color: '#ffffff' },
-  toastContainer: {
-    position: 'fixed',
-    top: 24,
-    right: 24,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-    zIndex: 9999,
-  },
-  toast: {
-    backgroundColor: theme.cards,
-    border: `1px solid ${theme.border}`,
-    borderLeftWidth: 4,
-    borderRadius: 10,
-    padding: '12px 16px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-    animation: 'slideIn 0.3s ease forwards',
-    minWidth: 280,
-  },
-  skeletonLine: { height: 16, borderRadius: 4, backgroundColor: theme.border },
-  skeletonRow: {
-    display: 'flex',
-    gap: 16,
-    padding: '14px 20px',
-    borderBottom: `1px solid ${theme.border}`,
-  },
-};
-
-export default BackupsPage;

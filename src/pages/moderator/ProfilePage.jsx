@@ -1,8 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Camera, MapPin, Save } from 'lucide-react';
 import { getModeratorProfile } from '../../api/moderator';
 import api from '../../api/axios';
-
-const theme = { bg: '#020208', cards: '#0f1220', accent: '#f59e0b', text: '#e2e8f0', muted: '#64748b', border: '#1e2238', success: '#22c55e', danger: '#ef4444' };
+import { errorMessage } from '../../utils/format';
+import {
+  PageHeader, Card, Avatar, Badge, Button, Input, LoadingState, Toast, ToastContainer,
+} from '../../components/ui';
+import './ProfilePage.css';
 
 export default function ModeratorProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -13,6 +17,7 @@ export default function ModeratorProfilePage() {
   const [form, setForm] = useState({ nombre: '', apellido: '', email: '', telefono: '' });
   const [toast, setToast] = useState(null);
   const fileRef = useRef(null);
+  const closeToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,13 +28,17 @@ export default function ModeratorProfilePage() {
         const d = res.data?.data || res.data;
         setProfile(d);
         setForm({ nombre: d.nombre || '', apellido: d.apellido || '', email: d.email || '', telefono: d.telefono || '' });
-      } catch (err) { if (!cancelled) setError(err.response?.data?.message || 'Error al cargar perfil'); }
-      finally { if (!cancelled) setLoading(false); }
+      } catch (err) {
+        if (!cancelled) setError(errorMessage(err, 'Error al cargar perfil'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3000); };
+  const showToast = (message, ok = true) => setToast({ message, variant: ok ? 'success' : 'danger' });
+  const setField = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -39,54 +48,89 @@ export default function ModeratorProfilePage() {
     if (form.email.trim()) payload.email = form.email.trim();
     if (form.telefono.trim()) payload.telefono = form.telefono.trim();
     setSaving(true);
-    try { await api.put('/api/users/profile', payload); showToast('Perfil actualizado'); }
-    catch (err) { showToast(err.response?.data?.message || 'Error', false); }
-    finally { setSaving(false); }
+    try {
+      await api.put('/api/users/profile', payload);
+      showToast('Perfil actualizado');
+    } catch (err) {
+      showToast(errorMessage(err, 'Error al guardar'), false);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAvatar = async (e) => {
-    const f = e.target.files?.[0]; if (!f) return;
+    const f = e.target.files?.[0];
+    if (!f) return;
     setUploading(true);
     try {
-      const fd = new FormData(); fd.append('file', f);
+      const fd = new FormData();
+      fd.append('file', f);
       const res = await api.post('/api/users/avatar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setProfile((p)=>({ ...p, avatar: res.data?.url || res.data?.avatar || URL.createObjectURL(f) }));
+      setProfile((p) => ({ ...p, avatar: res.data?.url || res.data?.avatar || URL.createObjectURL(f) }));
       showToast('Avatar actualizado');
-    } catch { showToast('Error al subir avatar', false); }
-    finally { setUploading(false); if (fileRef.current) fileRef.current.value=''; }
+    } catch (err) {
+      showToast(errorMessage(err, 'Error al subir avatar'), false);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
   };
 
-  if (loading) return <div style={{ padding:40, color:theme.muted, textAlign:'center' }}>Cargando perfil...</div>;
-  if (error) return <div style={{ padding:40, color:theme.danger, textAlign:'center' }}>{error}</div>;
+  if (loading) return <div className="page"><LoadingState message="Cargando perfil…" /></div>;
+  if (error) return <div className="page"><div className="page-error" role="alert">{error}</div></div>;
+
+  const displayName = `${form.nombre} ${form.apellido}`.trim() || 'Moderador';
+  const zona = profile?.zonaModerador || profile?.zona_moderador;
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:16, maxWidth: 720 }}>
-      <div style={{ background:theme.cards, border:`1px solid ${theme.border}`, borderRadius:12, padding:20, display:'flex', alignItems:'center', gap:16 }}>
-        <div onClick={()=>fileRef.current?.click()} style={{ width:72, height:72, borderRadius:'50%', overflow:'hidden', cursor:'pointer', border:`2px solid ${theme.accent}`, position:'relative', flexShrink:0 }}>
-          {profile?.avatar ? <img src={profile.avatar} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:`${theme.accent}20`, color:theme.accent, fontWeight:700, fontSize:20 }}>{(form.nombre[0]||'M').toUpperCase()}</div>}
-          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', opacity:0, transition:'opacity 0.15s' }} className="overlay">{uploading ? '...' : '📷'}</div>
-          <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} style={{ display:'none' }} />
-        </div>
-        <div>
-          <h2 style={{ fontSize:15, fontWeight:700, color:theme.text, margin:0 }}>{`${form.nombre} ${form.apellido}`.trim() || 'Moderador'}</h2>
-          <p style={{ fontSize:12, color:theme.muted, margin:'2px 0 0' }}>{form.email}</p>
-          <span style={{ display:'inline-block', marginTop:6, padding:'3px 8px', borderRadius:20, background:`${theme.accent}20`, color:theme.accent, fontSize:11, fontWeight:600 }}>{profile?.zonaModerador || profile?.zona_moderador || 'Sin zona'} • Moderador</span>
-        </div>
-      </div>
+    <div className="page profile-page">
+      <PageHeader title="Mi perfil" description="Tus datos de contacto como moderador." />
 
-      <form onSubmit={handleSave} style={{ background:theme.cards, border:`1px solid ${theme.border}`, borderRadius:12, padding:20, display:'flex', flexDirection:'column', gap:12 }}>
-        <h3 style={{ fontSize:13, fontWeight:700, color:theme.text, margin:0 }}>Información personal</h3>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-          <div><label style={label}>Nombre</label><input value={form.nombre} onChange={(e)=>setForm({...form,nombre:e.target.value})} style={input} /></div>
-          <div><label style={label}>Apellido</label><input value={form.apellido} onChange={(e)=>setForm({...form,apellido:e.target.value})} style={input} /></div>
-          <div><label style={label}>Email</label><input type="email" value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})} style={input} /></div>
-          <div><label style={label}>Teléfono</label><input value={form.telefono} onChange={(e)=>setForm({...form,telefono:e.target.value})} style={input} /></div>
+      <Card>
+        <div className="profile-hero">
+          <button
+            type="button"
+            className="profile-hero__avatar"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            aria-label="Cambiar foto de perfil"
+          >
+            <Avatar key={profile?.avatar || 'none'} src={profile?.avatar} name={displayName} size={72} />
+            <span className="profile-hero__overlay" aria-hidden="true">
+              {uploading ? <span className="btn__spinner" /> : <Camera size={18} />}
+            </span>
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} hidden />
+          <div className="profile-hero__text">
+            <h3 className="profile-hero__name">{displayName}</h3>
+            <p className="text-muted text-sm">{form.email || '—'}</p>
+            <div className="row">
+              <Badge variant="warning">Moderador</Badge>
+              <Badge variant={zona ? 'neutral' : 'danger'}><MapPin size={12} /> {zona || 'Sin zona'}</Badge>
+            </div>
+          </div>
         </div>
-        <button type="submit" disabled={saving} style={{ alignSelf:'flex-start', padding:'8px 16px', borderRadius:8, border:'none', background:theme.accent, color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer', opacity:saving?0.6:1 }}>{saving?'Guardando...':'Guardar cambios'}</button>
-      </form>
-      {toast && <div style={{ position:'fixed', bottom:16, right:16, background: toast.ok?theme.success:theme.danger, color:'#fff', padding:'8px 14px', borderRadius:8, fontSize:13 }}>{toast.msg}</div>}
+      </Card>
+
+      <Card title="Información personal">
+        <form onSubmit={handleSave} className="stack">
+          <div className="form-grid">
+            <Input label="Nombre" value={form.nombre} onChange={setField('nombre')} autoComplete="given-name" />
+            <Input label="Apellido" value={form.apellido} onChange={setField('apellido')} autoComplete="family-name" />
+            <Input label="Correo" type="email" value={form.email} onChange={setField('email')} autoComplete="email" />
+            <Input label="Teléfono" value={form.telefono} onChange={setField('telefono')} autoComplete="tel" />
+          </div>
+          <div className="row row--end">
+            <Button type="submit" icon={<Save size={15} />} loading={saving}>Guardar cambios</Button>
+          </div>
+        </form>
+      </Card>
+
+      {toast && (
+        <ToastContainer>
+          <Toast message={toast.message} variant={toast.variant} onClose={closeToast} />
+        </ToastContainer>
+      )}
     </div>
   );
 }
-const label = { fontSize:11, fontWeight:600, color:'#64748b', display:'block', marginBottom:4 };
-const input = { width:'100%', padding:'8px 10px', borderRadius:8, border:'1px solid #1e2238', background:'#020208', color:'#e2e8f0', fontSize:13, boxSizing:'border-box' };

@@ -1,11 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import DataTable from '../../components/admin/DataTable';
 import { getMyReports } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
+import { errorMessage, formatDateTime, fullName, toList } from '../../utils/format';
+import { PageHeader, DataTable, StatusBadge } from '../../components/ui';
 
-const theme = { bg: '#020208', cards: '#0f1220', accent: '#f59e0b', text: '#e2e8f0', muted: '#64748b', border: '#1e2238', success: '#22c55e', danger: '#ef4444', warning: '#f59e0b' };
-
-const normList = (d) => (Array.isArray(d) ? d : (d.data || d.reports || []));
+const conductorName = (r) => {
+  if (typeof r.conductor === 'string') return r.conductor;
+  if (r.conductor) return fullName(r.conductor);
+  if (r.conductorName) return r.conductorName;
+  if (r.driver) return fullName(r.driver);
+  return '—';
+};
 
 export default function NotificacionesPage() {
   const { ciudadParams } = useModeratorCity();
@@ -13,40 +18,52 @@ export default function NotificacionesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetch = useCallback(async () => {
+  const fetchReports = useCallback(async () => {
     try {
       const res = await getMyReports({ page: 1, limit: 50, ...ciudadParams });
-      setReports(normList(res.data));
+      setReports(toList(res.data, 'reports'));
+      setError(null);
     } catch (err) {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
-      else setError(err.response?.data?.message || 'Error al cargar notificaciones');
-    } finally { setLoading(false); }
+      else setError(errorMessage(err, 'Error al cargar tus reportes'));
+    } finally {
+      setLoading(false);
+    }
   }, [ciudadParams]);
 
-  useEffect(() => { fetch(); }, [fetch]);
-  useEffect(() => { const id = setInterval(fetch, 60000); return () => clearInterval(id); }, [fetch]);
-
-  const tpl = (v) => <span style={{ fontSize: 13 }}>{v || '—'}</span>;
-  const stateBadge = (estado) => {
-    const e = estado || 'abierta';
-    const color = e === 'resuelta' || e === 'atendida' ? theme.success : e === 'pendiente' || e === 'abierta' ? theme.warning : theme.muted;
-    return <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: `${color}20`, color }}>{e}</span>;
-  };
+  useEffect(() => { fetchReports(); }, [fetchReports]);
+  useEffect(() => {
+    const id = setInterval(fetchReports, 60000);
+    return () => clearInterval(id);
+  }, [fetchReports]);
 
   const columns = [
-    { key: 'fecha', label: 'Fecha', render: (v, r) => tpl(v || r.createdAt ? new Date(r.createdAt || v).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') },
-    { key: 'conductor', label: 'Conductor', render: (v, r) => tpl(v || r.conductor?.nombre || r.conductorName || r.driver?.nombre || '—') },
-    { key: 'descripcion', label: 'Descripción', render: (v, r) => tpl(v || r.descripcion || r.description || r.contenido || r.content || '—') },
-    { key: 'estado', label: 'Estado', render: (v, r) => stateBadge(v || r.estado) },
+    { key: 'fecha', label: 'Fecha', render: (v, r) => <span className="nowrap">{formatDateTime(r.createdAt || v)}</span> },
+    { key: 'conductor', label: 'Conductor', render: (_, r) => <span className="text-strong">{conductorName(r)}</span> },
+    {
+      key: 'descripcion',
+      label: 'Descripción',
+      render: (v, r) => <span className="text-secondary">{v || r.description || r.contenido || r.content || '—'}</span>,
+    },
+    { key: 'estado', label: 'Estado', render: (v) => <StatusBadge status={v || 'abierta'} /> },
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ background: `${theme.cards}`, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, fontSize: 12, color: theme.muted }}>
-        Notificaciones y reportes que enviaste al admin. Se actualizan cada minuto y al entrar.
-      </div>
-      {error && <div style={{ padding: 10, background: 'rgba(239,68,68,0.1)', color: theme.danger, borderRadius: 8, fontSize: 13 }}>{error}</div>}
-      <DataTable columns={columns} data={reports} loading={loading} emptyMessage="No tienes reportes ni notificaciones" />
+    <div className="page">
+      <PageHeader
+        title="Mis reportes"
+        description="Reportes que enviaste al administrador. Se actualizan al entrar y cada minuto."
+      />
+
+      {error && <div className="page-error" role="alert">{error}</div>}
+
+      <DataTable
+        columns={columns}
+        data={reports}
+        loading={loading}
+        emptyMessage="Aún no has enviado reportes"
+        emptyDescription="Los reportes que hagas desde Conductores aparecerán aquí."
+      />
     </div>
   );
 }

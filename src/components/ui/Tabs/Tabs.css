@@ -27,3 +27,5 @@
 .tabs__trigger--disabled { opacity: 0.5; cursor: not-allowed; }
 
 .tabs__content { padding-top: var(--space-2); }
+
+.tabs__trigger { display: inline-flex; align-items: center; gap: var(--space-2); }

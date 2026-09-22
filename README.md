@@ -1,16 +1,51 @@
-# React + Vite
+# Carga Express · Panel web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Panel de administración y moderación de Carga Express (React 19 + Vite). Consume el backend AdonisJS (`bakend-cargaexpress`).
 
-Currently, two official plugins are available:
+## Áreas
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `/admin`: administradores (usuarios, conductores, viajes, finanzas, disputas, configuración, backups).
+- `/moderator`: moderadores por ciudad (centro de control, viajes, emergencias en vivo, conductores, conversatorio).
 
-## React Compiler
+El rol se toma de `GET /api/users/profile` (`rol`, `esModerador`, `zonaModerador`).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Desarrollo
 
-## Expanding the ESLint configuration
+```bash
+npm install
+cp .env.example .env   # opcional: VITE_SENTRY_DSN, VITE_BACKEND_URL
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Las llamadas HTTP van a `/api`, que se reenvía al backend (`vite.config.js` en desarrollo, `vercel.json` en producción).
+- Los sockets y los archivos subidos usan la URL absoluta de `src/config.js` (`VITE_BACKEND_URL`).
+
+## Estructura
+
+```
+src/
+  api/          axios (auth + refresh) y funciones por área
+  components/
+    ui/         design system: Button, DataTable, Modal, StatCard, StatusBadge, …
+    layout/     Sidebar, Header (topbar) y navegación (sidebarContent.js)
+  contexts/     Auth, ciudad del moderador, badges en tiempo real
+  pages/        admin/ y moderator/ (subcarpetas para modales y partes de cada página)
+  styles/       tokens.css (variables) y ui.css (clases de layout)
+  utils/        format.js (moneda, fechas, errores), roles.js, storage.js
+```
+
+## Convenciones de UI
+
+- Colores, espaciados y radios **solo** con variables de `styles/tokens.css`.
+- Páginas con `<div className="page">` + `PageHeader`, `toolbar`, `DataTable`/`Card`.
+- Iconos de `lucide-react`; sin emojis en la interfaz.
+- Estados del backend con `StatusBadge` (mapa único en `components/ui/Badge/status.js`).
+- Formateo con `utils/format.js` (`formatCurrency`, `formatDateTime`, `errorMessage`, `toList`).
+
+## Scripts
+
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run lint` | ESLint (debe quedar en 0 problemas) |
+| `npm run build` | Build de producción en `dist/` |

@@ -1,6 +1,7 @@
+import { Inbox } from 'lucide-react';
 import './EmptyState.css';
 
-export default function EmptyState({ icon = '📭', title, description, action }) {
+export default function EmptyState({ icon = <Inbox size={22} />, title, description, action }) {
   return (
     <div className="empty-state">
       <div className="empty-state__icon">{icon}</div>

@@ -1,162 +1,51 @@
-import { useState, useEffect, useMemo } from 'react';
-import DataTable from '../../components/admin/DataTable';
-import ConfirmDialog from '../../components/admin/ConfirmDialog';
-import { getModeratorReports, approveEncuesta } from '../../api/admin';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Check, X } from 'lucide-react';
+import { getAdminEncuestas, approveEncuesta } from '../../api/admin';
+import { errorMessage, formatDate, toList } from '../../utils/format';
+import {
+  PageHeader, SegmentedFilter, DataTable, ConfirmDialog, StatusBadge, Button, Pagination,
+} from '../../components/ui';
 
-const theme = {
-  bg: '#020208',
-  cards: '#0f1220',
-  accent: '#6366f1',
-  text: '#e2e8f0',
-  muted: '#64748b',
-  success: '#22c55e',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  border: '#1e2238',
-};
+const PAGE_SIZE = 50;
 
-const styles = {
-  page: {
-    padding: 32,
-    minHeight: '100vh',
-    backgroundColor: theme.bg,
-    color: theme.text,
-  },
-  pageHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 28,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 800,
-    color: theme.text,
-    margin: 0,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: theme.muted,
-    margin: '4px 0 0',
-  },
-  filterBar: {
-    display: 'flex',
-    gap: 8,
-    marginBottom: 20,
-  },
-  filterBtn: {
-    padding: '8px 18px',
-    borderRadius: 8,
-    border: `1px solid ${theme.border}`,
-    backgroundColor: 'transparent',
-    color: theme.muted,
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  filterBtnActive: {
-    backgroundColor: `${theme.accent}20`,
-    color: theme.accent,
-    borderColor: `${theme.accent}50`,
-  },
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '4px 12px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
-  },
-  badgePending: {
-    backgroundColor: `${theme.warning}20`,
-    color: theme.warning,
-  },
-  badgeApproved: {
-    backgroundColor: `${theme.success}20`,
-    color: theme.success,
-  },
-  approveBtn: {
-    padding: '6px 14px',
-    borderRadius: 6,
-    border: 'none',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    backgroundColor: `${theme.success}20`,
-    color: theme.success,
-    whiteSpace: 'nowrap',
-  },
-  errorBanner: {
-    padding: '16px 20px',
-    borderRadius: 10,
-    backgroundColor: `${theme.danger}15`,
-    border: `1px solid ${theme.danger}40`,
-    color: theme.danger,
-    fontSize: 14,
-    marginBottom: 20,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-  },
-  count: {
-    fontSize: 13,
-    color: theme.muted,
-    marginLeft: 8,
-  },
-};
-
-function StatusBadge({ status }) {
-  const isApproved = status === 'approved';
-  return (
-    <span
-      style={{
-        ...styles.badge,
-        ...(isApproved ? styles.badgeApproved : styles.badgePending),
-      }}
-    >
-      {isApproved ? 'Aprobado' : 'Pendiente'}
-    </span>
-  );
-}
+// El backend responde 'aprobada' | 'pendiente' (antes 'approved' | 'pending'); se normaliza.
+const statusOf = (e) => (e.status === 'approved' || e.status === 'aprobada' ? 'approved' : 'pending');
+const titleOf = (row) => row?.title || row?.titulo || '';
 
 function EncuestasPage() {
   const [encuestas, setEncuestas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [confirmAction, setConfirmAction] = useState(null);
 
-  const fetchEncuestas = async () => {
+  const fetchEncuestas = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await getModeratorReports();
-      const all = Array.isArray(res.data) ? res.data : (res.data.data || res.data || []);
-      setEncuestas(
-        all.filter((item) => item.type === 'encuesta' || item.tipo === 'encuesta')
-      );
+      const res = await getAdminEncuestas({ page, limit: PAGE_SIZE });
+      setEncuestas(toList(res.data, 'encuestas'));
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al cargar las encuestas');
+      setError(errorMessage(err, 'Error al cargar las encuestas'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
 
   useEffect(() => {
     fetchEncuestas();
-  }, []);
+  }, [fetchEncuestas]);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return encuestas;
-    return encuestas.filter((e) => e.status === filter);
+    return encuestas.filter((e) => statusOf(e) === filter);
   }, [encuestas, filter]);
 
   const counts = useMemo(() => ({
     all: encuestas.length,
-    pending: encuestas.filter((e) => e.status === 'pending').length,
-    approved: encuestas.filter((e) => e.status === 'approved').length,
+    pending: encuestas.filter((e) => statusOf(e) === 'pending').length,
+    approved: encuestas.filter((e) => statusOf(e) === 'approved').length,
   }), [encuestas]);
 
   const handleApprove = async () => {
@@ -165,158 +54,89 @@ function EncuestasPage() {
       await approveEncuesta(confirmAction.id);
       await fetchEncuestas();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al aprobar encuesta');
+      setError(errorMessage(err, 'Error al aprobar encuesta'));
     }
-    setConfirmAction(null);
   };
+
+  const hasMore = encuestas.length === PAGE_SIZE;
 
   const columns = [
     {
       key: 'title',
-      label: 'Título',
-      render: (val, row) => (
-        <span style={{ fontWeight: 600 }}>{val || row.titulo || '—'}</span>
-      ),
+      label: 'Pregunta',
+      render: (val, row) => <span className="text-strong">{val || row.titulo || '—'}</span>,
     },
     {
-      key: 'creator',
+      key: 'author',
       label: 'Creador',
-      render: (val, row) => val || row.creador || row.reporter?.name || '—',
-    },
-    {
-      key: 'questions',
-      label: 'Preguntas',
-      render: (val, row) => {
-        const count = val || (row.preguntas ? row.preguntas.length : null);
-        return count != null ? (
-          <span
-            style={{
-              padding: '4px 10px',
-              borderRadius: 6,
-              backgroundColor: `${theme.accent}20`,
-              color: theme.accent,
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            {count}
-          </span>
-        ) : '—';
-      },
+      render: (val, row) => val || row.creator || row.creador || row.reporter?.name || '—',
     },
     {
       key: 'status',
       label: 'Estado',
-      render: (val) => <StatusBadge status={val || 'pending'} />,
+      render: (_, row) => <StatusBadge status={statusOf(row) === 'approved' ? 'aprobada' : 'pendiente'} />,
     },
     {
-      key: 'createdAt',
+      key: 'date',
       label: 'Fecha',
-      render: (val) =>
-        val
-          ? new Date(val).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
-          : '—',
+      render: (val, row) => <span className="nowrap">{formatDate(val || row.createdAt)}</span>,
     },
     {
       key: 'acciones',
-      label: 'Acciones',
-      render: (_, row) => (
-        <button
-          style={styles.approveBtn}
-          onClick={(e) => {
-            e.stopPropagation();
-            setConfirmAction(row);
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.success;
-            e.currentTarget.style.color = '#fff';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = `${theme.success}20`;
-            e.currentTarget.style.color = theme.success;
-          }}
-        >
-          Aprobar
-        </button>
-      ),
+      label: '',
+      align: 'right',
+      render: (_, row) => (statusOf(row) === 'approved' ? null : (
+        <div className="row row--end">
+          <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={() => setConfirmAction(row)}>
+            Aprobar
+          </Button>
+        </div>
+      )),
     },
   ];
 
   return (
-    <div style={styles.page}>
-      <div style={styles.pageHeader}>
-        <div>
-          <h1 style={styles.title}>Encuestas</h1>
-          <p style={styles.subtitle}>Gestiona y aprueba las encuestas creadas por usuarios</p>
-        </div>
+    <div className="page">
+      <PageHeader title="Encuestas" description="Revisa y aprueba las encuestas creadas por los moderadores." />
+
+      <div className="toolbar">
+        <SegmentedFilter
+          ariaLabel="Filtrar por estado"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'all', label: 'Todas', count: counts.all },
+            { value: 'pending', label: 'Pendientes', count: counts.pending },
+            { value: 'approved', label: 'Aprobadas', count: counts.approved },
+          ]}
+        />
       </div>
 
       {error && (
-        <div style={styles.errorBanner}>
-          <span>⚠</span>
+        <div className="page-error" role="alert">
           <span>{error}</span>
-          <button
-            style={{
-              marginLeft: 'auto',
-              background: 'none',
-              border: 'none',
-              color: theme.danger,
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 13,
-            }}
-            onClick={() => setError(null)}
-          >
-            ✕
-          </button>
+          <Button size="icon" variant="ghost" onClick={() => setError(null)} aria-label="Cerrar mensaje">
+            <X size={14} />
+          </Button>
         </div>
       )}
-
-      <div style={styles.filterBar}>
-        {[
-          { key: 'all', label: 'Todos' },
-          { key: 'pending', label: 'Pendientes' },
-          { key: 'approved', label: 'Aprobados' },
-        ].map((f) => (
-          <button
-            key={f.key}
-            style={{
-              ...styles.filterBtn,
-              ...(filter === f.key ? styles.filterBtnActive : {}),
-            }}
-            onClick={() => setFilter(f.key)}
-            onMouseEnter={(e) => {
-              if (filter !== f.key) {
-                e.currentTarget.style.borderColor = theme.muted;
-                e.currentTarget.style.color = theme.text;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (filter !== f.key) {
-                e.currentTarget.style.borderColor = theme.border;
-                e.currentTarget.style.color = theme.muted;
-              }
-            }}
-          >
-            {f.label}
-            <span style={styles.count}>{counts[f.key]}</span>
-          </button>
-        ))}
-      </div>
 
       <DataTable
         columns={columns}
         data={filtered}
         loading={loading}
         emptyMessage="No hay encuestas para mostrar"
+        footer={(page > 1 || hasMore) && (
+          <Pagination page={page} totalPages={hasMore ? page + 1 : page} onChange={setPage} />
+        )}
       />
 
       <ConfirmDialog
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
         onConfirm={handleApprove}
-        title="Aprobar Encuesta"
-        message={`¿Estás seguro de que deseas aprobar la encuesta "${confirmAction?.title || confirmAction?.titulo || ''}"?`}
+        title="Aprobar encuesta"
+        message={`¿Deseas aprobar la encuesta “${titleOf(confirmAction)}”?`}
         confirmText="Aprobar"
       />
     </div>

@@ -1,4 +1,5 @@
-import { Fragment, useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import {
   getConversations,
   getUnreadCount,
@@ -6,63 +7,15 @@ import {
   createConversation,
   sendConversationMessage,
 } from '../../api/moderator';
-import { io } from 'socket.io-client';
-
-const theme = {
-  bg: '#020617',
-  cards: '#0B1220',
-  border: '#1E293B',
-  text: '#F8FAFC',
-  muted: '#94A3B8',
-  accent: '#1F6FEB',
-  success: '#22C55E',
-  danger: '#EF4444',
-};
-
-// Contactos internos fijos (Admin + moderadores de otras ciudades).
-// Mientras no exista endpoint de búsqueda, definir manualmente: id, nombre, ciudad/zona, rol.
-// Agrega aquí los ids de otros moderadores cuando los conozcas.
-const INTERNAL_CONTACTS = [
-  { id: 1, nombre: 'Administrador', email: 'admin@cargaexpress.com', ciudad: 'Nacional', rol: 'admin', esModerador: false },
-  { id: 72, nombre: 'Moderador Cali', email: 'moderador@gmail.com', ciudad: 'cali', rol: 'moderador', esModerador: true },
-];
-
-const getErrMsg = (err) =>
-  err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Error inesperado';
-
-const getRolEtiqueta = (u) => {
-  if (!u) return 'CLIENTE';
-  if (u.esModerador) return 'MODERADOR';
-  if (u.rol === 'admin' || u.role === 'admin') return 'ADMIN';
-  if (u.rol === 'conductor') return 'CONDUCTOR';
-  return 'CLIENTE';
-};
-
-const ROL_STYLE = {
-  ADMIN: { background: 'rgba(239,68,68,0.15)', color: '#F87171' },
-  MODERADOR: { background: 'rgba(245,158,11,0.16)', color: '#FBBF24' },
-  CONDUCTOR: { background: 'rgba(139,92,246,0.16)', color: '#C084FC' },
-  CLIENTE: { background: 'rgba(31,111,235,0.15)', color: '#60A5FA' },
-};
-
-const isSameDay = (a, b) => {
-  const da = new Date(a), db = new Date(b);
-  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
-};
-
-const formatHora = (v) => (v ? new Date(v).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '');
-const formatDia = (v) => {
-  const s = v ? new Date(v).toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
-  return s.charAt(0).toUpperCase() + s.slice(1);
-};
-
-const toContactList = (d) => {
-  if (Array.isArray(d)) return d;
-  if (d?.data && Array.isArray(d.data)) return d.data;
-  if (d?.drivers && Array.isArray(d.drivers)) return d.drivers;
-  if (d?.users && Array.isArray(d.users)) return d.users;
-  return [];
-};
+import { tokenStore } from '../../api/axios';
+import { SOCKET_URL } from '../../config';
+import { useAuth } from '../../contexts/AuthContext';
+import { errorMessage, toList } from '../../utils/format';
+import ConversationList from './ConversationList';
+import ConversationThread from './ConversationThread';
+import NewConversationModal from './NewConversationModal';
+import { isStaff, sortByRecency, toContactList } from './conversationUtils';
+import './ConversationsBoard.css';
 
 const DEFAULT_API = {
   getConversations,
@@ -72,8 +25,32 @@ const DEFAULT_API = {
   sendMessage: sendConversationMessage,
 };
 
-export default function ConversationsBoard({ getContacts, onOpenConversation, createCity, api = DEFAULT_API }) {
-  const { getConversations: fetchConvs, getUnreadCount: fetchUnreadCount, getConversationMessages: fetchMsgs, createConversation: apiCreateConv, sendMessage: apiSendMsg } = api;
+const noop = () => {};
+
+/**
+ * Conversatorio: lista de conversaciones (izquierda) + hilo (derecha).
+ * En móvil muestra un solo panel a la vez.
+ *
+ * Props:
+ * - getContacts(): promesa con los usuarios contactables (debe ser una referencia estable).
+ * - onOpenConversation(id|null): avisa qué conversación está abierta (para badges).
+ * - createCity(contact, myCity): ciudad a enviar al crear una conversación.
+ * - defaultCity: ciudad a usar si el usuario no tiene zonaModerador.
+ * - api: permite sustituir los endpoints (por defecto los del moderador).
+ */
+export default function ConversationsBoard({ getContacts, onOpenConversation, createCity, defaultCity, api = DEFAULT_API }) {
+  const {
+    getConversations: fetchConvs,
+    getUnreadCount: fetchUnreadCount,
+    getConversationMessages: fetchMsgs,
+    createConversation: apiCreateConv,
+    sendMessage: apiSendMsg,
+  } = api;
+  const { user } = useAuth();
+  const myId = user?.id;
+  // Sin zona definida no se inventa una: el backend usa la zonaModerador del usuario.
+  const myCity = user?.zonaModerador || defaultCity || undefined;
+
   const [conversations, setConversations] = useState([]);
   const [contactMap, setContactMap] = useState({});
   const [unreadTotal, setUnreadTotal] = useState(0);
@@ -90,86 +67,98 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
   const [sendError, setSendError] = useState('');
   const [createError, setCreateError] = useState('');
   const [creating, setCreating] = useState(false);
-  const endRef = useRef(null);
   const selectedIdRef = useRef(null);
-  const pendingRef = useRef(new Set());
   const sentIdsRef = useRef(new Set());
   const autoOpenedRef = useRef(false);
-  const myId = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').id; } catch { /* silencioso */ } })();
-  const myCity = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').zonaModerador || 'cali'; } catch { /* silencioso */ } return 'cali'; })();
 
   // En los endpoints del moderador, `usuario` es el otro participante.
   // En /api/conversations (admin), `usuario` es quien consulta y el otro participante
   // llega como nombre en `moderador`. Normaliza al "otro" en ambos casos.
-  const other = (c) => {
+  const other = useCallback((c) => {
     const u = c?.usuario || c;
     if (u && myId != null && String(u.id) === String(myId)) {
       const nombre = c?.moderador || c?.otro?.nombre || c?.otroUsuario?.nombre || 'Usuario';
-      return { id: c?.moderadorId ?? u.id, nombre, rol: c?.moderador ? 'moderador' : (u.rol || 'cliente'), esModerador: Boolean(c?.moderador || u.esModerador), ciudad: c?.ciudad || '', email: c?.moderadorEmail || '' };
+      return {
+        id: c?.moderadorId ?? u.id,
+        nombre,
+        rol: c?.moderador ? 'moderador' : (u.rol || 'cliente'),
+        esModerador: Boolean(c?.moderador || u.esModerador),
+        ciudad: c?.ciudad || '',
+        email: c?.moderadorEmail || '',
+      };
     }
     // La lista de conversaciones no trae esModerador en `usuario`; lo completamos con contactable-users.
     const cm = u?.id != null ? contactMap[String(u.id)] : null;
     if (cm) {
-      return { ...u, esModerador: cm.esModerador || u.esModerador || false, zonaModerador: cm.zonaModerador || u.zonaModerador, ciudad: cm.ciudad || cm.zonaModerador || u.ciudad || '' };
+      return {
+        ...u,
+        esModerador: cm.esModerador || u.esModerador || false,
+        zonaModerador: cm.zonaModerador || u.zonaModerador,
+        ciudad: cm.ciudad || cm.zonaModerador || u.ciudad || '',
+      };
     }
     return u;
-  };
+  }, [contactMap, myId]);
 
   const canCreate = typeof apiCreateConv === 'function';
 
-  const sortByRecency = (list) =>
-    list.sort((a, b) => new Date(b.updatedAt || b.ultimoMensajeAt) - new Date(a.updatedAt || a.ultimoMensajeAt));
-
   const touchConversation = (convId, mensaje, createdAt) => {
-    setConversations((prev) =>
-      sortByRecency(
-        prev.map((c) =>
-          String(c.id) === String(convId) ? { ...c, ultimoMensaje: mensaje, ultimoMensajeAt: createdAt, updatedAt: createdAt } : c,
-        ),
-      ),
-    );
+    setConversations((prev) => sortByRecency(
+      prev.map((c) => (String(c.id) === String(convId)
+        ? { ...c, ultimoMensaje: mensaje, ultimoMensajeAt: createdAt, updatedAt: createdAt }
+        : c)),
+    ));
   };
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     try {
       const res = await fetchConvs({ limit: 100 });
       const d = res.data;
-      const list = Array.isArray(d) ? d : (d && d.id ? [d] : d.conversations || d.data || []);
+      const list = d && !Array.isArray(d) && d.id ? [d] : toList(d, 'conversations');
       setConversations(sortByRecency(list));
-    } catch { /* silencioso */ }
-    finally { setLoading(false); }
-  };
+    } catch {
+      // Silencioso: la lista queda vacía y se muestra "Sin conversaciones".
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchConvs]);
 
-  const fetchContactsMap = async () => {
+  const fetchContactsMap = useCallback(async () => {
     try {
       const res = await getContacts();
-      const list = toContactList(res?.data ?? res);
       const m = {};
-      (list || []).forEach((u) => { if (u?.id != null) m[String(u.id)] = u; });
+      toContactList(res?.data ?? res).forEach((u) => { if (u?.id != null) m[String(u.id)] = u; });
       setContactMap(m);
-    } catch { /* silencioso */ }
-  };
+    } catch {
+      // Silencioso: el mapa solo completa etiquetas de rol/ciudad.
+    }
+  }, [getContacts]);
 
-  const fetchUnread = async () => {
+  const fetchUnread = useCallback(async () => {
     try {
       const res = await fetchUnreadCount();
       setUnreadTotal(res.data.total ?? res.data.count ?? 0);
-    } catch { /* silencioso */ }
-  };
+    } catch {
+      // Silencioso: el contador es informativo y se reintenta en el siguiente polling.
+    }
+  }, [fetchUnreadCount]);
 
-  const openConversation = async (conv) => {
+  const openConversation = useCallback(async (conv) => {
     setSelected(conv);
     setMobileOpen(true);
     setSendError('');
     setMsgLoading(true);
     try {
       const res = await fetchMsgs(conv.id);
-      const d = res.data;
-      setMessages(Array.isArray(d) ? d : d.messages || d.data || []);
-      setConversations((prev) => prev.map((c) => String(c.id) === String(conv.id) ? { ...c, noLeidos: 0 } : c));
+      setMessages(toList(res.data, 'messages'));
+      setConversations((prev) => prev.map((c) => (String(c.id) === String(conv.id) ? { ...c, noLeidos: 0 } : c)));
       fetchUnread();
-    } catch { /* silencioso */ } finally { setMsgLoading(false); }
-  };
+    } catch {
+      // Silencioso: el hilo queda vacío; el usuario puede reintentar abriéndolo de nuevo.
+    } finally {
+      setMsgLoading(false);
+    }
+  }, [fetchMsgs, fetchUnread]);
 
   useEffect(() => {
     fetchConversations();
@@ -177,26 +166,29 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
     fetchContactsMap();
     const id = setInterval(fetchUnread, 60000);
     return () => clearInterval(id);
-  }, []);
+  }, [fetchConversations, fetchUnread, fetchContactsMap]);
 
   useEffect(() => { selectedIdRef.current = selected?.id ?? null; }, [selected]);
 
-  useEffect(() => { (onOpenConversation || (() => {}))(selected?.id ?? null); }, [selected, onOpenConversation]);
+  useEffect(() => { (onOpenConversation || noop)(selected?.id ?? null); }, [selected, onOpenConversation]);
 
+  // Al cargar, abre automáticamente la conversación no leída más reciente.
   useEffect(() => {
-    if (loading) return;
-    if (autoOpenedRef.current) return;
+    if (loading || autoOpenedRef.current) return;
     if (selected) { autoOpenedRef.current = true; return; }
-    const unread = conversations
-      .filter((c) => (c.noLeidos || 0) > 0)
-      .sort((a, b) => new Date(b.updatedAt || b.ultimoMensajeAt) - new Date(a.updatedAt || a.ultimoMensajeAt));
+    const unread = sortByRecency(conversations.filter((c) => (c.noLeidos || 0) > 0));
     if (unread.length > 0) { autoOpenedRef.current = true; openConversation(unread[0]); }
-  }, [conversations, loading, selected]);
+  }, [conversations, loading, selected, openConversation]);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
-    const socket = io('https://bakend-cargaexpress-production.up.railway.app', { transports: ['websocket'], auth: { token: `Bearer ${token}` }, query: { token: `Bearer ${token}` } });
+    const token = tokenStore.access;
+    if (!token) return undefined;
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      auth: { token: `Bearer ${token}` },
+      // El servidor de producción aún lee el token desde el query del handshake.
+      query: { token: `Bearer ${token}` },
+    });
     socket.on('conversation:message', (data) => {
       const curId = selectedIdRef.current;
       const isMe = String(data.remitente?.id) === String(myId);
@@ -206,7 +198,7 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
           if (isMe) {
             if (sentIdsRef.current.has(real)) { sentIdsRef.current.delete(real); return prev; }
             const tmp = prev.find((m) => String(m.id).startsWith('tmp-') && m.remitente?.esModerador && m.mensaje === data.mensaje);
-            if (tmp) return prev.map((m) => String(m.id) === String(tmp.id) ? data : m);
+            if (tmp) return prev.map((m) => (String(m.id) === String(tmp.id) ? data : m));
           }
           return prev.some((m) => String(m.id) === real) ? prev : [...prev, data];
         });
@@ -214,11 +206,15 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
         setConversations((prev) => {
           const item = prev.find((c) => String(c.id) === String(data.conversacionId));
           if (item) {
-            return sortByRecency(
-              prev.map((c) => String(c.id) === String(data.conversacionId)
-                ? { ...c, ultimoMensaje: data.mensaje, ultimoMensajeAt: data.createdAt, updatedAt: data.createdAt, noLeidos: isMe ? (c.noLeidos || 0) : (c.noLeidos || 0) + 1 }
-                : c),
-            );
+            return sortByRecency(prev.map((c) => (String(c.id) === String(data.conversacionId)
+              ? {
+                ...c,
+                ultimoMensaje: data.mensaje,
+                ultimoMensajeAt: data.createdAt,
+                updatedAt: data.createdAt,
+                noLeidos: isMe ? (c.noLeidos || 0) : (c.noLeidos || 0) + 1,
+              }
+              : c)));
           }
           return sortByRecency([
             { id: data.conversacionId, usuario: data.remitente, ultimoMensaje: data.mensaje, ultimoMensajeAt: data.createdAt, updatedAt: data.createdAt, noLeidos: isMe ? 0 : 1 },
@@ -228,10 +224,8 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
         if (!isMe) fetchUnread();
       }
     });
-    return () => socket.disconnect();
-  }, [myId]);
-
-  useEffect(() => { if (endRef.current) endRef.current.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+    return () => { socket.disconnect(); };
+  }, [myId, fetchUnread]);
 
   const handleSend = async () => {
     const text = nuevo.trim();
@@ -240,7 +234,6 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
     setNuevo('');
     setSendError('');
     setEnviando(true);
-    pendingRef.current.add(tempId);
     setMessages((prev) => [
       ...prev,
       { id: tempId, mensaje: text, createdAt: new Date().toISOString(), leido: false, remitente: { id: myId, nombre: 'Tú', rol: 'moderador', esModerador: true } },
@@ -248,16 +241,16 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
     try {
       const res = await apiSendMsg(selected.id, { mensaje: text });
       const msg = res.data;
-      pendingRef.current.delete(tempId);
       sentIdsRef.current.add(String(msg.id));
-      setMessages((prev) => prev.map((m) => String(m.id) === tempId ? msg : m));
+      setMessages((prev) => prev.map((m) => (String(m.id) === tempId ? msg : m)));
       touchConversation(selected.id, msg.mensaje, msg.createdAt);
     } catch (err) {
-      pendingRef.current.delete(tempId);
       setMessages((prev) => prev.filter((m) => String(m.id) !== tempId));
       setNuevo(text);
-      setSendError(getErrMsg(err));
-    } finally { setEnviando(false); }
+      setSendError(errorMessage(err, 'No se pudo enviar el mensaje'));
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const handleCreate = async (contact, viajeId) => {
@@ -270,266 +263,82 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
     setCreateError('');
     setCreating(true);
     try {
-      const ciudad = createCity ? createCity(contact, myCity) : myCity;
+      const ciudad = (createCity ? createCity(contact, myCity) : myCity) || undefined;
       const res = await apiCreateConv({ usuarioId: contactId, viajeId, ciudad });
       const conv = res.data;
-      setConversations((prev) => prev.some((c) => String(c.id) === String(conv.id)) ? prev : [conv, ...prev]);
+      setConversations((prev) => (prev.some((c) => String(c.id) === String(conv.id)) ? prev : [conv, ...prev]));
       setShowNew(false);
       openConversation(conv);
     } catch (err) {
-      setCreateError(getErrMsg(err));
-    } finally { setCreating(false); }
+      setCreateError(errorMessage(err, 'No se pudo crear la conversación'));
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const openNewModal = async () => {
+  const openNewModal = () => {
     setCreateError('');
     setSearch('');
     setShowNew(true);
-    try {
-      const res = await getContacts();
-      setUsers(toContactList(res?.data ?? res).slice(0, 20));
-    } catch { /* silencioso */ }
   };
 
-  const formatFechaSalida = (v) => v ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(v)) : '-';
+  // Búsqueda en el servidor (con debounce) mientras el modal está abierto.
+  useEffect(() => {
+    if (!showNew) return undefined;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const res = await getContacts(search.trim());
+        if (!cancelled) setUsers(toContactList(res?.data ?? res));
+      } catch {
+        if (!cancelled) setUsers([]);
+      }
+    }, search ? 300 : 0);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [showNew, search, getContacts]);
 
-  const internalContacts = INTERNAL_CONTACTS.filter((c) => String(c.id) !== String(myId));
-  const q = search.toLowerCase();
-  const filteredInternal = internalContacts.filter((c) => !q || `${c.nombre} ${c.email} ${c.ciudad} ${c.rol}`.toLowerCase().includes(q));
-  const filteredPlatform = users
-    .filter((u) => {
-      const uo = u.usuario || u;
-      return !q || `${uo.nombre || ''} ${uo.email || ''} ${uo.ciudad || ''}`.toLowerCase().includes(q);
-    })
-    .slice(0, 10);
-
-  const contactoSeleccionado = other(selected);
-  const etiquetaSeleccion = getRolEtiqueta(contactoSeleccionado);
-
-  const renderContactoRow = (icono, nombre, subtitulo, etiqueta, onClick, disabled) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        <span style={{ fontSize: 16, flexShrink: 0 }}>{icono}</span>
-        <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: 12, fontWeight: 600, color: theme.text, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombre}</p>
-          <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>{subtitulo}</p>
-        </div>
-        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, ...ROL_STYLE[etiqueta] }}>{etiqueta}</span>
-      </div>
-      <button onClick={onClick} disabled={disabled} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: disabled ? '#334155' : theme.accent, color: '#fff', fontSize: 11, cursor: disabled ? 'not-allowed' : 'pointer' }}>
-        {disabled ? '…' : 'Crear'}
-      </button>
-    </div>
-  );
-
-  const renderConversationRow = (c) => {
-    const u = other(c);
-    const etiqueta = getRolEtiqueta(u);
-    const estilo = ROL_STYLE[etiqueta];
-    const subtitulo = u.esModerador ? (u.zonaModerador || u.ciudad || 'Moderador') : (u.ciudad || '');
-    return (
-      <div key={c.id} onClick={() => openConversation(c)} style={{ padding: '10px 12px', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', background: String(selected?.id) === String(c.id) ? 'rgba(255,255,255,0.06)' : 'transparent', borderLeft: String(selected?.id) === String(c.id) ? `2px solid ${theme.accent}` : '2px solid transparent', display: 'flex', gap: 10, alignItems: 'center' }}>
-        <img src={c.avatar || `https://i.pravatar.cc/40?u=${u.email || c.id}`} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.nombre || c.nombre || 'Usuario'}</span>
-            <span style={{ fontSize: 10, color: theme.muted, flexShrink: 0 }}>{formatHora(c.ultimoMensajeAt)}</span>
-          </div>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 2, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, ...estilo }}>{etiqueta}</span>
-            {subtitulo && <span style={{ fontSize: 10, color: theme.muted }}>📍 {subtitulo}</span>}
-            {(c.fechaSalida || c.viaje?.fechaSalida || c.createdAt) && <span style={{ fontSize: 10, color: theme.accent, background: 'rgba(245,158,11,0.1)', padding: '1px 4px', borderRadius: 4 }}>📅 {formatFechaSalida(c.fechaSalida || c.viaje?.fechaSalida || c.createdAt)}</span>}
-          </div>
-          <p style={{ fontSize: 12, color: theme.muted, margin: '4px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.ultimoMensaje || 'Sin mensajes'}</p>
-        </div>
-        {c.noLeidos > 0 && <span style={{ background: theme.danger, color: '#fff', minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, padding: '0 4px' }}>{c.noLeidos}</span>}
-      </div>
-    );
-  };
-
-  const byRecencia = (a, b) => new Date(b.updatedAt || b.ultimoMensajeAt || b.createdAt || 0) - new Date(a.updatedAt || a.ultimoMensajeAt || a.createdAt || 0);
-  const LABEL_SEQ = ['Moderación', 'Clientes'];
-  const secciones = [];
-  const seccionIndex = {};
-  conversations.forEach((c) => {
-    const label = other(c)?.esModerador ? 'Moderación' : 'Clientes';
-    if (!(label in seccionIndex)) { seccionIndex[label] = secciones.length; secciones.push({ label, ciudades: [] }); }
-    const seccion = secciones[seccionIndex[label]];
-    const ciudad = c.ciudad || other(c)?.ciudad || 'General';
-    let grupo = seccion.ciudades.find((g) => g.ciudad === ciudad);
-    if (!grupo) { grupo = { ciudad, items: [] }; seccion.ciudades.push(grupo); }
-    grupo.items.push(c);
-  });
-  secciones.sort((a, b) => LABEL_SEQ.indexOf(a.label) - LABEL_SEQ.indexOf(b.label));
-  secciones.forEach((s) => s.ciudades.forEach((g) => g.items.sort(byRecencia)));
+  const contacts = users.filter((u) => String((u.usuario || u).id) !== String(myId));
+  const filteredInternal = contacts.filter((u) => isStaff(u.usuario || u)).slice(0, 20);
+  const filteredPlatform = contacts.filter((u) => !isStaff(u.usuario || u)).slice(0, 20);
 
   return (
-    <div style={{ display: 'flex', maxHeight: 560, height: 560, maxWidth: 900, margin: '0 auto', width: '100%', background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
-      {/* Inbox - izquierda */}
-      <div style={{ width: 280, borderRight: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', background: '#0d1117' }} className="inbox-panel">
-        <div style={{ padding: 12, borderBottom: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-            Conversaciones
-            {unreadTotal > 0 && <span style={{ background: theme.danger, color: '#fff', padding: '2px 7px', borderRadius: 10, fontSize: 10, fontWeight: 700 }}>{unreadTotal}</span>}
-          </h3>
-          {canCreate ? (
-            <button onClick={openNewModal} aria-label="Nueva conversación" style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: theme.accent, color: '#fff', fontSize: 16, cursor: 'pointer' }}>+</button>
-          ) : (
-            <span title="Los moderadores inician el chat y tú respondes aquí" style={{ fontSize: 11, color: theme.muted }}>🔒 solo responder</span>
-          )}
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {loading ? (
-            <p style={{ padding: 16, color: theme.muted, fontSize: 12, textAlign: 'center' }}>Cargando...</p>
-          ) : conversations.length === 0 ? (
-            <p style={{ padding: 16, color: theme.muted, fontSize: 12, textAlign: 'center' }}>Sin conversaciones</p>
-          ) : secciones.map((s, si) => (
-            <Fragment key={s.label}>
-              {si > 0 && <div style={{ borderTop: `1px solid ${theme.border}`, marginTop: 4 }} />}
-              <p style={{ padding: '10px 12px 4px', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: theme.accent, background: 'rgba(31,111,235,0.08)', borderBottom: `1px solid ${theme.border}` }}>
-                {s.label === 'Moderación' ? '🛡️' : '👥'} {s.label}
-              </p>
-              {s.ciudades.map((g) => (
-                <Fragment key={`${s.label}-${g.ciudad}`}>
-                  <p style={{ padding: '6px 12px 2px', fontSize: 10, fontWeight: 700, color: theme.muted, textTransform: 'capitalize' }}>📍 {g.ciudad}</p>
-                  {g.items.map(renderConversationRow)}
-                </Fragment>
-              ))}
-            </Fragment>
-          ))}
-        </div>
-      </div>
+    <div className={`chat ${mobileOpen && selected ? 'chat--thread-open' : ''}`}>
+      <ConversationList
+        conversations={conversations}
+        loading={loading}
+        selectedId={selected?.id}
+        unreadTotal={unreadTotal}
+        canCreate={canCreate}
+        other={other}
+        onSelect={openConversation}
+        onNew={openNewModal}
+      />
 
-      {/* Hilo - derecha */}
-      <div className="thread-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#0d1117' }}>
-        {!selected ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: theme.muted, fontSize: 13, gap: 6 }}>
-            <span style={{ fontSize: 28 }}>💬</span>
-            <span>Selecciona una conversación</span>
-          </div>
-        ) : (
-          <>
-            <div style={{ padding: '10px 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: 10, background: theme.cards, flexWrap: 'wrap' }}>
-              <button onClick={() => setMobileOpen(false)} className="mobile-back" style={{ display: 'none', padding: '6px 10px', borderRadius: 6, border: `1px solid ${theme.border}`, background: 'transparent', color: theme.muted, cursor: 'pointer' }}>← Volver</button>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>{contactoSeleccionado?.nombre || selected.nombre || 'Chat'}</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, ...ROL_STYLE[etiquetaSeleccion] }}>{etiquetaSeleccion}</span>
-                </div>
-                <span style={{ fontSize: 11, color: theme.muted }}>
-                  {contactoSeleccionado?.esModerador ? (contactoSeleccionado.zonaModerador || contactoSeleccionado.ciudad || '') : (contactoSeleccionado?.email || contactoSeleccionado?.ciudad || '')}
-                </span>
-              </div>
-              {(selected.fechaSalida || selected.viaje?.fechaSalida || selected.createdAt) && <span style={{ fontSize: 11, color: theme.accent, background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 10, fontWeight: 600 }}>📅 Salida: {formatFechaSalida(selected.fechaSalida || selected.viaje?.fechaSalida || selected.createdAt)}</span>}
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {msgLoading ? <p style={{ textAlign: 'center', color: theme.muted, fontSize: 12 }}>Cargando mensajes...</p> : messages.length === 0 ? <p style={{ textAlign: 'center', color: theme.muted, fontSize: 12, fontStyle: 'italic' }}>Sin mensajes aún. Saluda al conductor o cliente…</p> : messages.map((m, i) => {
-                const isMe = String(m.remitente?.id) === String(myId) || !!m.remitente?.esModerador;
-                const prev = messages[i - 1];
-                const showDay = !prev || !isSameDay(m.createdAt, prev.createdAt);
-                const e = getRolEtiqueta(m.remitente);
-                const esOtroDia = !isSameDay(m.createdAt, new Date());
-                return (
-                  <Fragment key={m.id}>
-                    {showDay && (
-                      <div style={{ alignSelf: 'center', fontSize: 10, fontWeight: 700, color: theme.muted, background: '#21262d', padding: '3px 10px', borderRadius: 10 }}>
-                        {formatDia(m.createdAt)}
-                      </div>
-                    )}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                      {!isMe && (
-                        <div style={{ display: 'flex', gap: 6, fontSize: 10, color: theme.muted, marginBottom: 2, alignItems: 'center' }}>
-                          <span style={{ fontWeight: 600, color: theme.text }}>{m.remitente?.nombre || 'Usuario'}</span>
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, ...ROL_STYLE[e] }}>{e}</span>
-                          {m.remitente?.esModerador && m.remitente.zonaModerador && <span style={{ color: theme.accent }}>{m.remitente.zonaModerador}</span>}
-                        </div>
-                      )}
-                      <div style={{ maxWidth: '70%', padding: '8px 12px', borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px', background: isMe ? theme.accent : '#21262d', color: '#fff', fontSize: 13, wordBreak: 'break-word' }}>
-                        <span style={{ color: isMe ? 'rgba(255,255,255,0.85)' : theme.text }}>{m.mensaje}</span>
-                        <span style={{ display: 'block', textAlign: 'right', fontSize: 10, color: isMe ? 'rgba(255,255,255,0.65)' : theme.muted, marginTop: 2 }}>
-                          {formatHora(m.createdAt)}
-                          {esOtroDia && <> · {new Date(m.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}</>}
-                          {' '}{isMe && (m.leido || String(m.id).startsWith('tmp-') ? '✓✓' : '✓')}
-                        </span>
-                      </div>
-                    </div>
-                  </Fragment>
-                );
-              })}
-              <div ref={endRef} />
-            </div>
-            {sendError && (
-              <div style={{ padding: '8px 12px', background: 'rgba(239,68,68,0.12)', borderTop: '1px solid rgba(239,68,68,0.25)', color: '#F87171', fontSize: 12 }}>
-                {sendError}
-              </div>
-            )}
-            <div style={{ padding: 10, borderTop: `1px solid ${theme.border}`, display: 'flex', gap: 8, background: theme.cards }}>
-              <input value={nuevo} onChange={(e) => setNuevo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSend(); } }} placeholder="Escribe un mensaje... (max 500)" maxLength={500} style={{ flex: 1, padding: '8px 12px', borderRadius: 20, border: `1px solid ${theme.border}`, background: '#0d1117', color: theme.text, fontSize: 13 }} />
-              <button onClick={handleSend} disabled={!nuevo.trim() || enviando} style={{ padding: '8px 14px', borderRadius: 20, border: 'none', background: !nuevo.trim() || enviando ? '#30363d' : theme.accent, color: '#fff', fontWeight: 600, cursor: !nuevo.trim() || enviando ? 'not-allowed' : 'pointer' }}>➤</button>
-            </div>
-          </>
-        )}
-      </div>
+      <ConversationThread
+        conversation={selected}
+        contact={selected ? other(selected) : null}
+        messages={messages}
+        loading={msgLoading}
+        myId={myId}
+        draft={nuevo}
+        onDraftChange={setNuevo}
+        onSend={handleSend}
+        sending={enviando}
+        sendError={sendError}
+        onBack={() => setMobileOpen(false)}
+      />
 
-      {/* Modal nueva conversación */}
-      {showNew && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }} onClick={() => { if (!creating) setShowNew(false); }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 16, width: '92%', maxWidth: 440, maxHeight: '80vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: theme.text, margin: '0 0 4px' }}>Nueva conversación</h3>
-            <p style={{ fontSize: 11, color: theme.muted, margin: '0 0 10px' }}>Conductores, clientes, admin o moderadores de otras ciudades.</p>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar contacto..." style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12, marginBottom: 10, boxSizing: 'border-box' }} />
-            {createError && (
-              <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171', fontSize: 12, marginBottom: 10 }}>
-                {createError}
-              </div>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
-              {filteredInternal.length > 0 && (
-                <>
-                  <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: theme.muted, margin: '4px 0 0' }}>Internos</p>
-                  {filteredInternal.map((c) => renderContactoRow(
-                    c.esModerador ? '🛡️' : '🛡️',
-                    c.nombre,
-                    `${c.email} · ${c.ciudad}`,
-                    c.esModerador ? 'MODERADOR' : 'ADMIN',
-                    () => handleCreate(c, undefined),
-                    creating,
-                  ))}
-                </>
-              )}
-              {filteredPlatform.length > 0 && (
-                <>
-                  <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: theme.muted, margin: '4px 0 0' }}>Usuarios</p>
-                  {filteredPlatform.map((u) => {
-                    const uo = u.usuario || u;
-                    return renderContactoRow(
-                      uo.rol === 'conductor' ? '🚚' : '👤',
-                      `${uo.nombre || ''} ${uo.apellido || ''}`.trim() || 'Usuario',
-                      `${uo.email || ''} • ${uo.ciudad || '-'}`,
-                      getRolEtiqueta(uo),
-                      () => handleCreate(uo, u.viajeId),
-                      creating,
-                    );
-                  })}
-                </>
-              )}
-              {filteredInternal.length === 0 && filteredPlatform.length === 0 && (
-                <p style={{ fontSize: 12, color: theme.muted, textAlign: 'center', padding: '16px 0' }}>Sin resultados para "{search}"</p>
-              )}
-            </div>
-            <button onClick={() => { if (!creating) setShowNew(false); }} style={{ marginTop: 10, width: '100%', padding: '8px', borderRadius: 8, border: `1px solid ${theme.border}`, background: 'transparent', color: theme.muted, cursor: 'pointer' }}>Cerrar</button>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @media (max-width: 768px) {
-          .inbox-panel { width: 100% !important; }
-          .mobile-back { display: block !important; }
-          ${mobileOpen ? '.inbox-panel { display: none !important; }' : '.thread-panel { display: none !important; }'}
-        }
-        .mobile-back { display: none; }
-      `}</style>
+      <NewConversationModal
+        isOpen={showNew}
+        onClose={() => setShowNew(false)}
+        search={search}
+        onSearchChange={setSearch}
+        internal={filteredInternal}
+        platform={filteredPlatform}
+        error={createError}
+        creating={creating}
+        onCreate={handleCreate}
+      />
     </div>
   );
 }

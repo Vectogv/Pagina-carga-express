@@ -43,7 +43,7 @@ export const sendEmergencyMessage = (alertaId, data) => api.post(`/api/emergency
 // Emergencias — GET /api/moderator/emergency, POST acknowledge/resolve
 export const getModeratorEmergencies = (params) => api.get('/api/moderator/emergency', { params })
 export const acknowledgeEmergency = (id) => api.post(`/api/moderator/emergency/${id}/acknowledge`)
-export const resolveEmergency = (id) => api.post(`/api/moderator/emergency/${id}/resolve`)
+export const resolveEmergency = (id, data = {}) => api.post(`/api/moderator/emergency/${id}/resolve`, data)
 
 // Conversatorio — GET /moderator/conversations, unread-count, messages
 export const getConversations = (params) => api.get('/api/moderator/conversations', { params })

@@ -1,0 +1,81 @@
+/* ── Filtros de fecha en toolbar ────────────────────── */
+.trips-date {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+}
+
+.trips-date__input {
+  height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-family: inherit;
+  color-scheme: dark;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.trips-date__input:focus { border-color: var(--primary); box-shadow: var(--focus-ring); }
+
+/* ── Celdas ─────────────────────────────────────────── */
+.trip-route-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 320px;
+}
+
+.trip-route-cell__arrow { color: var(--text-muted); flex-shrink: 0; }
+
+/* ── Ruta en detalle ────────────────────────────────── */
+.trip-route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-sunken);
+}
+
+.trip-route__point { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+
+.trip-route__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-bottom: var(--space-1);
+}
+
+.trip-route__dot--end { background: var(--success); }
+.trip-route__line { color: var(--text-muted); display: flex; }
+
+@media (max-width: 480px) {
+  .trip-route { grid-template-columns: minmax(0, 1fr); }
+  .trip-route__line { transform: rotate(90deg); justify-self: start; }
+}
+
+/* ── Participantes ──────────────────────────────────── */
+.trip-person {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-sunken);
+  min-width: 0;
+}
+
+.trip-price { font-size: var(--text-lg); font-weight: var(--font-bold); color: var(--success); }
+
+.trip-detail { display: flex; flex-direction: column; gap: var(--space-5); }

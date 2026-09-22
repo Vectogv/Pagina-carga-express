@@ -1,0 +1,25 @@
+.commissions__notice {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--success-subtle);
+  border: 1px solid var(--success-border, var(--border));
+  color: var(--success);
+  font-size: var(--text-base);
+}
+
+.commissions__empty { text-align: center; padding: var(--space-6) 0; }
+
+.commissions__history { list-style: none; margin: 0; padding: 0; }
+
+.commissions__history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.commissions__history-item:last-child { border-bottom: none; }
+
+.commissions__history-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

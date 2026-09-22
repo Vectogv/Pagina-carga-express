@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
-import DataTable from '../../components/admin/DataTable';
-import ConfirmDialog from '../../components/admin/ConfirmDialog';
+import { BellRing, Check, Flag, X } from 'lucide-react';
 import { getModeratorDrivers, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
+import { errorMessage, fullName, toList } from '../../utils/format';
+import {
+  PageHeader, SearchInput, SegmentedFilter, DataTable, ConfirmDialog, Avatar, Button, StatusBadge,
+  Textarea, Toast, ToastContainer,
+} from '../../components/ui';
 
-const theme = { bg: '#020208', cards: '#0f1220', accent: '#f59e0b', text: '#e2e8f0', muted: '#64748b', border: '#1e2238', success: '#22c55e', danger: '#ef4444', warning: '#f59e0b' };
+const TABS = [
+  ['pendiente', 'Pendientes'],
+  ['aprobado', 'Aprobados'],
+  ['rechazado', 'Rechazados'],
+  ['todos', 'Todos'],
+];
 
-const VER_LABELS = { pendiente: 'Pendiente', aprobado: 'Aprobado', rechazado: 'Rechazado' };
-const VER_COLORS = { pendiente: theme.warning, aprobado: theme.success, rechazado: theme.danger };
+const driverName = (r) => fullName(r.usuario || r);
+const driverId = (r) => r.id || r.usuarioId;
 
 export default function ModeratorDriversPage() {
   const { ciudadParams } = useModeratorCity();
@@ -19,65 +28,89 @@ export default function ModeratorDriversPage() {
   const [toast, setToast] = useState(null);
   const [filter, setFilter] = useState('');
   const [tab, setTab] = useState('pendiente');
+  const closeToast = useCallback(() => setToast(null), []);
 
-  const fetch = useCallback(async () => {
-    setLoading(true); setError(null);
+  const fetchDrivers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       const params = { page: 1, limit: 100, ...ciudadParams };
       if (tab !== 'todos') params.estado = tab;
       const res = await getModeratorDrivers(params);
-      const d = res.data;
-      setDrivers(Array.isArray(d) ? d : (d.drivers || d.data || []));
+      setDrivers(toList(res.data, 'drivers'));
     } catch (err) {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
-      else setError(err.response?.data?.message || 'Error al cargar conductores');
-    } finally { setLoading(false); }
+      else setError(errorMessage(err, 'Error al cargar conductores'));
+    } finally {
+      setLoading(false);
+    }
   }, [tab, ciudadParams]);
-  useEffect(() => { fetch(); }, [fetch]);
 
-  const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3000); };
+  useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
+
+  const showToast = (message, ok = true) => setToast({ message, variant: ok ? 'success' : 'danger' });
+  const openAction = (type, r) => { setNota(''); setAction({ type, ...r }); };
+  const closeAction = () => { setAction(null); setNota(''); };
 
   const handleNotify = async () => {
-    try { await notifyDriver(action.id || action.usuarioId); showToast('Notificación enviada'); setAction(null); }
-    catch (err) { showToast(err.response?.data?.message || 'Error al notificar', false); }
+    try { await notifyDriver(driverId(action)); showToast('Notificación enviada'); } catch (err) { showToast(errorMessage(err, 'Error al notificar'), false); }
   };
   const handleReport = async () => {
-    if (!nota.trim()) return showToast('Escribe descripción', false);
-    try { await reportDriver(action.id || action.usuarioId, { descripcion: nota.trim() }); showToast('Reporte enviado a admin'); setAction(null); setNota(''); fetch(); }
-    catch (err) { showToast(err.response?.data?.message || 'Error al reportar', false); }
+    try {
+      await reportDriver(driverId(action), { descripcion: nota.trim() });
+      showToast('Reporte enviado al administrador');
+      fetchDrivers();
+    } catch (err) { showToast(errorMessage(err, 'Error al reportar'), false); }
   };
   const handleApprove = async () => {
-    try { await approveDriver(action.id || action.usuarioId); showToast('Conductor aprobado'); setAction(null); fetch(); }
-    catch (err) { showToast(err.response?.data?.message || 'Error al aprobar', false); }
+    try { await approveDriver(driverId(action)); showToast('Conductor aprobado'); fetchDrivers(); } catch (err) { showToast(errorMessage(err, 'Error al aprobar'), false); }
   };
   const handleReject = async () => {
-    if (!nota.trim()) return showToast('La nota de rechazo es obligatoria', false);
-    try { await rejectDriver(action.id || action.usuarioId, { nota: nota.trim() }); showToast('Conductor rechazado'); setAction(null); setNota(''); fetch(); }
-    catch (err) { showToast(err.response?.data?.message || 'Error al rechazar', false); }
+    try {
+      await rejectDriver(driverId(action), { nota: nota.trim() });
+      showToast('Conductor rechazado');
+      fetchDrivers();
+    } catch (err) { showToast(errorMessage(err, 'Error al rechazar'), false); }
   };
 
-  const verBadge = (estado) => (
-    <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: `${VER_COLORS[estado] || theme.muted}20`, color: VER_COLORS[estado] || theme.muted }}>
-      {VER_LABELS[estado] || estado || '—'}
-    </span>
-  );
-
   const columns = [
-    { key: 'nombre', label: 'Conductor', render: (_, r) => `${r.usuario?.nombre || r.nombre || ''} ${r.usuario?.apellido || ''}`.trim() || '-' },
-    { key: 'email', label: 'Email', render: (_, r) => r.usuario?.email || r.email || '-' },
-    { key: 'telefono', label: 'Teléfono', render: (_, r) => r.usuario?.telefono || '-' },
-    { key: 'placa', label: 'Placa', render: (_, r) => r.placa || '-' },
-    { key: 'ciudad', label: 'Ciudad', render: (_, r) => ((c) => c === 'california' ? 'cali' : c)(r.ciudad || '-') },
-    { key: 'estadoVerificacion', label: 'Verificación', render: (_, r) => verBadge(r.estadoVerificacion) },
     {
-      key: 'acciones', label: 'Acciones', render: (_, r) => {
+      key: 'nombre',
+      label: 'Conductor',
+      render: (_, r) => (
+        <div className="cell-user">
+          <Avatar src={r.usuario?.avatar} name={driverName(r)} />
+          <div className="cell-user__text">
+            <span className="cell-user__name">{driverName(r)}</span>
+            <span className="cell-user__meta">{r.usuario?.email || r.email || '—'}</span>
+          </div>
+        </div>
+      ),
+    },
+    { key: 'telefono', label: 'Teléfono', render: (_, r) => r.usuario?.telefono || '—' },
+    { key: 'placa', label: 'Placa', render: (v) => (v ? <span className="text-mono">{v}</span> : '—') },
+    { key: 'ciudad', label: 'Ciudad', render: (v) => (v === 'california' ? 'cali' : (v || '—')) },
+    { key: 'estadoVerificacion', label: 'Verificación', render: (v) => <StatusBadge status={v} /> },
+    {
+      key: 'acciones',
+      label: '',
+      align: 'right',
+      render: (_, r) => {
         const pend = (r.estadoVerificacion || 'pendiente') === 'pendiente';
         return (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {pend && <button onClick={() => setAction({ type: 'approve', ...r })} style={btn(theme.success)}>Aprobar</button>}
-            {pend && <button onClick={() => { setNota(''); setAction({ type: 'reject', ...r }); }} style={btn(theme.danger)}>Rechazar</button>}
-            <button onClick={() => setAction({ type: 'notify', ...r })} style={btn(theme.accent)}>Notificar</button>
-            <button onClick={() => setAction({ type: 'report', ...r })} style={btn(theme.danger)}>Reportar</button>
+          <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
+            {pend && (
+              <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={() => openAction('approve', r)}>Aprobar</Button>
+            )}
+            {pend && (
+              <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={() => openAction('reject', r)}>Rechazar</Button>
+            )}
+            <Button size="icon" variant="ghost" onClick={() => openAction('notify', r)} aria-label={`Notificar a ${driverName(r)}`} title="Notificar">
+              <BellRing size={15} />
+            </Button>
+            <Button size="icon" variant="ghost" onClick={() => openAction('report', r)} aria-label={`Reportar a ${driverName(r)}`} title="Reportar al administrador">
+              <Flag size={15} />
+            </Button>
           </div>
         );
       },
@@ -90,49 +123,98 @@ export default function ModeratorDriversPage() {
     rechazado: drivers.filter((d) => d.estadoVerificacion === 'rechazado').length,
     todos: drivers.length,
   };
+  const tabOptions = TABS.map(([value, label]) => ({ value, label, count: counts[value] }));
 
   const filtered = drivers.filter((d) => {
     if (!filter.trim()) return true;
     const q = filter.toLowerCase();
     const u = d.usuario || {};
-    return `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.telefono || '').includes(q) || (d.placa || '').toLowerCase().includes(q);
+    return `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase().includes(q)
+      || (u.email || '').toLowerCase().includes(q)
+      || (u.telefono || '').includes(q)
+      || (d.placa || '').toLowerCase().includes(q);
   });
 
+  const actionEmail = action?.usuario?.email || '';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        {[['pendiente', 'Pendientes'], ['aprobado', 'Aprobados'], ['rechazado', 'Rechazados'], ['todos', 'Todos']].map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            style={{
-              padding: '6px 14px', borderRadius: 8, border: `1px solid ${theme.border}`,
-              background: tab === key ? 'rgba(245,158,11,0.15)' : 'transparent',
-              color: tab === key ? theme.accent : theme.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            {label} <span style={{ opacity: tab === key ? 1 : 0.6 }}>({counts[key]})</span>
-          </button>
-        ))}
-        <input
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Buscar por nombre, placa, correo o teléfono..."
-          style={{ flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }}
-        />
+    <div className="page">
+      <PageHeader title="Conductores" description="Verifica, notifica y reporta a los conductores de tu ciudad." />
+
+      <div className="toolbar">
+        <SearchInput value={filter} onChange={setFilter} placeholder="Buscar por nombre, placa, correo o teléfono" />
+        <SegmentedFilter options={tabOptions} value={tab} onChange={setTab} ariaLabel="Estado de verificación" />
       </div>
-      {error && <div style={{ padding: 10, background: 'rgba(239,68,68,0.1)', color: theme.danger, borderRadius: 8, fontSize: 13 }}>{error}</div>}
-      <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={filter ? `Sin resultados para "${filter}"` : (tab === 'pendiente' ? 'Sin conductores pendientes' : 'No hay conductores en tu ciudad')} />
-      {toast && <div style={{ position: 'fixed', bottom: 16, right: 16, background: toast.ok ? theme.success : theme.danger, color: '#fff', padding: '8px 14px', borderRadius: 8, fontSize: 13, zIndex: 9999 }}>{toast.msg}</div>}
-      <ConfirmDialog isOpen={action?.type==='notify'} onClose={()=>setAction(null)} onConfirm={handleNotify} title="Notificar conductor" message={`¿Enviar push a ${action?.usuario?.email || ''}?`} confirmText="Notificar" />
-      <ConfirmDialog isOpen={action?.type==='approve'} onClose={()=>setAction(null)} onConfirm={handleApprove} title="Aprobar conductor" message={`¿Confirmar la verificación de ${action?.usuario?.nombre || ''} ${action?.usuario?.apellido || ''}? Se notifica al conductor.`} confirmText="Aprobar" danger={false} />
-      <ConfirmDialog isOpen={action?.type==='reject'} onClose={()=>{setAction(null);setNota('');}} onConfirm={handleReject} title="Rechazar conductor" message={`La nota es obligatoria y se le envía al conductor ${action?.usuario?.email || ''}.`} confirmText="Rechazar" danger>
-        <textarea value={nota} onChange={(e)=>setNota(e.target.value)} placeholder="Motivo del rechazo (obligatorio)" rows={3} style={{ width:'100%', marginTop:8, padding:'8px 10px', borderRadius:8, border:`1px solid ${theme.border}`, background:theme.bg, color:theme.text, fontSize:13 }} />
+
+      {error && <div className="page-error" role="alert">{error}</div>}
+
+      <DataTable
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        emptyMessage={filter ? `Sin resultados para “${filter}”` : (tab === 'pendiente' ? 'Sin conductores pendientes' : 'No hay conductores en tu ciudad')}
+      />
+
+      <ConfirmDialog
+        isOpen={action?.type === 'notify'}
+        onClose={closeAction}
+        onConfirm={handleNotify}
+        title="Notificar conductor"
+        message={`Se enviará una notificación push a ${actionEmail || driverName(action || {})}.`}
+        confirmText="Notificar"
+      />
+      <ConfirmDialog
+        isOpen={action?.type === 'approve'}
+        onClose={closeAction}
+        onConfirm={handleApprove}
+        title="Aprobar conductor"
+        message={`¿Confirmar la verificación de ${action ? driverName(action) : ''}? Se notificará al conductor.`}
+        confirmText="Aprobar"
+      />
+      <ConfirmDialog
+        isOpen={action?.type === 'reject'}
+        onClose={closeAction}
+        onConfirm={handleReject}
+        title="Rechazar conductor"
+        message={`La nota es obligatoria y se enviará al conductor${actionEmail ? ` ${actionEmail}` : ''}.`}
+        confirmText="Rechazar"
+        confirmDisabled={!nota.trim()}
+        danger
+      >
+        <Textarea
+          label="Motivo del rechazo"
+          required
+          value={nota}
+          onChange={(e) => setNota(e.target.value)}
+          placeholder="Motivo del rechazo"
+          rows={3}
+        />
       </ConfirmDialog>
-      <ConfirmDialog isOpen={action?.type==='report'} onClose={()=>{setAction(null);setNota('');}} onConfirm={handleReport} title="Reportar a admin" message="Será visible en /admin/moderator-reports" confirmText="Reportar" danger>
-        <textarea value={nota} onChange={(e)=>setNota(e.target.value)} placeholder="Ej: Inactivo 2 semanas, no responde" rows={3} style={{ width:'100%', marginTop:8, padding:'8px 10px', borderRadius:8, border:`1px solid ${theme.border}`, background:theme.bg, color:theme.text, fontSize:13 }} />
+      <ConfirmDialog
+        isOpen={action?.type === 'report'}
+        onClose={closeAction}
+        onConfirm={handleReport}
+        title="Reportar al administrador"
+        message="El reporte será visible para el administrador en Reportes de moderadores."
+        confirmText="Reportar"
+        confirmDisabled={!nota.trim()}
+        danger
+      >
+        <Textarea
+          label="Descripción"
+          required
+          value={nota}
+          onChange={(e) => setNota(e.target.value)}
+          placeholder="Ej: Inactivo 2 semanas, no responde"
+          rows={3}
+        />
       </ConfirmDialog>
+
+      {toast && (
+        <ToastContainer>
+          <Toast message={toast.message} variant={toast.variant} onClose={closeToast} />
+        </ToastContainer>
+      )}
     </div>
   );
 }
-const btn = (color) => ({ padding:'4px 10px', borderRadius:6, border:'none', background:`${color}20`, color, fontSize:11, fontWeight:600, cursor:'pointer' });

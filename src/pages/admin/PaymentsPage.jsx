@@ -1,403 +1,215 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Check, Clock, ImageOff, RefreshCw, Wallet, X } from 'lucide-react';
 import { getPendingPayments, confirmPayment, rejectPayment } from '../../api/admin';
 import { resolveStorageUrl } from '../../utils/storage';
-import DataTable from '../../components/admin/DataTable';
-import Modal from '../../components/admin/Modal';
-import ConfirmDialog from '../../components/admin/ConfirmDialog';
+import { errorMessage, formatCurrency, formatDateTime, toList } from '../../utils/format';
+import {
+  PageHeader, DataTable, Modal, ConfirmDialog, StatCard, Button,
+} from '../../components/ui';
+import './PaymentsPage.css';
 
-const theme = {
-  bg: '#020208',
-  cards: '#0f1220',
-  accent: '#6366f1',
-  text: '#e2e8f0',
-  muted: '#64748b',
-  success: '#22c55e',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  border: '#1e2238',
-};
+const userIdOf = (p) => p?.userId || p?.id;
+const userNameOf = (p) => p?.userName || p?.user || 'Desconocido';
+const methodOf = (p) => p?.paymentMethod || p?.method || p?.metodo || '—';
+const dateOf = (p) => p?.date || p?.createdAt || p?.fecha;
+const proofOf = (p) => p?.proof || p?.proofUrl || p?.comprobante || p?.receipt || '';
 
-const styles = {
-  page: {
-    padding: 32,
-    minHeight: '100vh',
-    backgroundColor: theme.bg,
-    color: theme.text,
-  },
-  header: {
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 800,
-    color: theme.text,
-    margin: 0,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: theme.muted,
-    marginTop: 6,
-  },
-  actionsCell: {
-    display: 'flex',
-    gap: 8,
-  },
-  btn: (bgColor) => ({
-    padding: '6px 14px',
-    borderRadius: 6,
-    border: 'none',
-    backgroundColor: bgColor,
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'opacity 0.15s ease',
-    whiteSpace: 'nowrap',
-  }),
-  proofLink: {
-    color: theme.accent,
-    textDecoration: 'underline',
-    cursor: 'pointer',
-    fontSize: 13,
-    fontWeight: 600,
-    background: 'none',
-    border: 'none',
-    padding: 0,
-  },
-  proofImage: {
-    width: '100%',
-    maxHeight: 500,
-    objectFit: 'contain',
-    borderRadius: 8,
-    border: `1px solid ${theme.border}`,
-    backgroundColor: theme.bg,
-  },
-  proofPlaceholder: {
-    textAlign: 'center',
-    padding: 48,
-    color: theme.muted,
-    fontSize: 14,
-  },
-  infoRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '10px 0',
-    borderBottom: `1px solid ${theme.border}`,
-  },
-  infoRowLast: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '10px 0',
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: theme.muted,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: theme.text,
-  },
-  errorContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 60,
-    textAlign: 'center',
-  },
-  errorIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  errorMessage: {
-    fontSize: 16,
-    color: theme.danger,
-    marginBottom: 20,
-  },
-  retryBtn: {
-    padding: '10px 24px',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: theme.accent,
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  loadingContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 80,
-    color: theme.muted,
-    fontSize: 15,
-  },
-};
-
-const currencyFormatter = new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: 'COP',
-  minimumFractionDigits: 0,
-});
-
-function formatDate(dateStr) {
-  if (!dateStr) return 'N/A';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+/** Imagen de comprobante con fallback cuando no carga. */
+function ProofImage({ path, className, alt = 'Comprobante de pago' }) {
+  const [failed, setFailed] = useState(false);
+  if (!path || failed) {
+    return (
+      <span className={`${className} payments__proof-fallback`}>
+        <ImageOff size={16} aria-hidden="true" />
+        <span className="sr-only">Comprobante no disponible</span>
+      </span>
+    );
+  }
+  return <img src={resolveStorageUrl(path)} alt={alt} className={className} loading="lazy" onError={() => setFailed(true)} />;
 }
 
-function PaymentsPage() {
+export default function PaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
 
-  const [confirmAction, setConfirmAction] = useState(null);
-  const [selectedPayment, setSelectedPayment] = useState(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-
-  const [proofOpen, setProofOpen] = useState(false);
+  // { payment, action: 'confirm' | 'reject' }
+  const [pending, setPending] = useState(null);
   const [proofPayment, setProofPayment] = useState(null);
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await getPendingPayments();
-      setPayments(Array.isArray(res.data) ? res.data : (res.data.payments || res.data.data || res.data || []));
+      setPayments(toList(res.data, 'payments'));
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al cargar los pagos pendientes');
+      setError(errorMessage(err, 'Error al cargar los pagos pendientes'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPayments();
-  }, []);
+  }, [fetchPayments]);
 
   const executePaymentAction = async () => {
-    if (!selectedPayment) return;
-    const userId = selectedPayment.userId || selectedPayment.id;
+    if (!pending) return;
+    const { payment, action } = pending;
+    const userId = userIdOf(payment);
+    setNotice(null);
     try {
-      if (confirmAction === 'confirm') {
-        await confirmPayment(userId);
-      } else {
-        await rejectPayment(userId);
-      }
-      setPayments((prev) =>
-        prev.filter(
-          (p) => (p.userId || p.id) !== userId
-        )
-      );
+      if (action === 'confirm') await confirmPayment(userId);
+      else await rejectPayment(userId);
+      setPayments((prev) => prev.filter((p) => userIdOf(p) !== userId));
+      setNotice(`Pago de ${userNameOf(payment)} ${action === 'confirm' ? 'confirmado' : 'rechazado'}.`);
+      if (proofPayment && userIdOf(proofPayment) === userId) setProofPayment(null);
     } catch (err) {
-      alert(err.response?.data?.message || 'Error al procesar el pago');
+      setError(errorMessage(err, 'Error al procesar el pago'));
     }
   };
 
-  const openConfirmDialog = (payment, action) => {
-    setSelectedPayment(payment);
-    setConfirmAction(action);
-    setConfirmOpen(true);
-  };
-
-  const openProofModal = (payment) => {
-    setProofPayment(payment);
-    setProofOpen(true);
-  };
+  const total = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
 
   const columns = [
     {
-      key: 'userName',
-      label: 'Usuario',
-      render: (val, row) => (
-        <span style={{ fontWeight: 600 }}>{val || row.user || 'Desconocido'}</span>
-      ),
+      key: 'proof',
+      label: 'Comprobante',
+      render: (_, row) => (proofOf(row) ? (
+        <button
+          type="button"
+          className="payments__thumb-btn"
+          onClick={(e) => { e.stopPropagation(); setProofPayment(row); }}
+          aria-label={`Ver comprobante de ${userNameOf(row)}`}
+        >
+          <ProofImage path={proofOf(row)} className="payments__thumb" />
+        </button>
+      ) : <span className="text-muted text-sm">Sin comprobante</span>),
     },
+    { key: 'userName', label: 'Usuario', render: (_, row) => <span className="text-strong">{userNameOf(row)}</span> },
     {
       key: 'amount',
       label: 'Monto',
-      render: (val) => (
-        <span style={{ fontWeight: 700, color: theme.success }}>
-          {currencyFormatter.format(val || 0)}
-        </span>
-      ),
+      align: 'right',
+      render: (v) => <span className="text-success text-strong">{formatCurrency(v)}</span>,
     },
-    {
-      key: 'paymentMethod',
-      label: 'Método de Pago',
-      render: (val, row) => val || row.method || row.metodo || 'N/A',
-    },
-    {
-      key: 'proof',
-      label: 'Comprobante',
-      render: (val, row) => {
-        const proofUrl = val || row.proofUrl || row.comprobante || row.receipt;
-        if (!proofUrl) return <span style={{ color: theme.muted, fontSize: 13 }}>Sin comprobante</span>;
-        return (
-          <button
-            style={styles.proofLink}
-            onClick={(e) => {
-              e.stopPropagation();
-              openProofModal(row);
-            }}
-          >
-            Ver comprobante
-          </button>
-        );
-      },
-    },
-    {
-      key: 'date',
-      label: 'Fecha',
-      render: (val, row) => formatDate(val || row.createdAt || row.fecha),
-    },
+    { key: 'paymentMethod', label: 'Método', render: (_, row) => methodOf(row) },
+    { key: 'date', label: 'Fecha', render: (_, row) => <span className="nowrap">{formatDateTime(dateOf(row))}</span> },
     {
       key: 'actions',
-      label: 'Acciones',
+      label: '',
+      align: 'right',
       render: (_, row) => (
-        <div style={styles.actionsCell}>
-          <button
-            style={styles.btn(theme.success)}
-            onClick={(e) => {
-              e.stopPropagation();
-              openConfirmDialog(row, 'confirm');
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-          >
+        <div className="row row--end">
+          <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={(e) => { e.stopPropagation(); setPending({ payment: row, action: 'confirm' }); }}>
             Confirmar
-          </button>
-          <button
-            style={styles.btn(theme.danger)}
-            onClick={(e) => {
-              e.stopPropagation();
-              openConfirmDialog(row, 'reject');
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-          >
+          </Button>
+          <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={(e) => { e.stopPropagation(); setPending({ payment: row, action: 'reject' }); }}>
             Rechazar
-          </button>
+          </Button>
         </div>
       ),
     },
   ];
 
-  if (loading) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.loadingContainer}>Cargando pagos pendientes...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.errorContainer}>
-          <div style={styles.errorIcon}>⚠️</div>
-          <p style={styles.errorMessage}>{error}</p>
-          <button
-            style={styles.retryBtn}
-            onClick={fetchPayments}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const isConfirm = pending?.action === 'confirm';
+  const pendingDesc = pending ? `${formatCurrency(pending.payment.amount)} de ${userNameOf(pending.payment)}` : '';
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Pagos Pendientes</h1>
-        <p style={styles.subtitle}>Revisa y gestiona las solicitudes de pago de los usuarios</p>
+    <div className="page">
+      <PageHeader
+        title="Pagos pendientes"
+        description="Revisa los comprobantes enviados por los usuarios y confirma o rechaza cada pago."
+        actions={(
+          <Button variant="secondary" icon={<RefreshCw size={14} />} onClick={fetchPayments} loading={loading}>
+            Actualizar
+          </Button>
+        )}
+      />
+
+      <div className="stats-grid">
+        <StatCard title="Pagos por revisar" value={loading ? '—' : payments.length} icon={<Clock size={16} />} color="var(--warning)" />
+        <StatCard title="Monto pendiente" value={loading ? '—' : formatCurrency(total)} icon={<Wallet size={16} />} color="var(--success)" />
       </div>
+
+      {error && (
+        <div className="page-error" role="alert">
+          <span>{error}</span>
+          <Button size="sm" variant="ghost" onClick={fetchPayments}>Reintentar</Button>
+        </div>
+      )}
+      {notice && <div className="payments__notice" role="status">{notice}</div>}
 
       <DataTable
         columns={columns}
         data={payments}
-        loading={false}
+        loading={loading}
+        rowKey={(row, i) => userIdOf(row) ?? i}
+        onRowClick={setProofPayment}
         emptyMessage="No hay pagos pendientes"
+        emptyDescription="Los comprobantes enviados por los usuarios aparecerán aquí."
       />
 
       <ConfirmDialog
-        isOpen={confirmOpen}
-        onClose={() => {
-          setConfirmOpen(false);
-          setSelectedPayment(null);
-          setConfirmAction(null);
-        }}
+        isOpen={!!pending}
+        onClose={() => setPending(null)}
         onConfirm={executePaymentAction}
-        title={confirmAction === 'confirm' ? 'Confirmar Pago' : 'Rechazar Pago'}
-        message={
-          confirmAction === 'confirm'
-            ? `¿Deseas confirmar el pago de ${currencyFormatter.format(selectedPayment?.amount || 0)} de ${selectedPayment?.userName || selectedPayment?.user || ''}?`
-            : `¿Deseas rechazar el pago de ${currencyFormatter.format(selectedPayment?.amount || 0)} de ${selectedPayment?.userName || selectedPayment?.user || ''}? Esta acción notificará al usuario.`
-        }
-        confirmText={confirmAction === 'confirm' ? 'Confirmar' : 'Rechazar'}
-        cancelText="Cancelar"
-        danger={confirmAction === 'reject'}
+        title={isConfirm ? 'Confirmar pago' : 'Rechazar pago'}
+        message={isConfirm
+          ? `¿Confirmar el pago de ${pendingDesc}?`
+          : `¿Rechazar el pago de ${pendingDesc}? Esta acción notificará al usuario.`}
+        confirmText={isConfirm ? 'Confirmar' : 'Rechazar'}
+        danger={!isConfirm}
       />
 
       <Modal
-        isOpen={proofOpen}
-        onClose={() => {
-          setProofOpen(false);
-          setProofPayment(null);
-        }}
-        title="Comprobante de Pago"
+        isOpen={!!proofPayment}
+        onClose={() => setProofPayment(null)}
+        title="Comprobante de pago"
         size="lg"
+        footer={proofPayment && (
+          <>
+            <Button variant="soft-danger" icon={<X size={14} />} onClick={() => setPending({ payment: proofPayment, action: 'reject' })}>
+              Rechazar
+            </Button>
+            <Button variant="success" icon={<Check size={14} />} onClick={() => setPending({ payment: proofPayment, action: 'confirm' })}>
+              Confirmar
+            </Button>
+          </>
+        )}
       >
         {proofPayment && (
-          <div>
-            <div style={styles.infoRow}>
-              <span style={styles.infoLabel}>Usuario</span>
-              <span style={styles.infoValue}>{proofPayment.userName || proofPayment.user || 'Desconocido'}</span>
-            </div>
-            <div style={styles.infoRow}>
-              <span style={styles.infoLabel}>Monto</span>
-              <span style={styles.infoValue}>{currencyFormatter.format(proofPayment.amount || 0)}</span>
-            </div>
-            <div style={styles.infoRow}>
-              <span style={styles.infoLabel}>Método de Pago</span>
-              <span style={styles.infoValue}>{proofPayment.paymentMethod || proofPayment.method || proofPayment.metodo || 'N/A'}</span>
-            </div>
-            <div style={styles.infoRowLast}>
-              <span style={styles.infoLabel}>Fecha</span>
-              <span style={styles.infoValue}>{formatDate(proofPayment.date || proofPayment.createdAt || proofPayment.fecha)}</span>
-            </div>
-            <div style={{ marginTop: 20 }}>
-              {(proofPayment.proof || proofPayment.proofUrl || proofPayment.comprobante || proofPayment.receipt) ? (
-                <img
-                  src={resolveStorageUrl(proofPayment.proof || proofPayment.proofUrl || proofPayment.comprobante || proofPayment.receipt)}
-                  alt="Comprobante de pago"
-                  style={styles.proofImage}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'block';
-                  }}
-                />
-              ) : null}
-              <div style={{ ...styles.proofPlaceholder, display: (proofPayment.proof || proofPayment.proofUrl || proofPayment.comprobante || proofPayment.receipt) ? 'none' : 'block' }}>
-                No hay imagen de comprobante disponible
+          <div className="stack">
+            <dl className="detail-list">
+              <div className="detail-list__item">
+                <dt className="detail-list__label">Usuario</dt>
+                <dd className="detail-list__value">{userNameOf(proofPayment)}</dd>
               </div>
-            </div>
+              <div className="detail-list__item">
+                <dt className="detail-list__label">Monto</dt>
+                <dd className="detail-list__value text-success text-strong">{formatCurrency(proofPayment.amount)}</dd>
+              </div>
+              <div className="detail-list__item">
+                <dt className="detail-list__label">Método de pago</dt>
+                <dd className="detail-list__value">{methodOf(proofPayment)}</dd>
+              </div>
+              <div className="detail-list__item">
+                <dt className="detail-list__label">Fecha</dt>
+                <dd className="detail-list__value">{formatDateTime(dateOf(proofPayment))}</dd>
+              </div>
+            </dl>
+            {proofOf(proofPayment) ? (
+              <a href={resolveStorageUrl(proofOf(proofPayment))} target="_blank" rel="noreferrer" className="payments__proof-link">
+                <ProofImage key={proofOf(proofPayment)} path={proofOf(proofPayment)} className="payments__proof" />
+              </a>
+            ) : (
+              <p className="payments__proof-empty">No hay imagen de comprobante disponible.</p>
+            )}
           </div>
         )}
       </Modal>
     </div>
   );
 }
-
-export default PaymentsPage;

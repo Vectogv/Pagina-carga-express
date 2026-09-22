@@ -1,59 +1,26 @@
-import { Outlet, useLocation } from 'react-router-dom';
 import { useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import '../components/layout/Layout.css';
-import { adminNavItems } from '../components/layout/sidebarContent';
+import { adminNav, findNavEntry } from '../components/layout/sidebarContent';
 
-const pathTitleMap = {
-  '/admin': 'Dashboard',
-  '/admin/users': 'Usuarios',
-  '/admin/drivers': 'Conductores',
-  '/admin/trips': 'Viajes',
-  '/admin/earnings': 'Ganancias',
-  '/admin/commissions': 'Comisiones',
-  '/admin/verifications': 'Verificaciones',
-  '/admin/reports': 'Reportes',
-  '/admin/disputes': 'Disputas',
-  '/admin/emergencies': 'Emergencias',
-  '/admin/cancellation-requests': 'Cancelaciones',
-  '/admin/comunicados': 'Comunicados',
-  '/admin/encuestas': 'Encuestas',
-  '/admin/avisos': 'Avisos',
-  '/admin/conversations': 'Conversatorio',
-  '/admin/moderator-reports': 'Reportes Moderador',
-  '/admin/config': 'Configuración',
-  '/admin/backups': 'Backups',
-  '/admin/profile': 'Mi Perfil',
-  '/admin/payments': 'Pagos',
-  '/admin/moderators': 'Moderadores',
-  '/admin/clients': 'Clientes',
-};
-
-function AdminLayout() {
-  const location = useLocation();
+export default function AdminLayout() {
+  const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const isDashboard = location.pathname === '/admin';
-  const pageTitle = pathTitleMap[location.pathname] || location.pathname.split('/').pop().replace(/-/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+  const { group, label } = findNavEntry(adminNav, pathname);
 
   return (
     <div className="app-shell">
-      <Sidebar items={adminNavItems} title="Carga Express" subtitle="Panel Administrativo" open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <Sidebar nav={adminNav} title="Carga Express" subtitle="Administración" open={menuOpen} onClose={() => setMenuOpen(false)} />
       <div className="app-main">
-        <Header
-          title={pageTitle}
-          subtitle={isDashboard ? 'Visión general de la operación' : undefined}
-          showBack={!isDashboard}
-          onMenuToggle={() => setMenuOpen(true)}
-        />
-        <div className="app-content">
+        <Header section={group} title={label} onMenuToggle={() => setMenuOpen(true)} />
+        <main className="app-content">
           <div className="app-centered">
             <Outlet />
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
 }
-
-export default AdminLayout;

@@ -1,30 +1,25 @@
-import { useNavigate } from 'react-router-dom';
+import { Menu, ChevronRight } from 'lucide-react';
 import './Header.css';
 
-export default function Header({ title = '', subtitle = '', onMenuToggle = null, showBack = false, right = null }) {
-  const navigate = useNavigate();
-
+/** Barra superior: menú móvil, ruta (sección › página) y acciones globales. */
+export default function Header({ section, title, onMenuToggle, right }) {
   return (
-    <div className="header">
-      <div className="header__left">
-        {onMenuToggle && (
-          <button className="header__menu" onClick={onMenuToggle} aria-label="Abrir menú">
-            ☰
-          </button>
-        )}
-        <div className="header__titles">
-          <h1 className="header__title">{title}</h1>
-          {subtitle && <p className="header__subtitle">{subtitle}</p>}
-        </div>
+    <header className="topbar">
+      <div className="topbar__left">
+        <button type="button" className="topbar__menu" onClick={onMenuToggle} aria-label="Abrir menú">
+          <Menu size={20} />
+        </button>
+        <nav className="topbar__crumbs" aria-label="Ruta">
+          {section && (
+            <>
+              <span className="topbar__crumb">{section}</span>
+              <ChevronRight size={14} className="topbar__sep" />
+            </>
+          )}
+          <span className="topbar__crumb topbar__crumb--current">{title}</span>
+        </nav>
       </div>
-      <div className="header__actions">
-        {right}
-        {showBack && (
-          <button className="header__back" onClick={() => navigate('..')}>
-            ← Volver
-          </button>
-        )}
-      </div>
-    </div>
+      {right && <div className="topbar__actions">{right}</div>}
+    </header>
   );
 }

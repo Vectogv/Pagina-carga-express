@@ -8,7 +8,7 @@
   padding: 9px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  background: var(--bg-primary);
+  background: var(--bg-sunken);
   color: var(--text-primary);
   font-size: var(--text-base);
   font-family: var(--font-sans);

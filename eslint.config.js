@@ -18,7 +18,10 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     rules: {
-      'react-hooks/set-state-in-effect': 'warn',
+      // Las páginas cargan datos con fetch dentro de useEffect (sin librería de datos);
+      // ese patrón es intencional y esta regla lo marcaría en cada página.
+      'react-hooks/set-state-in-effect': 'off',
+      'no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_', ignoreRestSiblings: true }],
     },
   },
 ])
