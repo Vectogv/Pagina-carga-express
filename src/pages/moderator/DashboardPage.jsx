@@ -21,6 +21,7 @@ import { formatTime, timeAgo, toList } from '../../utils/format';
 import {
   PageHeader, StatCard, Card, Badge, Button, StatusBadge, LoadingState,
 } from '../../components/ui';
+import ZoneLimitCard from '../../components/maps/ZoneLimitCard';
 import './DashboardPage.css';
 
 const LIST_KEYS = ['drivers', 'trips', 'emergencies', 'conversations'];
@@ -277,6 +278,8 @@ export default function ModeratorDashboard() {
           <StatCard key={k.title} title={k.title} value={k.value} icon={k.icon} color={k.color} subtitle={k.subtitle} to={k.to} />
         ))}
       </div>
+
+      <ZoneLimitCard zonaClave={user.zonaModerador || user.zona_moderador} />
 
       <div className="two-col">
         <Card

@@ -177,12 +177,18 @@ function ZonasDeReferencia({ zonas }) {
  * Mapa de operaciones a pantalla casi completa: permite marcar un centro y
  * dibujar el radio de la zona de forma visual. No guarda nada en el servidor;
  * devuelve la zona al editor con `onApply`.
+ *
+ * Con `readOnly` solo muestra el límite (para que un moderador vea su zona sin
+ * poder cambiarla): sin clic en el mapa, sin tiradores, sin deslizador y sin
+ * botones de crear, eliminar ni aplicar. Se conservan el zoom, el centrado y
+ * los datos de la zona.
  */
 export default function OperationsMap({
   zoneName = '',
   initialCircle = null,
   referenceRect = null,
   otherZones = [],
+  readOnly = false,
   onClose,
   onApply,
 }) {
@@ -299,12 +305,18 @@ export default function OperationsMap({
           Volver
         </Button>
         <div className="opsmap__titulo">
-          <h2>{zoneName ? `Zona: ${zoneName}` : 'Nueva zona de operación'}</h2>
-          <p>Haz clic en el mapa para colocar el centro y arrastra el tirador para ajustar el radio.</p>
+          <h2>{zoneName ? `Zona: ${zoneName}` : (readOnly ? 'Zona de operación' : 'Nueva zona de operación')}</h2>
+          <p>
+            {readOnly
+              ? 'Límite de la zona donde operas. Solo el administrador puede modificarlo.'
+              : 'Haz clic en el mapa para colocar el centro y arrastra el tirador para ajustar el radio.'}
+          </p>
         </div>
-        <Button icon={<Check size={16} />} onClick={guardar} disabled={!centro} aria-label="Aplicar la zona al editor">
-          Aplicar zona
-        </Button>
+        {!readOnly && (
+          <Button icon={<Check size={16} />} onClick={guardar} disabled={!centro} aria-label="Aplicar la zona al editor">
+            Aplicar zona
+          </Button>
+        )}
       </header>
 
       <div className="opsmap__cuerpo">
@@ -323,17 +335,23 @@ export default function OperationsMap({
               maxZoom={19}
               eventHandlers={{ tileerror: onErrorDeTiles }}
             />
-            <ClicsDelMapa onPick={colocarCentro} />
+            {!readOnly && <ClicsDelMapa onPick={colocarCentro} />}
             <ZonasDeReferencia zonas={otherZones} />
-            {!centro && referenceRect && (
+            {(readOnly || !centro) && referenceRect && (
               <Rectangle
                 bounds={[[referenceRect.sur, referenceRect.oeste], [referenceRect.norte, referenceRect.este]]}
                 pathOptions={{ className: 'opsmap__rect-actual' }}
               />
             )}
-            {centro && (
+            {centro && (readOnly ? (
+              <Circle
+                center={centro}
+                radius={radio * 1000}
+                pathOptions={{ className: 'opsmap__circulo', interactive: false }}
+              />
+            ) : (
               <ZonaEnEdicion centro={centro} radio={radio} onChange={onCambioDeZona} onPreview={setVistaPrevia} />
-            )}
+            ))}
             {miUbicacion && <Marker position={[miUbicacion.lat, miUbicacion.lng]} icon={iconoUbicacion} alt="Mi ubicación" />}
           </MapContainer>
 
@@ -394,11 +412,14 @@ export default function OperationsMap({
             ) : (
               <p className="opsmap__vacio">
                 <Ruler size={16} aria-hidden="true" />
-                Todavía no hay radio. Usa «Crear radio» o haz clic en el mapa sobre el centro de la ciudad.
+                {readOnly
+                  ? 'Esta zona está definida por un rectángulo; el mapa lo dibuja con línea discontinua.'
+                  : 'Todavía no hay radio. Usa «Crear radio» o haz clic en el mapa sobre el centro de la ciudad.'}
               </p>
             )}
           </section>
 
+          {!readOnly && (
           <section className="opsmap__seccion">
             <h3 className="opsmap__seccion-titulo">Radio de cobertura</h3>
             <div className="opsmap__radio">
@@ -433,7 +454,9 @@ export default function OperationsMap({
             </div>
             <p className="opsmap__ayuda">Entre {RADIO_MIN} y {RADIO_MAX} km. El deslizador llega a 100 km; para más, escribe el valor.</p>
           </section>
+          )}
 
+          {!readOnly && (
           <section className="opsmap__seccion">
             <h3 className="opsmap__seccion-titulo">Acciones</h3>
             <div className="opsmap__acciones">
@@ -461,6 +484,26 @@ export default function OperationsMap({
               </p>
             )}
           </section>
+          )}
+
+          {readOnly && (
+            <section className="opsmap__seccion">
+              <Button
+                variant="ghost"
+                icon={<Crosshair size={15} />}
+                onClick={centrarEnMiUbicacion}
+                loading={buscandoUbicacion}
+                fullWidth
+              >
+                Centrar en mi ubicación
+              </Button>
+              {errorUbicacion && <p className="opsmap__error" role="status">{errorUbicacion}</p>}
+              <p className="opsmap__ayuda">
+                Solo se aceptan viajes que empiecen dentro de este límite. Si necesitas cambiarlo, pídeselo al
+                administrador.
+              </p>
+            </section>
+          )}
 
           {otherZones.length > 0 && (
             <section className="opsmap__seccion">
