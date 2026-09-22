@@ -1,778 +1,291 @@
 import { useState, useEffect, useCallback } from 'react';
-import Header from '../../components/admin/Header';
-import DataTable from '../../components/admin/DataTable';
-import Modal from '../../components/admin/Modal';
-import ConfirmDialog from '../../components/admin/ConfirmDialog';
+import { Ban, CircleCheck, KeyRound, Pencil, Shield, Star, Trash2, UserPlus } from 'lucide-react';
+import { getUsers, suspendUser, deleteUser, setLeader, resetPassword } from '../../api/admin';
+import { getRolUsuario } from '../../utils/roles';
+import { errorMessage, formatCurrency, fullName, toList } from '../../utils/format';
 import {
-  getUsers,
-  updateUser,
-  suspendUser,
-  deleteUser,
-  setModerator,
-  setLeader,
-  registerUser,
-  resetPassword,
-} from '../../api/admin';
-import { getRolUsuario, getLabelRol } from '../../utils/roles';
+  Alert, Avatar, Button, ConfirmDialog, DataTable, PageHeader, Pagination, SearchInput, SegmentedFilter, StatusBadge,
+} from '../../components/ui';
+import RoleBadge from './users/RoleBadge';
+import EditUserModal from './users/EditUserModal';
+import AddUserModal from './users/AddUserModal';
+import ModeratorModal from './users/ModeratorModal';
+import ResetPasswordModal from './users/ResetPasswordModal';
+import { userId } from './users/constants';
 
-const theme = {
-  bg: '#020208',
-  cards: '#0f1220',
-  accent: '#6366f1',
-  text: '#e2e8f0',
-  muted: '#64748b',
-  success: '#22c55e',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  border: '#1e2238',
+const LIMIT = 15;
+
+const ROLE_FILTERS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'cliente', label: 'Clientes' },
+  { value: 'conductor', label: 'Conductores' },
+  { value: 'moderador', label: 'Moderadores' },
+  { value: 'lider', label: 'Líderes' },
+  { value: 'admin', label: 'Admins' },
+];
+
+// "moderador" incluye moderadores-líder (esModerador), igual que el contador.
+const matchesRole = (u, rol) => {
+  if (rol === 'all') return true;
+  if (rol === 'moderador') return !!u.esModerador;
+  if (rol === 'lider') return !!u.esLider;
+  return getRolUsuario(u) === rol;
 };
 
-const styles = {
-  page: {
-    minHeight: '100vh',
-    backgroundColor: theme.bg,
-    color: theme.text,
-  },
-  content: {
-    padding: 16,
-  },
-  pagination: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    padding: '14px 20px',
-    backgroundColor: theme.cards,
-    borderRadius: 12,
-    border: `1px solid ${theme.border}`,
-  },
-  pageInfo: {
-    fontSize: 13,
-    color: theme.muted,
-  },
-  pageButtons: {
-    display: 'flex',
-    gap: 8,
-  },
-  pageBtn: {
-    padding: '6px 14px',
-    borderRadius: 8,
-    border: `1px solid ${theme.border}`,
-    backgroundColor: 'transparent',
-    color: theme.text,
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  pageBtnActive: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
-    color: '#fff',
-  },
-  pageBtnDisabled: {
-    opacity: 0.4,
-    cursor: 'not-allowed',
-  },
-  avatarCell: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: '50%',
-    backgroundColor: theme.accent,
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 13,
-    fontWeight: 700,
-    flexShrink: 0,
-  },
-  nameText: {
-    fontWeight: 600,
-    fontSize: 13,
-  },
-  badge: {
-    display: 'inline-block',
-    padding: '3px 10px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
-    textTransform: 'capitalize',
-  },
-  actionsCell: {
-    display: 'flex',
-    gap: 6,
-    flexWrap: 'nowrap',
-  },
-  actionBtn: {
-    padding: '5px 10px',
-    borderRadius: 6,
-    border: 'none',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    whiteSpace: 'nowrap',
-  },
-  formGroup: {
-    marginBottom: 18,
-  },
-  label: {
-    display: 'block',
-    fontSize: 13,
-    fontWeight: 600,
-    color: theme.muted,
-    marginBottom: 6,
-  },
-  input: {
-    width: '100%',
-    padding: '10px 14px',
-    borderRadius: 8,
-    border: `1px solid ${theme.border}`,
-    backgroundColor: theme.bg,
-    color: theme.text,
-    fontSize: 13,
-    outline: 'none',
-    transition: 'border-color 0.15s ease',
-    boxSizing: 'border-box',
-  },
-  select: {
-    width: '100%',
-    padding: '10px 14px',
-    borderRadius: 8,
-    border: `1px solid ${theme.border}`,
-    backgroundColor: theme.bg,
-    color: theme.text,
-    fontSize: 13,
-    outline: 'none',
-    cursor: 'pointer',
-    boxSizing: 'border-box',
-  },
-  saveBtn: {
-    width: '100%',
-    padding: '10px 0',
-    borderRadius: 8,
-    border: 'none',
-    backgroundColor: theme.accent,
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 700,
-    cursor: 'pointer',
-    transition: 'opacity 0.15s ease',
-    marginTop: 8,
-  },
-  debtTag: {
-    fontWeight: 600,
-    fontSize: 13,
-  },
-};
+const userStatus = (u) => (u.suspendido ? 'suspendido' : (u.estado || u.status || 'activo'));
 
-const roleColors = {
-  admin: theme.danger,
-  moderador: theme.warning,
-  moderador_lider: theme.warning,
-  lider: '#a78bfa',
-  conductor: '#8b5cf6',
-  cliente: theme.success,
-  desconocido: theme.muted,
-};
+/**
+ * Paginación desde las cabeceras X-Total-Count / X-Last-Page (cuerpo = array).
+ * Si no llegan, se habilita "siguiente" cuando la página vino llena.
+ */
+function readPagination(headers, listLength, page) {
+  const total = Number(headers?.['x-total-count']);
+  const lastPage = Number(headers?.['x-last-page']);
+  const hasTotal = headers?.['x-total-count'] != null && Number.isFinite(total);
+  if (headers?.['x-last-page'] != null && Number.isFinite(lastPage) && lastPage > 0) {
+    return { total: hasTotal ? total : undefined, totalPages: lastPage };
+  }
+  if (hasTotal) return { total, totalPages: Math.max(1, Math.ceil(total / LIMIT)) };
+  return { total: undefined, totalPages: listLength >= LIMIT ? page + 1 : page };
+}
 
-const statusColors = {
-  activo: theme.success,
-  suspendido: theme.danger,
-  inactivo: theme.muted,
-};
-
-function UsersPage() {
+export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [search, setSearch] = useState('');
   const [rolFilter, setRolFilter] = useState('all');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const limit = 15;
+  const [pagination, setPagination] = useState({ total: undefined, totalPages: 1 });
 
-  const [editModal, setEditModal] = useState({ open: false, user: null });
-  const [editForm, setEditForm] = useState({ nombre: '', apellido: '', email: '', telefono: '', edad: '' });
-  const [modModal, setModModal] = useState({ open: false, user: null, esModerador: true, zonaModerador: 'cali' });
-
-  const [confirmDialog, setConfirmDialog] = useState({ open: false, type: '', user: null });
-  const [addModal, setAddModal] = useState(false);
-  const [addForm, setAddForm] = useState({ nombre: '', apellido: '', email: '', password: '', telefono: '', rol: 'cliente', esModerador: false, zonaModerador: 'cali' });
-  const [addSaving, setAddSaving] = useState(false);
-  const [pwModal, setPwModal] = useState({ open: false, user: null });
-  const [pwForm, setPwForm] = useState({ password: '', confirm: '' });
-  const [pwSaving, setPwSaving] = useState(false);
-  const [toast, setToast] = useState(null);
+  const [editUser, setEditUser] = useState(null);
+  const [modUser, setModUser] = useState(null);
+  const [pwUser, setPwUser] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getUsers({ page, limit, search });
-      const d = res.data;
-      let list = Array.isArray(d) ? d : (d.users || d.data || []);
-      if (rolFilter !== 'all') {
-        list = list.filter((u) => getRolUsuario(u) === rolFilter);
-      }
-      setUsers(list);
-      setTotal(Array.isArray(d) && rolFilter === 'all' ? d.length : list.length);
-      setTotalPages(1);
+      const res = await getUsers({
+        page,
+        limit: LIMIT,
+        search: search.trim() || undefined,
+        rol: rolFilter === 'all' ? undefined : rolFilter,
+      });
+      const raw = toList(res.data, 'users');
+      // Respaldo: si el backend ignora `rol`, se filtra en cliente (solo afecta a la página actual).
+      setUsers(raw.filter((u) => matchesRole(u, rolFilter)));
+      setPagination(readPagination(res.headers, raw.length, page));
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al cargar usuarios');
+      setError(errorMessage(err, 'Error al cargar usuarios'));
     } finally {
       setLoading(false);
     }
   }, [page, search, rolFilter]);
 
   useEffect(() => {
-    fetchUsers();
+    const t = setTimeout(fetchUsers, 300);
+    return () => clearTimeout(t);
   }, [fetchUsers]);
 
-  const handleSearch = (val) => {
-    setSearch(val);
-    setPage(1);
-  };
+  useEffect(() => {
+    if (!notice) return undefined;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
-  const openEdit = (user) => {
-    setEditForm({
-      nombre: user.nombre || user.name || '',
-      apellido: user.apellido || '',
-      email: user.email || '',
-      telefono: user.telefono || user.phone || '',
-      edad: user.edad ?? '',
-    });
-    setEditModal({ open: true, user });
-  };
+  const handleSearch = (val) => { setSearch(val); setPage(1); };
+  const handleRole = (val) => { setRolFilter(val); setPage(1); };
 
-  const handleSaveEdit = async () => {
-    if (!editModal.user) return;
-    // Doc §18: PUT /api/admin/users/:id {nombre,apellido,email,telefono,edad}
-    const payload = {};
-    if (editForm.nombre.trim()) payload.nombre = editForm.nombre.trim();
-    if (editForm.apellido.trim()) payload.apellido = editForm.apellido.trim();
-    if (editForm.email.trim()) payload.email = editForm.email.trim();
-    if (editForm.telefono.trim()) payload.telefono = editForm.telefono.trim();
-    if (editForm.edad !== '' && !isNaN(Number(editForm.edad))) payload.edad = Number(editForm.edad);
+  const handleSuspend = async (u) => {
     try {
-      await updateUser(editModal.user.id || editModal.user._id, payload);
-      setEditModal({ open: false, user: null });
+      await suspendUser(userId(u));
       fetchUsers();
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Error al actualizar usuario';
-      alert(msg);
+      setError(errorMessage(err, 'Error al suspender usuario'));
     }
   };
 
-  const handleSuspend = async (user) => {
+  const handleLeader = async (u) => {
     try {
-      await suspendUser(user.id || user._id);
+      await setLeader(userId(u));
       fetchUsers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error al suspender usuario');
+      setError(errorMessage(err, 'Error al asignar líder'));
     }
   };
 
   const handleDelete = async () => {
-    if (!confirmDialog.user) return;
     try {
-      await deleteUser(confirmDialog.user.id || confirmDialog.user._id);
-      setConfirmDialog({ open: false, type: '', user: null });
+      await deleteUser(userId(deleteTarget));
       fetchUsers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error al eliminar usuario');
+      setError(errorMessage(err, 'Error al eliminar usuario'));
     }
   };
 
-  const openModerator = (user) => {
-    const esMod = !!user.esModerador;
-    // Muestra estado actual para permitir: cambiar ciudad (mantener true) o quitar (poner false)
-    setModModal({ open: true, user, esModerador: esMod, zonaModerador: user.zonaModerador || user.zona_moderador || 'cali' });
-  };
-  const handleSetModerator = async () => {
-    if (!modModal.user) return;
-    try {
-      // Doc: PUT /api/admin/users/:id/moderator {esModerador, zonaModerador:"cali"|"popayan"|"pasto"}
-      await setModerator(modModal.user.id || modModal.user._id, {
-        esModerador: modModal.esModerador,
-        zonaModerador: modModal.zonaModerador,
-      });
-      setModModal({ open: false, user: null, esModerador: true, zonaModerador: 'cali' });
-      fetchUsers();
-    } catch (err) {
-      alert(err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Error al asignar moderador');
-    }
+  const handleSaved = (msg = 'Usuario actualizado') => {
+    setEditUser(null);
+    setModUser(null);
+    setNotice({ variant: 'success', msg });
+    fetchUsers();
   };
 
-  const handleSetLeader = async (user) => {
-    try {
-      await setLeader(user.id || user._id);
-      fetchUsers();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error al asignar líder');
-    }
+  const handleCreated = (msg, warning) => {
+    setAddOpen(false);
+    setNotice(warning ? { variant: 'warning', msg: warning } : { variant: 'success', msg });
+    fetchUsers();
   };
 
-  const openPassword = (user) => {
-    setPwForm({ password: '', confirm: '' });
-    setPwModal({ open: true, user });
+  const handlePassword = async (password) => {
+    await resetPassword(userId(pwUser), { password });
+    setPwUser(null);
+    setNotice({ variant: 'success', msg: 'Contraseña actualizada' });
   };
 
-  const handlePasswordSave = async () => {
-    if (!pwModal.user) return;
-    if (!pwForm.password || pwForm.password.length < 6) {
-      setToast({ msg: 'La contraseña debe tener al menos 6 caracteres', ok: false });
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-    if (pwForm.password !== pwForm.confirm) {
-      setToast({ msg: 'Las contraseñas no coinciden', ok: false });
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-    setPwSaving(true);
-    try {
-      await resetPassword(pwModal.user.id || pwModal.user._id, { password: pwForm.password });
-      setPwModal({ open: false, user: null });
-      setToast({ msg: 'Contraseña actualizada ✓', ok: true });
-      setTimeout(() => setToast(null), 3000);
-    } catch (err) {
-      setToast({ msg: err.response?.data?.message || 'Error al cambiar contraseña', ok: false });
-      setTimeout(() => setToast(null), 3000);
-    } finally {
-      setPwSaving(false);
-    }
-  };
-
-  const handleAddUser = async () => {
-    if (!addForm.nombre.trim() || !addForm.apellido.trim() || !addForm.email.trim() || !addForm.password.trim()) {
-      setToast({ msg: 'Nombre, apellido, email y contraseña son obligatorios', ok: false });
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-    if (addForm.password.length < 6) {
-      setToast({ msg: 'Contraseña mínimo 6 caracteres', ok: false });
-      setTimeout(() => setToast(null), 3000);
-      return;
-    }
-    setAddSaving(true);
-    try {
-      // Doc §1: POST /api/auth/register {nombre,apellido,email,password,telefono,rol}
-      const payload = {
-        nombre: addForm.nombre.trim(),
-        apellido: addForm.apellido.trim(),
-        email: addForm.email.trim(),
-        password: addForm.password,
-        rol: addForm.rol,
-      };
-      if (addForm.telefono.trim()) payload.telefono = addForm.telefono.trim();
-      // Si es conductor, requiere campos extra, se envían vacíos para que backend valide
-      const res = await registerUser(payload);
-      const newId = res.data?.id || res.data?.user?.id;
-      // Si marcó esModerador, asignar después de crear
-      if (addForm.esModerador && newId) {
-        try {
-          await setModerator(newId, { esModerador: true, zonaModerador: addForm.zonaModerador });
-        } catch (e) {
-          setToast({ msg: 'Usuario creado pero fallo asignar moderador: ' + (e.response?.data?.message || ''), ok: false });
-          setTimeout(() => setToast(null), 4000);
-        }
-      }
-      setToast({ msg: `${addForm.esModerador ? 'Moderador' : 'Usuario'} creado correctamente`, ok: true });
-      setTimeout(() => setToast(null), 3000);
-      setAddModal(false);
-      setAddForm({ nombre: '', apellido: '', email: '', password: '', telefono: '', rol: 'cliente', esModerador: false, zonaModerador: 'cali' });
-      fetchUsers();
-    } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Error al crear usuario';
-      setToast({ msg, ok: false });
-      setTimeout(() => setToast(null), 4000);
-    } finally {
-      setAddSaving(false);
-    }
-  };
-
-  const getInitials = (user) => {
-    const name = user.nombre || user.name || '';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '??';
+  const pageCounts = {
+    cliente: users.filter((u) => getRolUsuario(u) === 'cliente').length,
+    conductor: users.filter((u) => getRolUsuario(u) === 'conductor').length,
+    moderador: users.filter((u) => u.esModerador).length,
+    lider: users.filter((u) => u.esLider).length,
+    admin: users.filter((u) => getRolUsuario(u) === 'admin').length,
   };
 
   const columns = [
     {
       key: 'nombre',
-      label: 'Avatar / Nombre',
-      render: (_, user) => (
-        <div style={styles.avatarCell}>
-          <div style={styles.avatar}>{getInitials(user)}</div>
-          <span style={styles.nameText}>{user.nombre || user.name || 'Sin nombre'}</span>
+      label: 'Usuario',
+      render: (_, u) => (
+        <div className="cell-user">
+          <Avatar src={u.avatar} name={fullName(u)} />
+          <div className="cell-user__text">
+            <span className="cell-user__name">{fullName(u)}</span>
+            <span className="cell-user__meta">{u.email || '—'}</span>
+          </div>
         </div>
       ),
     },
-    { key: 'email', label: 'Email' },
-    {
-      key: 'telefono',
-      label: 'Telefono',
-      render: (_, user) => user.telefono || user.phone || '-',
-    },
-    {
-      key: 'rol',
-      label: 'Rol',
-      render: (_, user) => {
-        const r = getRolUsuario(user);
-        const label = getLabelRol(user);
-        const color = roleColors[r] || theme.muted;
-        return <span style={{ ...styles.badge, backgroundColor: `${color}20`, color }}>{label}</span>;
-      },
-    },
-    {
-      key: 'estado',
-      label: 'Estado',
-      render: (_, user) => {
-        const status = user.estado || user.status || 'activo';
-        const color = statusColors[status] || theme.muted;
-        return (
-          <span style={{ ...styles.badge, backgroundColor: `${color}20`, color }}>
-            {status}
-          </span>
-        );
-      },
-    },
+    { key: 'telefono', label: 'Teléfono', render: (_, u) => u.telefono || u.phone || '—' },
+    { key: 'rol', label: 'Rol', render: (_, u) => <RoleBadge user={u} /> },
+    { key: 'estado', label: 'Estado', render: (_, u) => <StatusBadge status={userStatus(u)} /> },
     {
       key: 'deuda',
       label: 'Deuda',
-      render: (_, user) => {
-        const debt = user.deuda || user.debt || 0;
-        const color = debt > 0 ? theme.danger : theme.success;
-        return (
-          <span style={{ ...styles.debtTag, color }}>
-            ${typeof debt === 'number' ? debt.toLocaleString() : debt}
-          </span>
-        );
+      align: 'right',
+      render: (_, u) => {
+        const debt = Number(u.deuda || u.debt || 0);
+        return <span className={`nowrap ${debt > 0 ? 'text-danger' : 'text-muted'}`}>{formatCurrency(debt)}</span>;
       },
     },
     {
       key: 'acciones',
-      label: 'Acciones',
-      render: (_, user) => {
-        const isActive = (user.estado || user.status || 'activo') !== 'suspendido';
+      label: '',
+      align: 'right',
+      render: (_, u) => {
+        const name = fullName(u);
+        const suspended = userStatus(u) === 'suspendido';
         return (
-          <div style={styles.actionsCell}>
-            <button
-              style={{ ...styles.actionBtn, backgroundColor: `${theme.accent}20`, color: theme.accent }}
-              onClick={(e) => { e.stopPropagation(); openEdit(user); }}
+          <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
+            <Button size="icon" variant="ghost" onClick={() => setEditUser(u)} aria-label={`Editar a ${name}`} title="Editar">
+              <Pencil size={15} />
+            </Button>
+            <Button size="icon" variant="ghost" onClick={() => setPwUser(u)} aria-label={`Resetear contraseña de ${name}`} title="Resetear contraseña">
+              <KeyRound size={15} />
+            </Button>
+            <Button
+              size="icon"
+              variant={u.esModerador ? 'soft-primary' : 'ghost'}
+              onClick={() => setModUser(u)}
+              aria-label={u.esModerador ? `Modificar moderador ${name}` : `Asignar ${name} como moderador`}
+              title={u.esModerador ? 'Modificar / quitar moderador' : 'Asignar moderador'}
             >
-              Editar
-            </button>
-            <button
-              style={{ ...styles.actionBtn, backgroundColor: `${theme.warning}20`, color: theme.warning }}
-              onClick={(e) => { e.stopPropagation(); openPassword(user); }}
+              <Shield size={15} />
+            </Button>
+            <Button
+              size="icon"
+              variant={u.esLider ? 'soft-warning' : 'ghost'}
+              onClick={() => handleLeader(u)}
+              aria-label={`Cambiar líder: ${name}`}
+              aria-pressed={!!u.esLider}
+              title={u.esLider ? 'Es líder' : 'Marcar como líder'}
             >
-              Contraseña
-            </button>
-            <button
-              style={{
-                ...styles.actionBtn,
-                backgroundColor: `${isActive ? theme.warning : theme.success}20`,
-                color: isActive ? theme.warning : theme.success,
-              }}
-              onClick={(e) => { e.stopPropagation(); handleSuspend(user); }}
+              <Star size={15} />
+            </Button>
+            <Button
+              size="sm"
+              variant={suspended ? 'soft-success' : 'soft-warning'}
+              icon={suspended ? <CircleCheck size={14} /> : <Ban size={14} />}
+              onClick={() => handleSuspend(u)}
             >
-              {isActive ? 'Suspender' : 'Activar'}
-            </button>
-            <button
-              style={{ ...styles.actionBtn, backgroundColor: user.esModerador ? `${theme.warning}20` : `${theme.accent}20`, color: user.esModerador ? theme.warning : '#a78bfa' }}
-              onClick={(e) => { e.stopPropagation(); openModerator(user); }}
-            >
-              {user.esModerador ? 'Quitar Mod' : 'Mod'}
-            </button>
-            <button
-              style={{ ...styles.actionBtn, backgroundColor: `${theme.accent}20`, color: '#818cf8' }}
-              onClick={(e) => { e.stopPropagation(); handleSetLeader(user); }}
-            >
-              Lider
-            </button>
-            <button
-              style={{ ...styles.actionBtn, backgroundColor: `${theme.danger}20`, color: theme.danger }}
-              onClick={(e) => { e.stopPropagation(); setConfirmDialog({ open: true, type: 'delete', user }); }}
-            >
-              Elim
-            </button>
+              {suspended ? 'Activar' : 'Suspender'}
+            </Button>
+            <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(u)} aria-label={`Eliminar a ${name}`} title="Eliminar">
+              <Trash2 size={15} />
+            </Button>
           </div>
         );
       },
     },
   ];
 
-  const rolTabs = [
-    { key: 'all', label: 'Todos' },
-    { key: 'cliente', label: 'Clientes' },
-    { key: 'conductor', label: 'Conductores' },
-    { key: 'moderador', label: 'Moderadores' },
-    { key: 'admin', label: 'Admins' },
-  ];
-
   return (
-    <div style={styles.page}>
-      <Header title={users.length > 0 ? `Usuarios — ${rolFilter === 'all' ? 'Todos' : rolFilter}` : 'Usuarios'} onSearch={handleSearch} />
-      <div style={{ padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {rolTabs.map((t) => (
-            <button key={t.key} onClick={() => { setRolFilter(t.key); setPage(1); }} style={{ padding: '6px 12px', borderRadius: 20, border: `1px solid ${rolFilter === t.key ? theme.accent : theme.border}`, background: rolFilter === t.key ? `${theme.accent}20` : 'transparent', color: rolFilter === t.key ? theme.accent : theme.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{t.label}</button>
-          ))}
-        </div>
-        <button onClick={() => setAddModal(true)} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: theme.accent, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ Agregar Usuario / Moderador</button>
+    <div className="page">
+      <PageHeader
+        title="Usuarios"
+        description="Todas las cuentas de la plataforma: clientes, conductores, moderadores y administradores."
+        actions={<Button icon={<UserPlus size={16} />} onClick={() => setAddOpen(true)}>Agregar usuario</Button>}
+      />
+
+      <div className="toolbar">
+        <SearchInput value={search} onChange={handleSearch} placeholder="Buscar por nombre, correo o teléfono" />
+        <SegmentedFilter options={ROLE_FILTERS} value={rolFilter} onChange={handleRole} ariaLabel="Filtrar por rol" />
       </div>
-      <div style={{ padding: '0 16px', marginTop: 8, display: 'flex', gap: 8, fontSize: 11, color: theme.muted, flexWrap: 'wrap' }}>
-        <span>👥 Clientes: {users.filter((u) => getRolUsuario(u) === 'cliente').length}</span>
-        <span>•</span>
-        <span>🚗 Conductores: {users.filter((u) => getRolUsuario(u) === 'conductor').length}</span>
-        <span>•</span>
-        <span>🛡️ Moderadores: {users.filter((u) => u.esModerador).length}</span>
-        <span>•</span>
-        <span>👑 Admin: {users.filter((u) => getRolUsuario(u) === 'admin').length}</span>
-      </div>
-      <div style={styles.content}>
-        {toast && <div style={{ position: 'fixed', bottom: 16, right: 16, background: toast.ok ? theme.success : theme.danger, color: '#fff', padding: '10px 14px', borderRadius: 8, fontSize: 13, zIndex: 9999 }}>{toast.msg}</div>}
-        {error && (
-          <div style={{ padding: '12px 16px', borderRadius: 8, backgroundColor: `${theme.danger}15`, color: theme.danger, marginBottom: 16, fontSize: 13 }}>
-            {error}
-          </div>
+
+      {!loading && users.length > 0 && (
+        <p className="text-sm text-muted">
+          En esta página: {pageCounts.cliente} clientes · {pageCounts.conductor} conductores
+          · {pageCounts.moderador} moderadores · {pageCounts.lider} líderes · {pageCounts.admin} admins
+        </p>
+      )}
+
+      {notice && <Alert variant={notice.variant} onClose={() => setNotice(null)}>{notice.msg}</Alert>}
+      {error && <div className="page-error" role="alert">{error}</div>}
+
+      <DataTable
+        columns={columns}
+        data={users}
+        loading={loading}
+        emptyMessage={search ? `Sin resultados para “${search}”` : 'No se encontraron usuarios'}
+        footer={(
+          <Pagination page={page} totalPages={pagination.totalPages} total={pagination.total} onChange={setPage} />
         )}
-        <DataTable columns={columns} data={users} loading={loading} emptyMessage="No se encontraron usuarios" />
-        {total > 0 && (
-          <div style={styles.pagination}>
-            <span style={styles.pageInfo}>
-              Pagina {page} de {totalPages} ({total} usuarios)
-            </span>
-            <div style={styles.pageButtons}>
-              <button
-                style={{
-                  ...styles.pageBtn,
-                  ...(page <= 1 ? styles.pageBtnDisabled : {}),
-                }}
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Anterior
-              </button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const start = Math.max(1, Math.min(page - 2, totalPages - 4));
-                const p = start + i;
-                if (p > totalPages) return null;
-                return (
-                  <button
-                    key={p}
-                    style={{
-                      ...styles.pageBtn,
-                      ...(p === page ? styles.pageBtnActive : {}),
-                    }}
-                    onClick={() => setPage(p)}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-              <button
-                style={{
-                  ...styles.pageBtn,
-                  ...(page >= totalPages ? styles.pageBtnDisabled : {}),
-                }}
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      />
 
-      <Modal
-        isOpen={editModal.open}
-        onClose={() => setEditModal({ open: false, user: null })}
-        title="Editar Usuario"
-        size="sm"
-      >
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Nombre</label>
-          <input
-            style={styles.input}
-            value={editForm.nombre}
-            onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Email</label>
-          <input
-            style={styles.input}
-            type="email"
-            value={editForm.email}
-            onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Telefono</label>
-          <input
-            style={styles.input}
-            value={editForm.telefono}
-            onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Apellido</label>
-          <input
-            style={styles.input}
-            value={editForm.apellido}
-            onChange={(e) => setEditForm({ ...editForm, apellido: e.target.value })}
-            placeholder="Apellido"
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Edad</label>
-          <input
-            style={styles.input}
-            type="number"
-            min="18"
-            max="120"
-            value={editForm.edad}
-            onChange={(e) => setEditForm({ ...editForm, edad: e.target.value })}
-            placeholder="Edad (18-120)"
-          />
-        </div>
-        <button style={styles.saveBtn} onClick={handleSaveEdit}>
-          Guardar Cambios
-        </button>
-      </Modal>
-
-      <Modal
-        isOpen={pwModal.open}
-        onClose={() => setPwModal({ open: false, user: null })}
-        title="Resetear Contraseña"
-        size="sm"
-      >
-        <div style={{ background: `${theme.cards}`, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: theme.muted }}>
-          <b style={{ color: theme.text }}>{pwModal.user?.nombre} {pwModal.user?.apellido}</b> — {pwModal.user?.email}
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Nueva contraseña</label>
-          <input
-            style={styles.input}
-            type="password"
-            value={pwForm.password}
-            onChange={(e) => setPwForm({ ...pwForm, password: e.target.value })}
-            placeholder="Mínimo 6 caracteres"
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Confirmar contraseña</label>
-          <input
-            style={styles.input}
-            type="password"
-            value={pwForm.confirm}
-            onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
-            placeholder="Repite la contraseña"
-          />
-        </div>
-        <button style={{ ...styles.saveBtn, opacity: pwSaving ? 0.6 : 1 }} disabled={pwSaving} onClick={handlePasswordSave}>
-          {pwSaving ? 'Guardando...' : 'Guardar Contraseña'}
-        </button>
-      </Modal>
-
-      <Modal
-        isOpen={modModal.open}
-        onClose={() => setModModal({ open: false, user: null, esModerador: true, zonaModerador: 'cali' })}
-        title={modModal.user?.esModerador ? 'Modificar Moderador' : 'Asignar Moderador'}
-        size="sm"
-      >
-        <div style={{ background: `${theme.cards}`, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: theme.muted }}>
-          <b style={{ color: theme.text }}>{modModal.user?.nombre} {modModal.user?.apellido}</b> — {modModal.user?.email}<br />
-          Actual: {modModal.user?.esModerador ? `Moderador ${modModal.user?.zonaModerador || ''}` : 'No es moderador'}
-        </div>
-        <div style={styles.formGroup}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: theme.text }}>
-            <input type="checkbox" checked={modModal.esModerador} onChange={(e) => setModModal({ ...modModal, esModerador: e.target.checked })} />
-            Es moderador
-          </label>
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Zona {modModal.esModerador ? '*' : ''}</label>
-          <select
-            style={styles.select}
-            value={modModal.zonaModerador}
-            onChange={(e) => setModModal({ ...modModal, zonaModerador: e.target.value })}
-            disabled={!modModal.esModerador}
-          >
-            <option value="cali">Cali</option>
-            <option value="popayan">Popayán</option>
-            <option value="pasto">Pasto</option>
-          </select>
-          <p style={{ fontSize: 11, color: theme.muted, margin: '6px 0 0' }}>
-            {modModal.esModerador ? 'Cambiar ciudad: selecciona nueva zona y guarda (ej: Pasto→Cali).' : 'Quitar: desmarca y guarda (esModerador:false).'}
-          </p>
-        </div>
-        <button style={styles.saveBtn} onClick={handleSetModerator}>
-          {modModal.esModerador ? (modModal.user?.esModerador ? 'Guardar cambios' : 'Asignar como Moderador') : 'Quitar Moderador'}
-        </button>
-      </Modal>
-
-      <Modal isOpen={addModal} onClose={() => setAddModal(false)} title="Agregar Usuario / Moderador" size="sm">
-        <div style={styles.formGroup}><label style={styles.label}>Nombre *</label><input style={styles.input} value={addForm.nombre} onChange={(e) => setAddForm({ ...addForm, nombre: e.target.value })} placeholder="Nombre" /></div>
-        <div style={styles.formGroup}><label style={styles.label}>Apellido *</label><input style={styles.input} value={addForm.apellido} onChange={(e) => setAddForm({ ...addForm, apellido: e.target.value })} placeholder="Apellido" /></div>
-        <div style={styles.formGroup}><label style={styles.label}>Email *</label><input style={styles.input} type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} placeholder="email@ejemplo.com" /></div>
-        <div style={styles.formGroup}><label style={styles.label}>Contraseña * (6-32)</label><input style={styles.input} type="password" value={addForm.password} onChange={(e) => setAddForm({ ...addForm, password: e.target.value })} placeholder="Mínimo 6 caracteres" /></div>
-        <div style={styles.formGroup}><label style={styles.label}>Teléfono</label><input style={styles.input} value={addForm.telefono} onChange={(e) => setAddForm({ ...addForm, telefono: e.target.value })} placeholder="3001234567" /></div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Rol *</label>
-          <select style={styles.select} value={addForm.rol} onChange={(e) => setAddForm({ ...addForm, rol: e.target.value })}>
-            <option value="cliente">Cliente</option>
-            <option value="conductor">Conductor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <div style={{ ...styles.formGroup, background: `${theme.accent}10`, border: `1px solid ${theme.accent}30`, borderRadius: 8, padding: 12 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: theme.text }}>
-            <input type="checkbox" checked={addForm.esModerador} onChange={(e) => setAddForm({ ...addForm, esModerador: e.target.checked })} />
-            Asignar como Moderador
-          </label>
-          {addForm.esModerador && (
-            <div style={{ marginTop: 10 }}>
-              <label style={styles.label}>Zona del moderador</label>
-              <select style={styles.select} value={addForm.zonaModerador} onChange={(e) => setAddForm({ ...addForm, zonaModerador: e.target.value })}>
-                <option value="cali">Cali</option>
-                <option value="popayan">Popayán</option>
-                <option value="pasto">Pasto</option>
-              </select>
-              <p style={{ fontSize: 11, color: theme.muted, margin: '6px 0 0' }}>El moderador solo verá y gestionará conductores de su ciudad.</p>
-            </div>
-          )}
-        </div>
-        <button style={{ ...styles.saveBtn, opacity: addSaving ? 0.6 : 1 }} disabled={addSaving} onClick={handleAddUser}>{addSaving ? 'Creando...' : 'Crear Usuario'}</button>
-      </Modal>
+      {addOpen && <AddUserModal onClose={() => setAddOpen(false)} onCreated={handleCreated} />}
+      {editUser && <EditUserModal user={editUser} onClose={() => setEditUser(null)} onSaved={() => handleSaved()} />}
+      {modUser && <ModeratorModal user={modUser} onClose={() => setModUser(null)} onSaved={handleSaved} />}
+      {pwUser && (
+        <ResetPasswordModal
+          name={fullName(pwUser)}
+          email={pwUser.email}
+          avatar={pwUser.avatar}
+          onClose={() => setPwUser(null)}
+          onSubmit={handlePassword}
+        />
+      )}
 
       <ConfirmDialog
-        isOpen={confirmDialog.open}
-        onClose={() => setConfirmDialog({ open: false, type: '', user: null })}
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Eliminar Usuario"
-        message={`Estas seguro de eliminar al usuario "${confirmDialog.user?.nombre || confirmDialog.user?.name || ''}"? Esta accion no se puede deshacer.`}
+        title="Eliminar usuario"
+        message={`Se eliminará la cuenta de ${fullName(deleteTarget)}. Esta acción no se puede deshacer.`}
         confirmText="Eliminar"
-        cancelText="Cancelar"
         danger
       />
     </div>
   );
 }
-
-export default UsersPage;

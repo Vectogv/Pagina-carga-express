@@ -1,0 +1,67 @@
+.config__tabs .tabs__trigger { display: inline-flex; align-items: center; gap: 6px; }
+
+.config__content { max-width: 860px; }
+
+/* Banner */
+.config__banner {
+  width: 100%;
+  aspect-ratio: 16 / 6;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-sunken);
+}
+
+.config__banner--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.config__link { display: inline-flex; align-items: center; gap: 4px; color: var(--primary); overflow-wrap: anywhere; }
+
+.config__upload {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: var(--space-4);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.config__upload:hover,
+.config__upload:focus-within { border-color: var(--primary); }
+
+.config__upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.config__upload-preview { width: 100%; max-height: 220px; object-fit: cover; border-radius: var(--radius-sm); }
+
+.config__file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.config__check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.config__check input { width: 16px; height: 16px; accent-color: var(--primary); }

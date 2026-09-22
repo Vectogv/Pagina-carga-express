@@ -1,9 +1,11 @@
+import { useId } from 'react';
 import './Select.css';
 
-export default function Select({ label, error, helperText, disabled, required, id, children, ...props }) {
-  const selectId = id || `select-${Math.random().toString(36).slice(2, 9)}`;
+export default function Select({ label, error, helperText, disabled, required, id, children, className = '', ...props }) {
+  const autoId = useId();
+  const selectId = id || autoId;
   return (
-    <div className="select-group">
+    <div className={`select-group ${className}`}>
       {label && (
         <label htmlFor={selectId} className="select__label">
           {label} {required && <span className="select__required">*</span>}

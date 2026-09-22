@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
+  ArrowRight, ClipboardList, Clock, Inbox, MapPin, Megaphone, MessageSquare, Navigation, RefreshCw, Siren, Truck,
+} from 'lucide-react';
+import {
   getModeratorDrivers,
   getInactiveDrivers,
   getModeratorComunicados,
@@ -10,42 +13,26 @@ import {
   getConversations,
   getModeratorProfile,
 } from '../../api/moderator';
+import { tokenStore } from '../../api/axios';
 import { useModeratorBadges } from '../../contexts/ModeratorBadgesContext';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import StatsCard from '../../components/admin/StatsCard';
-import Card from '../../components/ui/Card/Card';
-import Badge from '../../components/ui/Badge/Badge';
-import Button from '../../components/ui/Button/Button';
-import EmptyState from '../../components/ui/EmptyState/EmptyState';
-import LoadingState from '../../components/ui/LoadingState/LoadingState';
+import { SOCKET_URL } from '../../config';
+import { formatTime, timeAgo, toList } from '../../utils/format';
+import {
+  PageHeader, StatCard, Card, Badge, Button, StatusBadge, LoadingState,
+} from '../../components/ui';
 import './DashboardPage.css';
 
-const SOCKET_URL = 'https://bakend-cargaexpress-production.up.railway.app';
+const LIST_KEYS = ['drivers', 'trips', 'emergencies', 'conversations'];
+const normalizeList = (d) => toList(d, ...LIST_KEYS);
 
-const normalizeList = (d) => {
-  if (Array.isArray(d)) return d;
-  if (d && Array.isArray(d.data)) return d.data;
-  if (d && Array.isArray(d.drivers)) return d.drivers;
-  if (d && Array.isArray(d.trips)) return d.trips;
-  if (d && Array.isArray(d.emergencies)) return d.emergencies;
-  if (d && Array.isArray(d.conversations)) return d.conversations;
-  return [];
-};
-
-const timeHM = (v) => (v ? new Date(v).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '');
-
-const timeAgo = (v) => {
-  if (!v) return '';
-  const diff = Date.now() - new Date(v).getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 45) return 'Ahora';
-  const m = Math.floor(s / 60);
-  if (m < 60) return `Hace ${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `Hace ${h} h`;
-  const d = Math.floor(h / 24);
-  if (d === 1) return 'Ayer';
-  return `Hace ${d} días`;
+const readStoredUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}');
+  } catch {
+    // Usuario guardado corrupto: se usa el perfil del backend.
+    return {};
+  }
 };
 
 const tripRoute = (t) => {
@@ -54,17 +41,20 @@ const tripRoute = (t) => {
   return `${from} → ${to}`;
 };
 
-const tripConductor = (t) => {
-  if (!t.conductor) return null;
-  return t.conductor.nombre || t.conductor.telefono || t.conductor.placa || null;
-};
-
-const tripVariant = { en_curso: 'warning', aceptado: 'primary', sos: 'danger', finalizado: 'success', completado: 'success', pendiente: 'neutral', cancelado: 'danger' };
-const emergVariant = { pendiente: 'danger', atendida: 'warning', resuelta: 'success' };
+const tripConductor = (t) => (t.conductor ? t.conductor.nombre || t.conductor.telefono || t.conductor.placa || null : null);
 
 const TRIP_ORDER = { en_curso: 0, sos: 1, aceptado: 2 };
 const ACTIVE_TRIP_STATES = ['aceptado', 'en_curso', 'sos'];
 const ACTIVE_EMERGENCY_STATES = ['pendiente', 'atendida'];
+
+const LIVE_LABEL = {
+  conectado: 'En tiempo real',
+  conectando: 'Conectando…',
+  error: 'Reconectando',
+  desconectado: 'Desconectado',
+};
+
+const ACTIVITY_ICON = { emergency: Siren, trip: Truck, message: MessageSquare };
 
 const mergeItem = (prev, item) => {
   if (!item || typeof item !== 'object' || !item.id) return prev;
@@ -77,13 +67,30 @@ const mergeItem = (prev, item) => {
   return [item, ...prev];
 };
 
+function PanelEmpty({ icon: Icon = Inbox, title, description }) {
+  return (
+    <div className="ccop-empty">
+      <span className="ccop-empty__icon"><Icon size={18} /></span>
+      <p className="ccop-empty__title">{title}</p>
+      {description && <p className="ccop-empty__text">{description}</p>}
+    </div>
+  );
+}
+
+function SeeAll({ to, label = 'Ver todo' }) {
+  const navigate = useNavigate();
+  return (
+    <Button variant="ghost" size="sm" onClick={() => navigate(to)}>
+      {label} <ArrowRight size={14} />
+    </Button>
+  );
+}
+
 export default function ModeratorDashboard() {
   const navigate = useNavigate();
   const { emergencyBadge, unreadBadge } = useModeratorBadges();
-  const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { /* perfil inicial vacío */ }
-    return {};
-  });
+  const { ciudadParams } = useModeratorCity();
+  const [user, setUser] = useState(readStoredUser);
   const [drivers, setDrivers] = useState([]);
   const [inactive, setInactive] = useState(0);
   const [comunicados, setComunicados] = useState([]);
@@ -91,17 +98,14 @@ export default function ModeratorDashboard() {
   const [trips, setTrips] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(null);
   const [socketStatus, setSocketStatus] = useState('conectando');
-  const { ciudadParams } = useModeratorCity();
 
-  const myId = (() => {
-    try { return JSON.parse(localStorage.getItem('user') || '{}').id; } catch { /* sin sesión local */ }
-    return null;
-  })();
+  const myId = readStoredUser().id ?? null;
 
   const fetchAll = useCallback(async () => {
-    setLoading(true);
+    setRefreshing(true);
     const results = await Promise.allSettled([
       getModeratorDrivers({ page: 1, limit: 100, ...ciudadParams }),
       getInactiveDrivers({ page: 1, limit: 100, ...ciudadParams }),
@@ -112,17 +116,16 @@ export default function ModeratorDashboard() {
     ]);
     if (results[0].status === 'fulfilled') setDrivers(normalizeList(results[0].value.data));
     if (results[1].status === 'fulfilled') setInactive(normalizeList(results[1].value.data).length);
-    if (results[2].status === 'fulfilled') setComunicados(normalizeList(results[2].value.data));
+    if (results[2].status === 'fulfilled') setComunicados(toList(results[2].value.data, 'comunicados'));
     if (results[3].status === 'fulfilled') setEmergencies(normalizeList(results[3].value.data));
     if (results[4].status === 'fulfilled') setTrips(normalizeList(results[4].value.data));
     if (results[5].status === 'fulfilled') setConversations(normalizeList(results[5].value.data));
     setUpdatedAt(new Date());
     setLoading(false);
+    setRefreshing(false);
   }, [ciudadParams]);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,10 +140,10 @@ export default function ModeratorDashboard() {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = tokenStore.access;
     if (!token) return undefined;
     const socket = io(SOCKET_URL, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       auth: { token: `Bearer ${token}` },
       query: { token: `Bearer ${token}` },
     });
@@ -163,19 +166,17 @@ export default function ModeratorDashboard() {
       const convId = payload.conversacionId || payload.conversationId;
       const fromMe = payload.remitente?.id === myId;
       if (convId) {
-        setConversations((prev) =>
-          prev.map((c) =>
-            String(c.id) === String(convId)
-              ? {
-                  ...c,
-                  ultimoMensaje: payload.mensaje ?? c.ultimoMensaje,
-                  ultimoMensajeAt: payload.createdAt || c.ultimoMensajeAt,
-                  updatedAt: payload.createdAt || c.updatedAt,
-                  noLeidos: fromMe ? (c.noLeidos || 0) : (c.noLeidos || 0) + 1,
-                }
-              : c,
-          ),
-        );
+        setConversations((prev) => prev.map((c) => (
+          String(c.id) === String(convId)
+            ? {
+              ...c,
+              ultimoMensaje: payload.mensaje ?? c.ultimoMensaje,
+              ultimoMensajeAt: payload.createdAt || c.ultimoMensajeAt,
+              updatedAt: payload.createdAt || c.updatedAt,
+              noLeidos: fromMe ? (c.noLeidos || 0) : (c.noLeidos || 0) + 1,
+            }
+            : c
+        )));
       }
       setUpdatedAt(new Date());
     });
@@ -200,11 +201,11 @@ export default function ModeratorDashboard() {
   const pendientesAction = pendVerif + comunicadosPend;
 
   const kpis = [
-    { title: 'Conductores', value: asignados, subtitle: `${online} en línea`, icon: '🚚', color: 'var(--primary)', to: '/moderator/drivers' },
-    { title: 'Viajes', value: activeTrips.length, subtitle: `${enCurso} en curso`, icon: '🧭', color: 'var(--info)', to: '/moderator/trips' },
-    { title: 'Emergencias', value: emergencyBadge, subtitle: `${pendEmerg} pendientes`, icon: '🚨', color: 'var(--danger)', to: '/moderator/emergencies' },
-    { title: 'Pendientes', value: pendientesAction, subtitle: 'Requieren acción', icon: '⏳', color: 'var(--warning)', to: '/moderator/comunicados' },
-    { title: 'Comunicaciones', value: unreadBadge, subtitle: 'Sin responder', icon: '💬', color: 'var(--primary)', to: '/moderator/conversations' },
+    { title: 'Conductores', value: asignados, subtitle: `${online} en línea`, icon: <Truck size={16} />, color: 'var(--primary)', to: '/moderator/drivers' },
+    { title: 'Viajes activos', value: activeTrips.length, subtitle: `${enCurso} en curso`, icon: <Navigation size={16} />, color: 'var(--info)', to: '/moderator/trips' },
+    { title: 'Emergencias', value: emergencyBadge, subtitle: `${pendEmerg} pendientes`, icon: <Siren size={16} />, color: 'var(--danger)', to: '/moderator/emergencies' },
+    { title: 'Pendientes', value: pendientesAction, subtitle: 'Requieren acción', icon: <Clock size={16} />, color: 'var(--warning)', to: '/moderator/comunicados' },
+    { title: 'Comunicaciones', value: unreadBadge, subtitle: 'Sin responder', icon: <MessageSquare size={16} />, color: 'var(--accent-violet)', to: '/moderator/conversations' },
   ];
 
   const tripsToShow = [...activeTrips]
@@ -243,183 +244,183 @@ export default function ModeratorDashboard() {
     return events.sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 8);
   }, [emergencies, trips, conversations]);
 
-  const activityDot = { emergency: 'var(--danger)', trip: 'var(--info)', message: 'var(--primary)' };
+  if (loading) return <div className="page"><LoadingState message="Cargando centro de control…" /></div>;
 
-  if (loading) return <LoadingState message="Cargando centro de control..." />;
+  const onlinePct = (online / Math.max(asignados, 1)) * 100;
+  const offlinePct = (offline / Math.max(asignados, 1)) * 100;
 
   return (
-    <div className="ccop">
-      {/* Encabezado del centro de control */}
-      <div className="ccop-hero">
-        <div>
-          <div className="ccop-hero__badges">
-            <Badge variant="primary">Moderador</Badge>
-            <Badge variant="neutral">📍 {ciudad}</Badge>
-          </div>
-          <h2 className="ccop-hero__title">Centro de Control Operativo</h2>
-          <p className="ccop-hero__desc">Supervisa conductores, viajes, emergencias y comunicaciones de Carga Express GV.</p>
-          <p className="ccop-hero__user">{userName}</p>
-        </div>
-        <div className="ccop-hero__status">
-          <span className={`ccop-live ${socketStatus === 'conectado' ? 'ccop-live--on' : 'ccop-live--off'}`}>
-            <span className="ccop-live__dot" />
-            {socketStatus === 'conectado' ? 'En tiempo real' : socketStatus === 'conectando' ? 'Conectando...' : socketStatus === 'error' ? 'Reconectando' : 'Desconectado'}
+    <div className="page">
+      <PageHeader
+        title="Centro de control"
+        description={(
+          <span className="ccop-subtitle">
+            <span className="ccop-subtitle__city"><MapPin size={13} /> {ciudad}</span>
+            <span>{userName}</span>
           </span>
-          {updatedAt && <p className="ccop-updated">Actualizado a las {timeHM(updatedAt)}</p>}
-          <Button variant="outline" size="sm" icon="↻" onClick={fetchAll}>Actualizar</Button>
-        </div>
-      </div>
+        )}
+        actions={(
+          <>
+            <span className={`ccop-live ccop-live--${socketStatus === 'conectado' ? 'on' : 'off'}`} title={updatedAt ? `Actualizado a las ${formatTime(updatedAt)}` : undefined}>
+              <span className="ccop-live__dot" aria-hidden="true" />
+              {LIVE_LABEL[socketStatus] || LIVE_LABEL.desconectado}
+            </span>
+            <Button variant="secondary" size="sm" icon={<RefreshCw size={14} />} loading={refreshing} onClick={fetchAll}>
+              Actualizar
+            </Button>
+          </>
+        )}
+      />
 
-      {/* KPIs principales */}
-      <div className="ccop-kpis">
+      <div className="stats-grid">
         {kpis.map((k) => (
-          <StatsCard key={k.title} title={k.title} value={k.value} icon={k.icon} color={k.color} subtitle={k.subtitle} to={k.to} />
+          <StatCard key={k.title} title={k.title} value={k.value} icon={k.icon} color={k.color} subtitle={k.subtitle} to={k.to} />
         ))}
       </div>
 
-      {/* Fila 1: Conductores + Viajes */}
-      <div className="ccop-row">
+      <div className="two-col">
         <Card
           title="Estado de conductores"
           description={`${asignados} conductores asignados en ${ciudad}`}
-          actions={<Button variant="ghost" size="sm" onClick={() => navigate('/moderator/drivers')}>Ver →</Button>}
+          actions={<SeeAll to="/moderator/drivers" />}
         >
-          <div className="ccop-bar" role="img" aria-label="Disponibilidad de conductores">
-            {online > 0 && <div className="ccop-bar__seg" style={{ flexBasis: `${(online / Math.max(asignados, 1)) * 100}%`, background: 'var(--success)' }} title={`${online} en línea`} />}
-            {offline > 0 && <div className="ccop-bar__seg" style={{ flexBasis: `${(offline / Math.max(asignados, 1)) * 100}%`, background: 'var(--text-disabled)' }} title={`${offline} desconectados`} />}
+          <div className="ccop-bar" role="img" aria-label={`${online} en línea, ${offline} desconectados`}>
+            {online > 0 && <div className="ccop-bar__seg ccop-bar__seg--online" style={{ flexBasis: `${onlinePct}%` }} />}
+            {offline > 0 && <div className="ccop-bar__seg ccop-bar__seg--offline" style={{ flexBasis: `${offlinePct}%` }} />}
           </div>
           <div className="ccop-legend">
-            <span className="ccop-legend__item"><span className="ccop-legend__dot" style={{ background: 'var(--success)' }} /> {online} en línea</span>
-            <span className="ccop-legend__item"><span className="ccop-legend__dot" style={{ background: 'var(--text-disabled)' }} /> {offline} desconectados</span>
-            {pendVerif > 0 && <span className="ccop-legend__item"><span className="ccop-legend__dot" style={{ background: 'var(--warning)' }} /> {pendVerif} con verificación pendiente</span>}
+            <span className="ccop-legend__item"><span className="ccop-legend__dot ccop-legend__dot--online" /> {online} en línea</span>
+            <span className="ccop-legend__item"><span className="ccop-legend__dot ccop-legend__dot--offline" /> {offline} desconectados</span>
+            {pendVerif > 0 && (
+              <span className="ccop-legend__item"><span className="ccop-legend__dot ccop-legend__dot--pending" /> {pendVerif} con verificación pendiente</span>
+            )}
           </div>
-          {inactive > 0 && <p className="ccop-item__sub">{inactive} conductores inactivos (7+ días sin viajes)</p>}
+          {inactive > 0 && (
+            <button type="button" className="ccop-footer-link" onClick={() => navigate('/moderator/drivers/inactive')}>
+              {inactive} conductores inactivos (7+ días sin viajes) <ArrowRight size={14} />
+            </button>
+          )}
         </Card>
 
-        <Card
-          title="Viajes en tiempo real"
-          description="En curso, aceptados y SOS"
-          actions={<Button variant="ghost" size="sm" onClick={() => navigate('/moderator/trips')}>Ver →</Button>}
-        >
+        <Card title="Viajes en tiempo real" description="En curso, aceptados y SOS" actions={<SeeAll to="/moderator/trips" />}>
           {tripsToShow.length === 0 ? (
-            <EmptyState icon="🚚" title="Información de viajes no disponible" description="Los viajes aparecerán aquí cuando estén disponibles." />
+            <PanelEmpty icon={Truck} title="Sin viajes activos" description="Los viajes aparecerán aquí cuando estén en curso." />
           ) : (
-            <div className="ccop-list">
+            <ul className="ccop-list">
               {tripsToShow.map((t) => (
-                <div className="ccop-item" key={t.id}>
-                  <div className="ccop-item__icon">🚚</div>
+                <li className="ccop-item" key={t.id}>
+                  <span className={`ccop-item__icon ${t.estado === 'sos' ? 'ccop-item__icon--danger' : ''}`}><Truck size={16} /></span>
                   <div className="ccop-item__body">
                     <p className="ccop-item__title">{tripRoute(t)}</p>
                     <p className="ccop-item__sub">{tripConductor(t) || 'Sin conductor asignado'} · #{String(t.id).slice(0, 8)}</p>
                   </div>
                   <div className="ccop-item__extra">
-                    <Badge variant={tripVariant[t.estado] || 'neutral'}>{t.estadoLabel || t.estado || '—'}</Badge>
-                    <span className="ccop-item__time">{t.createdAt ? timeHM(t.createdAt) : ''}</span>
+                    <StatusBadge status={t.estado} label={t.estadoLabel} size="sm" />
+                    <span className="ccop-item__time">{formatTime(t.createdAt)}</span>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </Card>
       </div>
 
-      {/* Fila 2: Emergencias + Comunicaciones */}
-      <div className="ccop-row">
+      <div className="two-col">
         <Card
-          title="Emergencias pendientes"
-          description={activeEmergencies.length > 0 ? `${activeEmergencies.length} caso(s) activo(s)` : 'Casos activos que requieren atención'}
-          actions={<Button variant="ghost" size="sm" onClick={() => navigate('/moderator/emergencies')}>Ver →</Button>}
+          title="Emergencias activas"
+          description={activeEmergencies.length > 0 ? `${activeEmergencies.length} caso(s) activo(s)` : 'Casos que requieren atención'}
+          actions={<SeeAll to="/moderator/emergencies" />}
         >
           {emeToShow.length === 0 ? (
-            <EmptyState icon="🚨" title="Sin emergencias pendientes" description="Los casos activos aparecerán aquí." />
+            <PanelEmpty icon={Siren} title="Sin emergencias activas" description="Los casos activos aparecerán aquí." />
           ) : (
-            <div className="ccop-list">
+            <ul className="ccop-list">
               {emeToShow.map((e) => {
-                const coord = e.lat && e.lng ? `📍 ${Number(e.lat).toFixed(3)}, ${Number(e.lng).toFixed(3)}` : null;
-                const conductor = e.usuario?.nombre ? `${e.usuario.nombre}${e.usuario.telefono ? ` · ${e.usuario.telefono}` : ''}` : null;
-                const subParts = [conductor, coord, e.usuario?.nombre ? null : `Caso #${String(e.id).slice(0, 8)}`, timeAgo(e.createdAt)].filter(Boolean);
+                const coord = e.lat && e.lng ? `${Number(e.lat).toFixed(3)}, ${Number(e.lng).toFixed(3)}` : null;
+                const who = e.usuario?.nombre ? `${e.usuario.nombre}${e.usuario.telefono ? ` · ${e.usuario.telefono}` : ''}` : null;
+                const subParts = [who, coord, e.usuario?.nombre ? null : `Caso #${String(e.id).slice(0, 8)}`, timeAgo(e.createdAt)].filter(Boolean);
                 return (
-                  <div className="ccop-item" key={e.id}>
-                    <div className="ccop-item__icon" style={{ borderColor: 'var(--danger-border)' }}>🚨</div>
+                  <li className="ccop-item" key={e.id}>
+                    <span className="ccop-item__icon ccop-item__icon--danger"><Siren size={16} /></span>
                     <div className="ccop-item__body">
                       <p className="ccop-item__title">{e.motivo || `Caso #${String(e.id).slice(0, 8)}`}</p>
                       <p className="ccop-item__sub">{subParts.join(' · ')}</p>
                     </div>
                     <div className="ccop-item__extra">
-                      <Badge variant={emergVariant[e.estado] || 'neutral'}>{e.estadoLabel || e.estado}</Badge>
-                      <Button variant="danger" size="sm" onClick={() => navigate('/moderator/emergencies')}>Atender</Button>
+                      <StatusBadge status={e.estado} label={e.estadoLabel} size="sm" />
+                      <Button variant="soft-danger" size="sm" onClick={() => navigate('/moderator/emergencies')}>Atender</Button>
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
         </Card>
 
         <Card
           title="Comunicaciones"
           description={`${unreadBadge} mensajes sin responder`}
-          actions={<Button variant="ghost" size="sm" onClick={() => navigate('/moderator/conversations')}>Abrir conversatorio →</Button>}
+          actions={<SeeAll to="/moderator/conversations" label="Abrir conversatorio" />}
         >
           {convToShow.length === 0 ? (
-            <EmptyState icon="💬" title="Sin conversaciones pendientes" description="Las conversaciones con clientes y conductores aparecerán aquí." />
+            <PanelEmpty icon={MessageSquare} title="Sin conversaciones pendientes" description="Las conversaciones con clientes y conductores aparecerán aquí." />
           ) : (
-            <div className="ccop-list">
+            <ul className="ccop-list">
               {convToShow.map((c) => {
                 const u = c.usuario || c;
+                const suffix = u.esModerador ? ` · ${u.zonaModerador || u.ciudad || 'Moderador'}` : u.ciudad ? ` · ${u.ciudad}` : '';
                 return (
-                  <div className="ccop-item" key={c.id}>
-                    <div className="ccop-item__icon">💬</div>
+                  <li className="ccop-item" key={c.id}>
+                    <span className="ccop-item__icon"><MessageSquare size={16} /></span>
                     <div className="ccop-item__body">
-                      <p className="ccop-item__title">
-                        {u.nombre || c.nombre || 'Usuario'}
-                        {u.esModerador ? ` · ${u.zonaModerador || u.ciudad || 'Moderador'}` : u.ciudad ? ` · ${u.ciudad}` : ''}
-                      </p>
+                      <p className="ccop-item__title">{u.nombre || c.nombre || 'Usuario'}{suffix}</p>
                       <p className="ccop-item__sub">{c.ultimoMensaje || 'Sin mensajes'}</p>
                     </div>
                     <div className="ccop-item__extra">
-                      {c.noLeidos > 0 && <Badge variant="danger">{c.noLeidos}</Badge>}
+                      {c.noLeidos > 0 && <Badge variant="danger" size="sm">{c.noLeidos}</Badge>}
                       <span className="ccop-item__time">{timeAgo(c.ultimoMensajeAt || c.updatedAt)}</span>
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
           {comunicadosPend > 0 && (
-            <button className="ccop-footer-link" onClick={() => navigate('/moderator/comunicados')}>
-              {comunicadosPend} comunicado{comunicadosPend > 1 ? 's' : ''} pendiente{comunicadosPend > 1 ? 's' : ''} de aprobación →
+            <button type="button" className="ccop-footer-link" onClick={() => navigate('/moderator/comunicados')}>
+              {comunicadosPend} comunicado{comunicadosPend > 1 ? 's' : ''} pendiente{comunicadosPend > 1 ? 's' : ''} de aprobación <ArrowRight size={14} />
             </button>
           )}
         </Card>
       </div>
 
-      {/* Fila 3: Actividad + Acciones */}
-      <div className="ccop-row">
+      <div className="two-col">
         <Card title="Actividad reciente" description="Últimos movimientos de la operación">
           {activity.length === 0 ? (
-            <EmptyState icon="🕘" title="No hay actividad reciente disponible." description="Los eventos aparecerán aquí conforme ocurran." />
+            <PanelEmpty icon={Clock} title="Sin actividad reciente" description="Los eventos aparecerán aquí conforme ocurran." />
           ) : (
-            <div className="ccop-list">
-              {activity.map((a, i) => (
-                <div className="ccop-activity" key={`${a.time}-${i}`}>
-                  <span className="ccop-activity__dot" style={{ background: activityDot[a.kind] }} />
-                  <p className="ccop-activity__text">{a.text}</p>
-                  <span className="ccop-item__time" style={{ marginLeft: 'auto' }}>{timeHM(a.time)}</span>
-                </div>
-              ))}
-            </div>
+            <ul className="ccop-list ccop-list--compact">
+              {activity.map((a, i) => {
+                const Icon = ACTIVITY_ICON[a.kind];
+                return (
+                  <li className="ccop-activity" key={`${a.time}-${i}`}>
+                    <span className={`ccop-activity__icon ccop-activity__icon--${a.kind}`}><Icon size={13} /></span>
+                    <p className="ccop-activity__text">{a.text}</p>
+                    <span className="ccop-item__time">{formatTime(a.time)}</span>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </Card>
 
         <Card title="Acciones rápidas" description="Atajos a las secciones de moderación">
           <div className="ccop-actions">
-            <Button variant="danger" icon="🚨" onClick={() => navigate('/moderator/emergencies')}>Gestionar emergencias</Button>
-            <Button variant="primary" icon="💬" onClick={() => navigate('/moderator/conversations')}>Abrir conversatorio</Button>
-            <Button variant="secondary" icon="🚚" onClick={() => navigate('/moderator/drivers')}>Ver conductores</Button>
-            <Button variant="secondary" icon="🧭" onClick={() => navigate('/moderator/trips')}>Ver viajes</Button>
-            <Button variant="secondary" icon="📢" onClick={() => navigate('/moderator/comunicados')}>Gestionar comunicados</Button>
-            <Button variant="secondary" icon="📋" onClick={() => navigate('/moderator/encuestas')}>Encuestas</Button>
+            <Button variant="soft-danger" icon={<Siren size={15} />} onClick={() => navigate('/moderator/emergencies')}>Gestionar emergencias</Button>
+            <Button variant="soft-primary" icon={<MessageSquare size={15} />} onClick={() => navigate('/moderator/conversations')}>Abrir conversatorio</Button>
+            <Button variant="secondary" icon={<Truck size={15} />} onClick={() => navigate('/moderator/drivers')}>Ver conductores</Button>
+            <Button variant="secondary" icon={<Navigation size={15} />} onClick={() => navigate('/moderator/trips')}>Ver viajes</Button>
+            <Button variant="secondary" icon={<Megaphone size={15} />} onClick={() => navigate('/moderator/comunicados')}>Comunicados</Button>
+            <Button variant="secondary" icon={<ClipboardList size={15} />} onClick={() => navigate('/moderator/encuestas')}>Encuestas</Button>
           </div>
         </Card>
       </div>

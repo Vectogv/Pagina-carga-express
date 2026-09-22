@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import api, { tokenStore } from '../api/axios';
 import { getUnreadCount } from '../api/moderator';
 import { updateFaviconBadge } from '../utils/favicon';
-
-const SOCKET_URL = 'https://bakend-cargaexpress-production.up.railway.app';
+import { SOCKET_URL } from '../config';
 
 const Ctx = createContext(null);
 
@@ -16,22 +16,22 @@ export function ModeratorBadgesProvider({ children }) {
   const openConversationRef = useRef(null);
 
   const refreshEmergencies = useCallback(async () => {
+    if (!tokenStore.access) return;
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-      const res = await fetch('/api/moderator/emergency/count', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const d = await res.json();
-        setEmergencyBadge((d.pendientes ?? 0) + (d.atendidas ?? 0));
-      }
-    } catch { /* silencioso */ }
+      const { data } = await api.get('/api/moderator/emergency/count');
+      setEmergencyBadge((data?.pendientes ?? 0) + (data?.atendidas ?? 0));
+    } catch {
+      // Silencioso: el badge es informativo y se reintenta en el siguiente polling.
+    }
   }, []);
 
   const refreshUnread = useCallback(async () => {
     try {
       const res = await getUnreadCount();
       setUnreadBadge(res.data.total ?? res.data.count ?? 0);
-    } catch { /* silencioso */ }
+    } catch {
+      // Silencioso: el badge es informativo y se reintenta en el siguiente polling.
+    }
   }, []);
 
   useEffect(() => {
@@ -42,9 +42,13 @@ export function ModeratorBadgesProvider({ children }) {
   }, [refreshEmergencies, refreshUnread]);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = tokenStore.access;
     if (!token) return;
-    const socket = io(SOCKET_URL, { transports: ['websocket'], auth: { token: `Bearer ${token}` }, query: { token: `Bearer ${token}` } });
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      auth: { token: `Bearer ${token}` },
+      query: { token: `Bearer ${token}` },
+    });
     socket.on('connect', () => { refreshEmergencies(); refreshUnread(); });
     // Cambio de estado de una emergencia → recalcular con el endpoint autoritativo.
     ['emergency:new', 'emergency:acknowledged', 'emergency:resolved', 'emergency:alert', 'moderator:emergency:update'].forEach((ev) => socket.on(ev, () => refreshEmergencies()));

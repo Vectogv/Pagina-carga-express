@@ -8,9 +8,10 @@
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
   white-space: nowrap;
   line-height: 1;
+  text-decoration: none;
 }
 
 .btn:disabled {
@@ -18,41 +19,52 @@
   cursor: not-allowed;
 }
 
-.btn--sm { padding: 6px 12px; font-size: var(--text-sm); }
-.btn--md { padding: 8px 16px; font-size: var(--text-base); }
-.btn--lg { padding: 10px 20px; font-size: var(--text-lg); }
+.btn__icon { display: inline-flex; }
 
-.btn--primary { background: var(--primary); color: white; border-color: var(--primary); }
-.btn--primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn--sm { height: 30px; padding: 0 10px; font-size: var(--text-sm); }
+.btn--md { height: 36px; padding: 0 14px; font-size: var(--text-base); }
+.btn--lg { height: 42px; padding: 0 18px; font-size: var(--text-lg); }
+.btn--icon { width: 32px; height: 32px; padding: 0; }
+
+.btn--primary { background: var(--primary); color: var(--primary-contrast); border-color: var(--primary); }
+.btn--primary:hover:not(:disabled) { background: var(--primary-hover); border-color: var(--primary-hover); }
 .btn--primary:active:not(:disabled) { background: var(--primary-active); }
 
-.btn--secondary { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border); }
-.btn--secondary:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-strong); }
+.btn--secondary { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-strong); }
+.btn--secondary:hover:not(:disabled) { background: var(--bg-hover); }
 
 .btn--outline { background: transparent; color: var(--text-primary); border-color: var(--border-strong); }
 .btn--outline:hover:not(:disabled) { background: var(--bg-elevated); }
 
-.btn--ghost { background: transparent; color: var(--text-secondary); border-color: transparent; }
-.btn--ghost:hover:not(:disabled) { background: var(--bg-elevated); color: var(--text-primary); }
+.btn--ghost { background: transparent; color: var(--text-secondary); }
+.btn--ghost:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-primary); }
 
-.btn--success { background: var(--success); color: white; border-color: var(--success); }
-.btn--success:hover:not(:disabled) { background: var(--success-hover); }
+.btn--success { background: var(--success-hover); color: #fff; border-color: var(--success-hover); }
+.btn--success:hover:not(:disabled) { background: #15803D; }
 
-.btn--danger { background: var(--danger); color: white; border-color: var(--danger); }
-.btn--danger:hover:not(:disabled) { background: var(--danger-hover); }
+.btn--danger { background: var(--danger-hover); color: #fff; border-color: var(--danger-hover); }
+.btn--danger:hover:not(:disabled) { background: #B91C1C; }
 
-.btn--warning { background: var(--warning); color: white; border-color: var(--warning); }
-.btn--warning:hover:not(:disabled) { background: var(--warning-hover); }
+.btn--warning { background: var(--warning-hover); color: #fff; border-color: var(--warning-hover); }
+.btn--warning:hover:not(:disabled) { background: #B45309; }
+
+/* Variantes suaves: acciones en filas de tabla */
+.btn--soft-primary { background: var(--primary-subtle); color: var(--primary); border-color: var(--primary-border); }
+.btn--soft-success { background: var(--success-subtle); color: var(--success); border-color: var(--success-border); }
+.btn--soft-warning { background: var(--warning-subtle); color: var(--warning); border-color: var(--warning-border); }
+.btn--soft-danger { background: var(--danger-subtle); color: var(--danger); border-color: var(--danger-border); }
+.btn--soft-primary:hover:not(:disabled),
+.btn--soft-success:hover:not(:disabled),
+.btn--soft-warning:hover:not(:disabled),
+.btn--soft-danger:hover:not(:disabled) { filter: brightness(1.2); }
 
 .btn--full { width: 100%; }
 
 .btn__spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: white;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
   border-radius: 50%;
-  animation: btn-spin 0.6s linear infinite;
+  animation: spin 0.6s linear infinite;
 }
-
-@keyframes btn-spin { to { transform: rotate(360deg); } }

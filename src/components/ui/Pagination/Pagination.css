@@ -1,0 +1,4 @@
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%; flex-wrap: wrap; }
+.pagination__info { font-size: var(--text-sm); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pagination__controls { display: flex; align-items: center; gap: var(--space-1); }
+.pagination__page { font-size: var(--text-sm); color: var(--text-secondary); padding: 0 var(--space-2); font-variant-numeric: tabular-nums; }

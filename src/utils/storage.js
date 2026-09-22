@@ -1,4 +1,4 @@
-const BACKEND_URL = 'https://bakend-cargaexpress-production.up.railway.app'
+import { BACKEND_URL } from '../config'
 
 export function resolveStorageUrl(path) {
   if (!path) return ''

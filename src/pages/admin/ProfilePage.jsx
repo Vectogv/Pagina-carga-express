@@ -1,27 +1,20 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Camera, Save } from 'lucide-react';
 import { getProfile, updateProfile, uploadAvatar } from '../../api/admin';
-import { resolveStorageUrl } from '../../utils/storage';
+import { errorMessage, fullName } from '../../utils/format';
+import {
+  PageHeader, Card, Input, Button, Badge, Avatar, LoadingState, Toast, ToastContainer,
+} from '../../components/ui';
+import './ProfilePage.css';
 
-const theme = {
-  bg: '#020208',
-  cards: '#0f1220',
-  accent: '#6366f1',
-  text: '#e2e8f0',
-  muted: '#64748b',
-  success: '#22c55e',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  border: '#1e2238',
-};
-
-function ProfilePage() {
+export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [form, setForm] = useState({ nombre: '', apellido: '', email: '', telefono: '' });
-  const [toasts, setToasts] = useState([]);
+  const [toast, setToast] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -39,7 +32,7 @@ function ProfilePage() {
           telefono: data.telefono || data.phone || '',
         });
       } catch (err) {
-        if (!cancelled) setError(err?.response?.data?.message || 'Error al cargar el perfil');
+        if (!cancelled) setError(errorMessage(err, 'Error al cargar el perfil'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -47,11 +40,8 @@ function ProfilePage() {
     return () => { cancelled = true; };
   }, []);
 
-  const showToast = (message, type = 'success') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  };
+  const notify = (message, variant = 'success') => setToast({ id: Date.now(), message, variant });
+  const closeToast = useCallback(() => setToast(null), []);
 
   const handleFormChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -68,16 +58,12 @@ function ProfilePage() {
     setSaving(true);
     try {
       await updateProfile(payload);
-      showToast('Perfil actualizado correctamente');
+      notify('Perfil actualizado correctamente');
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error al actualizar el perfil', 'error');
+      notify(errorMessage(err, 'Error al actualizar el perfil'), 'danger');
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
   };
 
   const handleAvatarChange = async (e) => {
@@ -89,294 +75,81 @@ function ProfilePage() {
       fd.append('file', file);
       const res = await uploadAvatar(fd);
       const newUrl = res.data?.url || res.data?.avatar || URL.createObjectURL(file);
-      setProfile((prev) => ({ ...prev, avatar: resolveStorageUrl(newUrl) }));
-      showToast('Foto de perfil actualizada');
-    } catch {
-      showToast('Error al subir la foto', 'error');
+      setProfile((prev) => ({ ...prev, avatar: newUrl }));
+      notify('Foto de perfil actualizada');
+    } catch (err) {
+      notify(errorMessage(err, 'Error al subir la foto'), 'danger');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  if (loading) return <LoadingSkeleton />;
-  if (error) return <ErrorState message={error} />;
+  const displayName = fullName({ ...profile, nombre: form.nombre, apellido: form.apellido }) || 'Admin';
 
   return (
-    <div style={styles.page}>
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
+    <div className="page">
+      <PageHeader title="Mi perfil" description="Administra tu información personal y tu foto de perfil." />
 
-      <h1 style={styles.title}>Mi Perfil</h1>
-      <p style={styles.subtitle}>Administra tu información personal</p>
+      {loading && <LoadingState message="Cargando perfil..." />}
+      {!loading && error && <div className="page-error" role="alert">{error}</div>}
 
-      <div style={styles.card}>
-        <div style={styles.avatarSection}>
-          <div style={styles.avatarWrapper} onClick={handleAvatarClick}>
-            {profile?.avatar ? (
-              <img
-                src={resolveStorageUrl(profile.avatar)}
-                alt="Avatar"
-                style={styles.avatar}
-              />
-            ) : (
-              <div style={styles.avatarFallback}>
-                {(form.nombre || 'A').charAt(0).toUpperCase()}
+      {!loading && !error && (
+        <div className="profile">
+          <Card>
+            <div className="profile__identity">
+              <div className="profile__avatar">
+                <Avatar key={profile?.avatar || 'none'} src={profile?.avatar} name={displayName} size={88} />
+                <button
+                  type="button"
+                  className="profile__avatar-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  aria-label="Cambiar foto de perfil"
+                >
+                  {uploading ? <span className="profile__spinner" aria-hidden="true" /> : <Camera size={15} />}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
               </div>
-            )}
-            <div style={styles.avatarOverlay}>
-              {uploading ? (
-                <span style={{ color: '#fff', fontSize: 12 }}>Subiendo...</span>
-              ) : (
-                <span style={{ color: '#fff', fontSize: 20 }}>📷</span>
-              )}
+              <div className="profile__info">
+                <h3 className="profile__name">{displayName}</h3>
+                <span className="text-muted truncate">{form.email || '—'}</span>
+                <Badge variant="primary">{profile?.role || profile?.rol || 'Administrador'}</Badge>
+              </div>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              style={{ display: 'none' }}
-            />
-          </div>
-          <div style={styles.avatarInfo}>
-            <h2 style={styles.profileName}>{form.nombre || 'Admin'}</h2>
-            <span style={styles.profileEmail}>{form.email || 'admin@plataforma.com'}</span>
-            <span style={styles.roleBadge}>
-              {profile?.role || profile?.rol || 'Administrador'}
-            </span>
-          </div>
+          </Card>
+
+          <form onSubmit={handleSaveProfile}>
+            <Card title="Información personal" description="Estos datos se usan para identificarte dentro del panel.">
+              <div className="form-grid">
+                <Input label="Nombre" name="nombre" value={form.nombre} onChange={handleFormChange} placeholder="Nombre" autoComplete="given-name" />
+                <Input label="Apellido" name="apellido" value={form.apellido} onChange={handleFormChange} placeholder="Apellido" autoComplete="family-name" />
+                <Input label="Correo electrónico" type="email" name="email" value={form.email} onChange={handleFormChange} placeholder="admin@plataforma.com" autoComplete="email" />
+                <Input label="Teléfono" type="tel" name="telefono" value={form.telefono} onChange={handleFormChange} placeholder="+57 300 123 4567" autoComplete="tel" />
+              </div>
+              <div className="row row--end">
+                <Button type="submit" icon={<Save size={15} />} loading={saving}>
+                  {saving ? 'Guardando...' : 'Guardar cambios'}
+                </Button>
+              </div>
+            </Card>
+          </form>
         </div>
-      </div>
+      )}
 
-      <form style={styles.card} onSubmit={handleSaveProfile}>
-        <h2 style={styles.cardTitle}>✏️ Información Personal</h2>
-
-        <div style={styles.formGrid}>
-          <div style={styles.field}>
-            <label style={styles.label}>Nombre</label>
-            <input type="text" name="nombre" value={form.nombre} onChange={handleFormChange} placeholder="Nombre" style={styles.input} />
-          </div>
-          <div style={styles.field}>
-            <label style={styles.label}>Apellido</label>
-            <input type="text" name="apellido" value={form.apellido} onChange={handleFormChange} placeholder="Apellido" style={styles.input} />
-          </div>
-          <div style={styles.field}>
-            <label style={styles.label}>Correo Electrónico</label>
-            <input type="email" name="email" value={form.email} onChange={handleFormChange} placeholder="admin@plataforma.com" style={styles.input} />
-          </div>
-          <div style={styles.field}>
-            <label style={styles.label}>Teléfono</label>
-            <input type="tel" name="telefono" value={form.telefono} onChange={handleFormChange} placeholder="+57 300 123 4567" style={styles.input} />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            ...styles.btn,
-            ...styles.btnPrimary,
-            opacity: saving ? 0.6 : 1,
-          }}
-        >
-          {saving ? 'Guardando...' : 'Guardar Cambios'}
-        </button>
-      </form>
-
-      <div style={styles.toastContainer}>
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            style={{
-              ...styles.toast,
-              borderLeftColor: toast.type === 'success' ? theme.success : theme.danger,
-            }}
-          >
-            <span>{toast.type === 'success' ? '✅' : '❌'}</span>
-            <span style={{ flex: 1, fontSize: 13, color: theme.text }}>{toast.message}</span>
-          </div>
-        ))}
-      </div>
+      {toast && (
+        <ToastContainer>
+          <Toast key={toast.id} message={toast.message} variant={toast.variant} onClose={closeToast} />
+        </ToastContainer>
+      )}
     </div>
   );
 }
-
-function LoadingSkeleton() {
-  return (
-    <div style={styles.page}>
-      <div style={styles.skeletonCard}>
-        <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <div style={styles.skeletonCircle} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ ...styles.skeletonLine, width: '40%' }} />
-            <div style={{ ...styles.skeletonLine, width: '55%', height: 12 }} />
-            <div style={{ ...styles.skeletonLine, width: '25%', height: 20 }} />
-          </div>
-        </div>
-      </div>
-      <div style={{ ...styles.skeletonCard, marginTop: 20 }}>
-        <div style={{ ...styles.skeletonLine, width: '30%', height: 24 }} />
-        <div style={styles.formGrid}>
-          {[1, 2, 3].map((i) => (
-            <div key={i} style={styles.field}>
-              <div style={{ ...styles.skeletonLine, width: '50%', height: 14 }} />
-              <div style={{ ...styles.skeletonLine, width: '100%', height: 44 }} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ErrorState({ message }) {
-  return (
-    <div style={styles.errorWrapper}>
-      <span style={{ fontSize: 48 }}>⚠️</span>
-      <h2 style={styles.errorTitle}>Error</h2>
-      <p style={styles.errorMessage}>{message}</p>
-    </div>
-  );
-}
-
-const styles = {
-  page: { padding: 20 },
-  title: { fontSize: 18, fontWeight: 700, color: theme.text, margin: 0 },
-  subtitle: { fontSize: 13, color: theme.muted, margin: '4px 0 24px' },
-  card: {
-    backgroundColor: theme.cards,
-    borderRadius: 14,
-    border: `1px solid ${theme.border}`,
-    padding: 20,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 24,
-    maxWidth: 700,
-  },
-  avatarSection: { display: 'flex', alignItems: 'center', gap: 24 },
-  avatarWrapper: {
-    position: 'relative',
-    width: 96,
-    height: 96,
-    borderRadius: '50%',
-    overflow: 'hidden',
-    cursor: 'pointer',
-    flexShrink: 0,
-    border: `3px solid ${theme.accent}`,
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  avatarFallback: {
-    width: '100%',
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.accent,
-    color: '#fff',
-    fontSize: 36,
-    fontWeight: 700,
-  },
-  avatarOverlay: {
-    position: 'absolute',
-    inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0,
-    transition: 'opacity 0.2s ease',
-  },
-  avatarInfo: { display: 'flex', flexDirection: 'column', gap: 4 },
-  profileName: { fontSize: 20, fontWeight: 700, color: theme.text, margin: 0 },
-  profileEmail: { fontSize: 13, color: theme.muted, margin: 0 },
-  roleBadge: {
-    display: 'inline-flex',
-    alignSelf: 'flex-start',
-    padding: '4px 12px',
-    borderRadius: 20,
-    backgroundColor: `${theme.accent}22`,
-    color: theme.accent,
-    fontSize: 12,
-    fontWeight: 600,
-    marginTop: 4,
-  },
-  cardTitle: { fontSize: 18, fontWeight: 700, color: theme.text, margin: 0 },
-  formGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-    gap: 12,
-  },
-  field: { display: 'flex', flexDirection: 'column', gap: 6 },
-  label: { fontSize: 13, fontWeight: 600, color: theme.muted },
-  input: {
-    padding: '10px 14px',
-    borderRadius: 8,
-    border: `1px solid ${theme.border}`,
-    backgroundColor: theme.bg,
-    color: theme.text,
-    fontSize: 13,
-    outline: 'none',
-  },
-  btn: {
-    padding: '12px 24px',
-    borderRadius: 10,
-    border: 'none',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-    alignSelf: 'flex-start',
-  },
-  btnPrimary: { backgroundColor: theme.accent, color: '#ffffff' },
-  toastContainer: {
-    position: 'fixed',
-    top: 24,
-    right: 24,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-    zIndex: 9999,
-  },
-  toast: {
-    backgroundColor: theme.cards,
-    border: `1px solid ${theme.border}`,
-    borderLeftWidth: 4,
-    borderRadius: 10,
-    padding: '12px 16px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-    animation: 'slideIn 0.3s ease forwards',
-    minWidth: 280,
-  },
-  skeletonCard: {
-    backgroundColor: theme.cards,
-    borderRadius: 14,
-    border: `1px solid ${theme.border}`,
-    padding: 20,
-  },
-  skeletonCircle: { width: 96, height: 96, borderRadius: '50%', backgroundColor: theme.border },
-  skeletonLine: { height: 16, borderRadius: 4, backgroundColor: theme.border },
-  errorWrapper: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    padding: 64,
-    textAlign: 'center',
-  },
-  errorTitle: { fontSize: 18, fontWeight: 700, color: theme.text, margin: 0 },
-  errorMessage: { fontSize: 13, color: theme.muted, margin: 0, maxWidth: 400 },
-};
-
-export default ProfilePage;

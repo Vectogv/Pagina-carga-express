@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
+import { useZonas } from '../hooks/useZonas';
 
 const Ctx = createContext(null);
 
@@ -10,6 +11,7 @@ const STORAGE_KEY = 'moderatorCity';
 export function ModeratorCityProvider({ children }) {
   const { user } = useAuth();
   const isAdmin = user?.rol === 'admin' || user?.role === 'admin';
+  const zonas = useZonas();
   const [ciudad, setCiudad] = useState(() => localStorage.getItem(STORAGE_KEY) || 'general');
 
   useEffect(() => {
@@ -17,13 +19,9 @@ export function ModeratorCityProvider({ children }) {
   }, [ciudad]);
 
   const value = useMemo(() => {
-    const labels = {
-      general: 'General (todas)',
-      cali: 'Cali',
-      popayan: 'Popayán',
-      pasto: 'Pasto',
-    };
+    const labels = { general: 'General (todas)', ...Object.fromEntries(zonas.map((z) => [z.value, z.label])) };
     return {
+      zonas,
       isAdmin,
       ciudad,
       setCiudad,
@@ -31,7 +29,7 @@ export function ModeratorCityProvider({ children }) {
       // Params ?ciudad= para los GET de moderación, solo si el admin eligió una ciudad concreta.
       ciudadParams: isAdmin && ciudad !== 'general' ? { ciudad } : {},
     };
-  }, [isAdmin, ciudad]);
+  }, [isAdmin, ciudad, zonas]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

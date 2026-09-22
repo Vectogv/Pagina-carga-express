@@ -1,17 +1,11 @@
 import './Badge.css';
 
-const variantMap = {
-  success: 'badge--success',
-  warning: 'badge--warning',
-  danger: 'badge--danger',
-  info: 'badge--info',
-  neutral: 'badge--neutral',
-  primary: 'badge--primary',
-};
+const VARIANTS = ['success', 'warning', 'danger', 'info', 'neutral', 'primary', 'violet'];
 
-export default function Badge({ children, variant = 'neutral', size = 'md', ...props }) {
+export default function Badge({ children, variant = 'neutral', size = 'md', className = '', ...props }) {
+  const v = VARIANTS.includes(variant) ? variant : 'neutral';
   return (
-    <span className={`badge ${variantMap[variant] || 'badge--neutral'} badge--${size}`} {...props}>
+    <span className={`badge badge--${v} badge--${size} ${className}`} {...props}>
       {children}
     </span>
   );

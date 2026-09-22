@@ -1,0 +1,78 @@
+.login {
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) minmax(0, 1.1fr);
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.login__aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-10);
+  background:
+    radial-gradient(600px 400px at 0% 0%, rgba(59, 130, 246, 0.18), transparent 70%),
+    radial-gradient(500px 400px at 100% 100%, rgba(99, 102, 241, 0.14), transparent 70%),
+    var(--bg-sunken);
+  border-right: 1px solid var(--border);
+}
+
+.login__brand { display: flex; align-items: center; gap: var(--space-3); font-weight: var(--font-bold); font-size: var(--text-lg); }
+
+.login__logo {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), #6366F1);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
+}
+
+.login__pitch { max-width: 440px; display: flex; flex-direction: column; gap: var(--space-4); }
+.login__pitch h1 { font-size: 32px; line-height: 1.15; letter-spacing: -0.03em; font-weight: var(--font-bold); }
+.login__pitch p { color: var(--text-secondary); font-size: var(--text-lg); }
+
+.login__features { list-style: none; display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-4); }
+.login__features li { display: flex; align-items: center; gap: var(--space-3); color: var(--text-secondary); }
+.login__features svg { color: var(--primary); }
+
+.login__legal { font-size: var(--text-sm); color: var(--text-muted); }
+
+.login__main { display: flex; align-items: center; justify-content: center; padding: var(--space-8) var(--space-4); }
+
+.login__card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: var(--space-5); }
+
+.login__header { display: flex; flex-direction: column; gap: var(--space-1); }
+.login__header h2 { font-size: var(--text-2xl); font-weight: var(--font-bold); letter-spacing: -0.02em; }
+.login__header p { color: var(--text-secondary); }
+
+.login__password { position: relative; }
+.login__password .input__field { padding-right: 40px; }
+
+.login__toggle {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.login__toggle:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+.login__hint { font-size: var(--text-sm); color: var(--text-muted); text-align: center; }
+
+@media (max-width: 900px) {
+  .login { grid-template-columns: 1fr; }
+  .login__aside { display: none; }
+}

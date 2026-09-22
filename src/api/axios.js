@@ -7,83 +7,68 @@ const api = axios.create({
   },
 })
 
-let isRefreshing = false
-let failedQueue = []
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error)
-    } else {
-      prom.resolve(token)
-    }
-  })
-  failedQueue = []
+export const tokenStore = {
+  get access() { return localStorage.getItem('accessToken') },
+  get refresh() { return localStorage.getItem('refreshToken') },
+  set(access, refresh) {
+    if (access) localStorage.setItem('accessToken', access)
+    if (refresh) localStorage.setItem('refreshToken', refresh)
+  },
+  clear() {
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+    localStorage.removeItem('user')
+  },
 }
 
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accessToken')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => Promise.reject(error)
-)
+// Endpoints de auth: un 401 aquí es un error real, no un token vencido.
+const AUTH_PATHS = ['/api/auth/login', '/api/auth/refresh-token', '/api/auth/register']
+
+let refreshPromise = null
+let onSessionExpired = null
+
+/** AuthContext registra aquí qué hacer cuando la sesión no se puede renovar. */
+export const setSessionExpiredHandler = (fn) => { onSessionExpired = fn }
+
+async function refreshAccessToken() {
+  const refreshToken = tokenStore.refresh
+  if (!refreshToken) throw new Error('Sin refresh token')
+  const { data } = await axios.post('/api/auth/refresh-token', { refreshToken })
+  const newToken = data.token || data.accessToken
+  if (!newToken) throw new Error('Respuesta de refresh sin token')
+  tokenStore.set(newToken, data.refreshToken)
+  return newToken
+}
+
+api.interceptors.request.use((config) => {
+  const token = tokenStore.access
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
+    const original = error.config
+    const isAuthCall = AUTH_PATHS.some((p) => original?.url?.startsWith(p))
 
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    if (error.response?.status !== 401 || !original || original._retry || isAuthCall) {
       return Promise.reject(error)
     }
 
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject })
-      })
-        .then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`
-          return api(originalRequest)
-        })
-        .catch((err) => Promise.reject(err))
-    }
-
-    originalRequest._retry = true
-    isRefreshing = true
-
+    original._retry = true
     try {
-      const refreshToken = localStorage.getItem('refreshToken')
-      const { data } = await axios.post(
-        '/api/auth/refresh-token',
-        { refreshToken },
-        { headers: { 'Content-Type': 'application/json' } }
-      )
-
-      const newToken = data.accessToken
-      localStorage.setItem('accessToken', newToken)
-      if (data.refreshToken) {
-        localStorage.setItem('refreshToken', data.refreshToken)
-      }
-
-      api.defaults.headers.common.Authorization = `Bearer ${newToken}`
-      originalRequest.headers.Authorization = `Bearer ${newToken}`
-
-      processQueue(null, newToken)
-      return api(originalRequest)
+      // Una sola renovación compartida por todas las peticiones que fallen a la vez.
+      refreshPromise = refreshPromise || refreshAccessToken().finally(() => { refreshPromise = null })
+      const token = await refreshPromise
+      original.headers.Authorization = `Bearer ${token}`
+      return api(original)
     } catch (refreshError) {
-      processQueue(refreshError, null)
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      window.location.href = '/admin/login'
+      tokenStore.clear()
+      onSessionExpired?.()
       return Promise.reject(refreshError)
-    } finally {
-      isRefreshing = false
     }
-  }
+  },
 )
 
 export default api

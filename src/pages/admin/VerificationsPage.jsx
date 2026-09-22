@@ -1,207 +1,46 @@
-import { useState, useEffect } from 'react';
-import DataTable from '../../components/admin/DataTable';
-import Modal from '../../components/admin/Modal';
-import ConfirmDialog from '../../components/admin/ConfirmDialog';
+import { useState, useEffect, useCallback } from 'react';
+import { Check, ExternalLink, FileText, X } from 'lucide-react';
 import { getVerifications, approveVerification, rejectVerification } from '../../api/admin';
 import { resolveStorageUrl } from '../../utils/storage';
+import { errorMessage, formatDate, toList } from '../../utils/format';
+import {
+  Avatar, Badge, Button, ConfirmDialog, DataTable, Modal, PageHeader, Textarea,
+} from '../../components/ui';
 
-const theme = {
-  bg: '#020208',
-  cards: '#0f1220',
-  accent: '#6366f1',
-  text: '#e2e8f0',
-  muted: '#64748b',
-  success: '#22c55e',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  border: '#1e2238',
+const DOC_STATUS = {
+  approved: ['Aprobado', 'success'],
+  rejected: ['Rechazado', 'danger'],
+  pending: ['Pendiente', 'warning'],
 };
 
-const styles = {
-  page: {
-    padding: 32,
-    minHeight: '100vh',
-    backgroundColor: theme.bg,
-    color: theme.text,
-  },
-  pageHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 28,
-  },
-  pageTitle: {
-    fontSize: 24,
-    fontWeight: 800,
-    color: theme.text,
-    margin: 0,
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    color: theme.muted,
-    margin: '4px 0 0',
-  },
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '4px 12px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
-    whiteSpace: 'nowrap',
-  },
-  badgePending: {
-    backgroundColor: `${theme.warning}20`,
-    color: theme.warning,
-  },
-  badgeApproved: {
-    backgroundColor: `${theme.success}20`,
-    color: theme.success,
-  },
-  badgeRejected: {
-    backgroundColor: `${theme.danger}20`,
-    color: theme.danger,
-  },
-  actionBtn: {
-    padding: '6px 14px',
-    borderRadius: 6,
-    border: 'none',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    whiteSpace: 'nowrap',
-  },
-  approveBtn: {
-    backgroundColor: `${theme.success}20`,
-    color: theme.success,
-  },
-  rejectBtn: {
-    backgroundColor: `${theme.danger}20`,
-    color: theme.danger,
-  },
-  actionsCell: {
-    display: 'flex',
-    gap: 8,
-    flexWrap: 'nowrap',
-  },
-  errorBanner: {
-    padding: '16px 20px',
-    borderRadius: 10,
-    backgroundColor: `${theme.danger}15`,
-    border: `1px solid ${theme.danger}40`,
-    color: theme.danger,
-    fontSize: 14,
-    marginBottom: 20,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-  },
-  detailGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-    gap: 16,
-  },
-  detailCard: {
-    backgroundColor: `${"#020208"}`,
-    borderRadius: 10,
-    border: `1px solid ${theme.border}`,
-    padding: 16,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-  },
-  detailLabel: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: theme.muted,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    margin: 0,
-  },
-  detailValue: {
-    fontSize: 14,
-    color: theme.text,
-    margin: 0,
-  },
-  docImage: {
-    width: '100%',
-    maxHeight: 300,
-    objectFit: 'contain',
-    borderRadius: 8,
-    backgroundColor: `${"#020208"}`,
-    border: `1px solid ${theme.border}`,
-  },
-  driverInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-  },
-  driverAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: '50%',
-    backgroundColor: theme.accent,
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 12,
-    fontWeight: 700,
-    flexShrink: 0,
-  },
-  driverName: {
-    fontWeight: 600,
-    fontSize: 14,
-    color: theme.text,
-  },
-  documentsSection: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTop: `1px solid ${theme.border}`,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 700,
-    color: theme.text,
-    margin: '0 0 12px',
-  },
-};
-
-function StatusBadge({ status }) {
-  const map = {
-    approved: styles.badgeApproved,
-    rejected: styles.badgeRejected,
-    pending: styles.badgePending,
-  };
-  const labels = {
-    approved: 'Aprobado',
-    rejected: 'Rechazado',
-    pending: 'Pendiente',
-  };
+function DocStatus({ status }) {
+  const [label, variant] = DOC_STATUS[status] || [status || 'Pendiente', 'warning'];
   return (
-    <span style={{ ...styles.badge, ...(map[status] || styles.badgePending) }}>
-      {labels[status] || status}
-    </span>
+    <Badge variant={variant}>
+      <span className="badge__dot" aria-hidden="true" />
+      {label}
+    </Badge>
   );
 }
 
-function DriverCell({ name, cedula }) {
-  const initials = name
-    ? name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-    : '??';
+const driverName = (row) => row?.conductorName || row?.conductor?.name || row?.name || '';
+const driverCedula = (row) => row?.cedula || row?.conductor?.cedula || '';
+
+const isImage = (doc) => doc.type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.url || '');
+
+function DocThumb({ label, path }) {
+  const url = resolveStorageUrl(path);
   return (
-    <div style={styles.driverInfo}>
-      <div style={styles.driverAvatar}>{initials}</div>
-      <div>
-        <div style={styles.driverName}>{name}</div>
-        <div style={{ fontSize: 12, color: theme.muted }}>{cedula}</div>
-      </div>
+    <div className="stack">
+      <span className="detail-list__label">{label}</span>
+      <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${label} en una pestaña nueva`}>
+        <img src={url} alt={label} className="thumb thumb--link" loading="lazy" />
+      </a>
     </div>
   );
 }
 
-function VerificationsPage() {
+export default function VerificationsPage() {
   const [verifications, setVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -209,45 +48,46 @@ function VerificationsPage() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [nota, setNota] = useState('');
 
-  const fetchVerifications = async () => {
+  const fetchVerifications = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
       const res = await getVerifications();
-      setVerifications(Array.isArray(res.data) ? res.data : (res.data.data || res.data || []));
+      setVerifications(toList(res.data));
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al cargar las verificaciones');
+      setError(errorMessage(err, 'Error al cargar las verificaciones'));
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchVerifications();
   }, []);
 
+  useEffect(() => { fetchVerifications(); }, [fetchVerifications]);
+
+  const closeConfirm = () => { setConfirmAction(null); setNota(''); };
+
   const handleApprove = async () => {
-    if (!confirmAction) return;
     try {
       await approveVerification(confirmAction.conductorId || confirmAction.id);
       await fetchVerifications();
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Error al aprobar verificación');
+      setError(errorMessage(err, 'Error al aprobar verificación'));
     }
-    setConfirmAction(null);
   };
 
   const handleReject = async () => {
-    if (!confirmAction) return;
     try {
+      // Doc §18: {nota} opcional
       const payload = nota.trim() ? { nota: nota.trim() } : {};
       await rejectVerification(confirmAction.conductorId || confirmAction.id, payload);
       await fetchVerifications();
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.message || 'Error al rechazar verificación');
+      setError(errorMessage(err, 'Error al rechazar verificación'));
     }
-    setConfirmAction(null);
-    setNota('');
+  };
+
+  const ask = (row, type) => (e) => {
+    e.stopPropagation();
+    setConfirmAction({ ...row, type });
   };
 
   const columns = [
@@ -255,100 +95,50 @@ function VerificationsPage() {
       key: 'conductor',
       label: 'Conductor',
       render: (_, row) => (
-        <DriverCell
-          name={row.conductorName || row.conductor?.name || row.name}
-          cedula={row.cedula || row.conductor?.cedula}
-        />
+        <div className="cell-user">
+          <Avatar name={driverName(row)} />
+          <div className="cell-user__text">
+            <span className="cell-user__name">{driverName(row) || '—'}</span>
+            <span className="cell-user__meta">{driverCedula(row) || '—'}</span>
+          </div>
+        </div>
       ),
     },
-    {
-      key: 'cedula',
-      label: 'Cédula',
-      render: (val, row) => <StatusBadge status={row.cedulaStatus || val || 'pending'} />,
-    },
-    {
-      key: 'licencia',
-      label: 'Licencia',
-      render: (val, row) => <StatusBadge status={row.licenciaStatus || val || 'pending'} />,
-    },
-    {
-      key: 'vehiculo',
-      label: 'Vehículo',
-      render: (val, row) => <StatusBadge status={row.vehiculoStatus || val || 'pending'} />,
-    },
+    { key: 'cedula', label: 'Cédula', render: (val, row) => <DocStatus status={row.cedulaStatus || val || 'pending'} /> },
+    { key: 'licencia', label: 'Licencia', render: (val, row) => <DocStatus status={row.licenciaStatus || val || 'pending'} /> },
+    { key: 'vehiculo', label: 'Vehículo', render: (val, row) => <DocStatus status={row.vehiculoStatus || val || 'pending'} /> },
     {
       key: 'acciones',
-      label: 'Acciones',
+      label: '',
+      align: 'right',
       render: (_, row) => (
-        <div style={styles.actionsCell}>
-          <button
-            style={{ ...styles.actionBtn, ...styles.approveBtn }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setConfirmAction({ ...row, type: 'approve' });
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.success;
-              e.currentTarget.style.color = '#fff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = `${theme.success}20`;
-              e.currentTarget.style.color = theme.success;
-            }}
-          >
-            Aprobar
-          </button>
-          <button
-            style={{ ...styles.actionBtn, ...styles.rejectBtn }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setConfirmAction({ ...row, type: 'reject' });
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.danger;
-              e.currentTarget.style.color = '#fff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = `${theme.danger}20`;
-              e.currentTarget.style.color = theme.danger;
-            }}
-          >
-            Rechazar
-          </button>
+        <div className="row row--end">
+          <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={ask(row, 'approve')}>Aprobar</Button>
+          <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={ask(row, 'reject')}>Rechazar</Button>
         </div>
       ),
     },
   ];
 
+  const docs = selected ? [
+    selected.cedulaImage && { label: 'Cédula', path: selected.cedulaImage },
+    selected.licenciaImage && { label: 'Licencia', path: selected.licenciaImage },
+    selected.vehiculoImage && { label: 'Vehículo', path: selected.vehiculoImage },
+  ].filter(Boolean) : [];
+  const extraDocs = selected?.documents || [];
+  const isApprove = confirmAction?.type === 'approve';
+  const confirmName = driverName(confirmAction) || 'este conductor';
+
   return (
-    <div style={styles.page}>
-      <div style={styles.pageHeader}>
-        <div>
-          <h1 style={styles.pageTitle}>Verificaciones de Conductores</h1>
-          <p style={styles.pageSubtitle}>
-            Revisa y gestiona la documentación de los conductores
-          </p>
-        </div>
-      </div>
+    <div className="page">
+      <PageHeader title="Verificaciones" description="Revisa y gestiona la documentación de los conductores." />
 
       {error && (
-        <div style={styles.errorBanner}>
-          <span>⚠</span>
+        <div className="page-error" role="alert">
           <span>{error}</span>
-          <button
-            style={{
-              marginLeft: 'auto',
-              background: 'none',
-              border: 'none',
-              color: theme.danger,
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 13,
-            }}
-            onClick={() => setError(null)}
-          >
-            ✕
-          </button>
+          <Button size="icon" variant="ghost" onClick={() => setError(null)} aria-label="Cerrar mensaje de error">
+            <X size={15} />
+          </Button>
         </div>
       )}
 
@@ -360,135 +150,83 @@ function VerificationsPage() {
         onRowClick={setSelected}
       />
 
-      <Modal
-        isOpen={!!selected}
-        onClose={() => setSelected(null)}
-        title="Detalles de Verificación"
-        size="lg"
-      >
+      <Modal isOpen={!!selected} onClose={() => setSelected(null)} title="Detalle de verificación" size="lg">
         {selected && (
-          <>
-            <div style={styles.detailGrid}>
-              <div style={styles.detailCard}>
-                <p style={styles.detailLabel}>Conductor</p>
-                <p style={styles.detailValue}>
-                  {selected.conductorName || selected.conductor?.name || '—'}
-                </p>
+          <div className="stack">
+            <div className="detail-list">
+              <div className="detail-list__item">
+                <span className="detail-list__label">Conductor</span>
+                <span className="detail-list__value">{driverName(selected) || '—'}</span>
               </div>
-              <div style={styles.detailCard}>
-                <p style={styles.detailLabel}>Cédula</p>
-                <p style={styles.detailValue}>
-                  {selected.cedula || selected.conductor?.cedula || '—'}
-                </p>
+              <div className="detail-list__item">
+                <span className="detail-list__label">Cédula</span>
+                <span className="detail-list__value">{driverCedula(selected) || '—'}</span>
               </div>
-              <div style={styles.detailCard}>
-                <p style={styles.detailLabel}>Estado Cédula</p>
-                <StatusBadge status={selected.cedulaStatus || 'pending'} />
+              <div className="detail-list__item">
+                <span className="detail-list__label">Fecha de solicitud</span>
+                <span className="detail-list__value">{formatDate(selected.createdAt)}</span>
               </div>
-              <div style={styles.detailCard}>
-                <p style={styles.detailLabel}>Estado Licencia</p>
-                <StatusBadge status={selected.licenciaStatus || 'pending'} />
+              <div className="detail-list__item">
+                <span className="detail-list__label">Estado cédula</span>
+                <span><DocStatus status={selected.cedulaStatus || 'pending'} /></span>
               </div>
-              <div style={styles.detailCard}>
-                <p style={styles.detailLabel}>Estado Vehículo</p>
-                <StatusBadge status={selected.vehiculoStatus || 'pending'} />
+              <div className="detail-list__item">
+                <span className="detail-list__label">Estado licencia</span>
+                <span><DocStatus status={selected.licenciaStatus || 'pending'} /></span>
               </div>
-              <div style={styles.detailCard}>
-                <p style={styles.detailLabel}>Fecha de Solicitud</p>
-                <p style={styles.detailValue}>
-                  {selected.createdAt
-                    ? new Date(selected.createdAt).toLocaleDateString('es-CO')
-                    : '—'}
-                </p>
+              <div className="detail-list__item">
+                <span className="detail-list__label">Estado vehículo</span>
+                <span><DocStatus status={selected.vehiculoStatus || 'pending'} /></span>
               </div>
             </div>
 
-            {(selected.documents || selected.cedulaImage || selected.licenciaImage || selected.vehiculoImage) && (
-              <div style={styles.documentsSection}>
-                <p style={styles.sectionTitle}>Documentos Cargados</p>
-                <div style={styles.detailGrid}>
-                  {selected.cedulaImage && (
-                    <div style={styles.detailCard}>
-                      <p style={styles.detailLabel}>Cédula</p>
-                      <img
-                        src={resolveStorageUrl(selected.cedulaImage)}
-                        alt="Cédula"
-                        style={styles.docImage}
-                      />
-                    </div>
-                  )}
-                  {selected.licenciaImage && (
-                    <div style={styles.detailCard}>
-                      <p style={styles.detailLabel}>Licencia</p>
-                      <img
-                        src={resolveStorageUrl(selected.licenciaImage)}
-                        alt="Licencia"
-                        style={styles.docImage}
-                      />
-                    </div>
-                  )}
-                  {selected.vehiculoImage && (
-                    <div style={styles.detailCard}>
-                      <p style={styles.detailLabel}>Vehículo</p>
-                      <img
-                        src={resolveStorageUrl(selected.vehiculoImage)}
-                        alt="Vehículo"
-                        style={styles.docImage}
-                      />
-                    </div>
-                  )}
-                  {selected.documents?.map((doc, i) => (
-                    <div key={i} style={styles.detailCard}>
-                      <p style={styles.detailLabel}>{doc.label || `Documento ${i + 1}`}</p>
-                      {doc.type === 'image' || doc.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                        <img src={resolveStorageUrl(doc.url)} alt={doc.label} style={styles.docImage} />
-                      ) : (
-                        <a
-                          href={resolveStorageUrl(doc.url)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: theme.accent, fontSize: 13 }}
-                        >
-                          Ver documento
+            {(docs.length > 0 || extraDocs.length > 0) && (
+              <>
+                <hr className="divider" />
+                <h3 className="section-title">Documentos cargados</h3>
+                <div className="form-grid">
+                  {docs.map((d) => <DocThumb key={d.label} label={d.label} path={d.path} />)}
+                  {extraDocs.map((doc, i) => {
+                    const label = doc.label || `Documento ${i + 1}`;
+                    return isImage(doc) ? (
+                      <DocThumb key={doc.url || i} label={label} path={doc.url} />
+                    ) : (
+                      <div key={doc.url || i} className="stack">
+                        <span className="detail-list__label">{label}</span>
+                        <a href={resolveStorageUrl(doc.url)} target="_blank" rel="noopener noreferrer" className="row text-primary-color text-sm">
+                          <FileText size={16} /> Ver documento <ExternalLink size={13} />
                         </a>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+              </>
             )}
-          </>
+          </div>
         )}
       </Modal>
 
       <ConfirmDialog
         isOpen={!!confirmAction}
-        onClose={() => { setConfirmAction(null); setNota(''); }}
-        onConfirm={confirmAction?.type === 'approve' ? handleApprove : handleReject}
-        title={confirmAction?.type === 'approve' ? 'Aprobar Verificación' : 'Rechazar Verificación'}
-        message={
-          confirmAction?.type === 'approve'
-            ? `¿Estás seguro de que deseas aprobar la verificación de ${confirmAction?.conductorName || confirmAction?.conductor?.name || 'este conductor'}?`
-            : `¿Estás seguro de que deseas rechazar la verificación de ${confirmAction?.conductorName || confirmAction?.conductor?.name || 'este conductor'}? Esta acción no se puede deshacer.`
-        }
-        confirmText={confirmAction?.type === 'approve' ? 'Aprobar' : 'Rechazar'}
-        danger={confirmAction?.type === 'reject'}
+        onClose={closeConfirm}
+        onConfirm={isApprove ? handleApprove : handleReject}
+        title={isApprove ? 'Aprobar verificación' : 'Rechazar verificación'}
+        message={isApprove
+          ? `¿Aprobar la verificación de ${confirmName}?`
+          : `¿Rechazar la verificación de ${confirmName}? Esta acción no se puede deshacer.`}
+        confirmText={isApprove ? 'Aprobar' : 'Rechazar'}
+        danger={!isApprove}
       >
-        {confirmAction?.type === 'reject' && (
-          <div style={{ marginTop: 12 }}>
-            <label style={{ fontSize: 12, color: theme.muted, display: 'block', marginBottom: 6 }}>Nota (opcional) — doc §18: {"{nota}"}</label>
-            <textarea
-              value={nota}
-              onChange={(e) => setNota(e.target.value)}
-              placeholder="Ej: Documento ilegible"
-              rows={2}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, backgroundColor: theme.bg, color: theme.text, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
-            />
-          </div>
+        {!isApprove && (
+          <Textarea
+            label="Nota (opcional)"
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            placeholder="Ej.: Documento ilegible"
+            rows={2}
+          />
         )}
       </ConfirmDialog>
     </div>
   );
 }
-
-export default VerificationsPage;

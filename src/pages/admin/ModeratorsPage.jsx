@@ -1,147 +1,233 @@
 import { useState, useEffect, useCallback } from 'react';
-import Header from '../../components/admin/Header';
-import DataTable from '../../components/admin/DataTable';
-import Modal from '../../components/admin/Modal';
+import { Pencil, Search, UserMinus, UserPlus } from 'lucide-react';
 import { getUsers, setModerator } from '../../api/admin';
+import { errorMessage, fullName, toList } from '../../utils/format';
+import {
+  Alert, Avatar, Badge, Button, Card, DataTable, Input, Modal, PageHeader, SegmentedFilter, Select,
+} from '../../components/ui';
+import { getZonaModerador, userId } from './users/constants';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
+import './users/users.css';
 
-const theme = { bg: '#020208', cards: '#0f1220', accent: '#6366f1', text: '#e2e8f0', muted: '#64748b', success: '#22c55e', warning: '#f59e0b', danger: '#ef4444', border: '#1e2238' };
+const isModerador = (u) => u.esModerador || u.es_moderador;
 
 export default function ModeratorsPage() {
+  const ZONAS = useZonas();
+  const zonaLabel = (z) => zonaLabelFrom(ZONAS, z);
   const [mods, setMods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [edit, setEdit] = useState({ open: false, user: null, zona: 'cali' });
-  const [, setAddOpen] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const [zonaFilter, setZonaFilter] = useState('all');
+
+  // Buscador para agregar moderadores
   const [search, setSearch] = useState('');
+  const [selectedZonaRaw, setSelectedZona] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [selectedZona, setSelectedZona] = useState('cali');
-  const [zonaFilter, setZonaFilter] = useState('all');
+  const [searched, setSearched] = useState(false);
+
+  const selectedZona = selectedZonaRaw || ZONAS[0]?.value || '';
+
+  // Modal de modificación de zona
+  const [edit, setEdit] = useState(null);
+  const [editZona, setEditZona] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchMods = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/admin/users?limit=100', { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } }).then(r=>r.json());
-      // Fallback via getUsers
-      const data = Array.isArray(res) ? res : (res.users || res.data || []);
-      setMods(data.filter(u => u.esModerador || u.es_moderador));
-    } catch {
-      try {
-        const res2 = await getUsers({ page: 1, limit: 100 });
-        const d = res2.data;
-        const list = Array.isArray(d) ? d : (d.users || d.data || []);
-        setMods(list.filter(u => u.esModerador || u.es_moderador));
-      } catch (err) { setError(err.response?.data?.message || 'Error'); }
-    } finally { setLoading(false); }
+      // Se piden hasta 100 y se filtra también en cliente (respaldo si el backend ignora `rol`).
+      const res = await getUsers({ page: 1, limit: 100, rol: 'moderador' });
+      setMods(toList(res.data, 'users').filter(isModerador));
+    } catch (err) {
+      setError(errorMessage(err, 'Error al cargar moderadores'));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchMods(); }, [fetchMods]);
 
+  useEffect(() => {
+    if (!notice) return undefined;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
   const handleRemove = async (u) => {
     try {
-      await setModerator(u.id || u._id, { esModerador: false });
+      await setModerator(userId(u), { esModerador: false });
+      setNotice(`${fullName(u)} ya no es moderador`);
       fetchMods();
-    } catch (err) { alert(err.response?.data?.message || 'Error'); }
-  };
-  const handleModify = async () => {
-    if (!edit.user) return;
-    try {
-      await setModerator(edit.user.id || edit.user._id, { esModerador: true, zonaModerador: edit.zona });
-      setEdit({ open: false, user: null, zona: 'cali' });
-      fetchMods();
-    } catch (err) { alert(err.response?.data?.message || 'Error al modificar'); }
+    } catch (err) {
+      setError(errorMessage(err, 'Error al quitar moderador'));
+    }
   };
 
-  const handleSearch = async () => {
+  const openEdit = (u) => {
+    setEditZona(getZonaModerador(u) || ZONAS[0]?.value || '');
+    setEdit(u);
+  };
+
+  const handleModify = async () => {
+    if (!edit) return;
+    setSavingEdit(true);
+    try {
+      await setModerator(userId(edit), { esModerador: true, zonaModerador: editZona });
+      setEdit(null);
+      setNotice('Zona actualizada');
+      fetchMods();
+    } catch (err) {
+      setError(errorMessage(err, 'Error al modificar'));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
     if (!search.trim()) return;
     setSearching(true);
     try {
       const res = await getUsers({ page: 1, limit: 20, search: search.trim() });
-      const d = res.data;
-      const list = Array.isArray(d) ? d : (d.users || d.data || []);
       // Solo usuarios que NO son moderadores y NO son admin
-      setSearchResults(list.filter((u) => !u.esModerador && !u.es_moderador && (u.rol || '').toLowerCase() !== 'admin'));
-    } catch { setSearchResults([]); }
-    finally { setSearching(false); }
+      setSearchResults(toList(res.data, 'users').filter((u) => !isModerador(u) && (u.rol || '').toLowerCase() !== 'admin'));
+    } catch (err) {
+      setSearchResults([]);
+      setError(errorMessage(err, 'Error al buscar usuarios'));
+    } finally {
+      setSearching(false);
+      setSearched(true);
+    }
   };
 
   const handleAddModerador = async (u) => {
     try {
-      await setModerator(u.id || u._id, { esModerador: true, zonaModerador: selectedZona });
-      setAddOpen(false); setSearch(''); setSearchResults([]);
+      await setModerator(userId(u), { esModerador: true, zonaModerador: selectedZona });
+      setSearch('');
+      setSearchResults([]);
+      setSearched(false);
+      setNotice(`${fullName(u)} asignado como moderador de ${zonaLabel(selectedZona)}`);
       fetchMods();
-    } catch (err) { alert(err.response?.data?.message || 'Error al asignar'); }
+    } catch (err) {
+      setError(errorMessage(err, 'Error al asignar'));
+    }
   };
 
-  const filteredMods = zonaFilter === 'all'
-    ? mods
-    : mods.filter((u) => (u.zonaModerador || u.zona_moderador || '').toLowerCase() === zonaFilter);
+  const zonaOf = (u) => getZonaModerador(u).toLowerCase();
+  const filteredMods = zonaFilter === 'all' ? mods : mods.filter((u) => zonaOf(u) === zonaFilter);
+  const zonaOptions = [
+    { value: 'all', label: 'Todas', count: mods.length },
+    ...ZONAS.map((z) => ({ value: z.value, label: z.label, count: mods.filter((u) => zonaOf(u) === z.value).length })),
+  ];
 
   const columns = [
-    { key: 'nombre', label: 'Nombre', render: (_, u) => `${u.nombre || ''} ${u.apellido || ''}`.trim() || '-' },
-    { key: 'email', label: 'Email', render: (_, u) => u.email || '-' },
-    { key: 'telefono', label: 'Teléfono', render: (_, u) => u.telefono || '-' },
-    { key: 'zona', label: 'Zona', render: (_, u) => <span style={{ padding:'2px 8px', borderRadius:12, background:`${theme.warning}20`, color:theme.warning, fontSize:11 }}>{u.zonaModerador || u.zona_moderador || '-'}</span> },
-    { key: 'acciones', label: 'Acciones', render: (_, u) => (
-        <div style={{ display:'flex', gap:6 }}>
-          <button onClick={() => setEdit({ open: true, user: u, zona: u.zonaModerador || u.zona_moderador || 'cali' })} style={{ padding:'4px 10px', borderRadius:6, border:'none', background:`${theme.accent}20`, color:theme.accent, fontSize:11, cursor:'pointer' }}>Modificar</button>
-          <button onClick={() => handleRemove(u)} style={{ padding:'4px 10px', borderRadius:6, border:'none', background:`${theme.danger}20`, color:theme.danger, fontSize:11, cursor:'pointer' }}>Quitar</button>
+    {
+      key: 'nombre',
+      label: 'Moderador',
+      render: (_, u) => (
+        <div className="cell-user">
+          <Avatar src={u.avatar} name={fullName(u)} />
+          <div className="cell-user__text">
+            <span className="cell-user__name">{fullName(u)}</span>
+            <span className="cell-user__meta">{u.email || '—'}</span>
+          </div>
         </div>
-      )},
+      ),
+    },
+    { key: 'telefono', label: 'Teléfono', render: (v) => v || '—' },
+    { key: 'zona', label: 'Zona', render: (_, u) => <Badge variant="info">{zonaLabel(getZonaModerador(u))}</Badge> },
+    {
+      key: 'acciones',
+      label: '',
+      align: 'right',
+      render: (_, u) => (
+        <div className="row row--end">
+          <Button size="sm" variant="secondary" icon={<Pencil size={14} />} onClick={() => openEdit(u)}>Modificar</Button>
+          <Button size="sm" variant="soft-danger" icon={<UserMinus size={14} />} onClick={() => handleRemove(u)}>Quitar</Button>
+        </div>
+      ),
+    },
   ];
 
   return (
-    <div style={{ minHeight:'100vh', background:theme.bg, color:theme.text }}>
-      <Header title="Moderadores" />
-      <div style={{ padding:16 }}>
-        <div style={{ background: theme.cards, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 12, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: theme.text, margin: 0 }}>Agregar Moderador — buscar usuario y asignar zona</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} placeholder="Buscar por nombre o email (ej: Carlos)" style={{ flex: 1, minWidth: 200, padding: '8px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }} />
-            <select value={selectedZona} onChange={(e) => setSelectedZona(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }}>
-              <option value="cali">Cali</option>
-              <option value="popayan">Popayán</option>
-              <option value="pasto">Pasto</option>
-            </select>
-            <button onClick={handleSearch} disabled={searching} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: theme.accent, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: searching ? 0.6 : 1 }}>{searching ? 'Buscando...' : 'Buscar'}</button>
-          </div>
+    <div className="page">
+      <PageHeader title="Moderadores" description="Usuarios con permisos de moderación por zona." />
+
+      <Card title="Agregar moderador" description="Busca un usuario existente y asígnale una zona.">
+        <div className="stack">
+          <form className="toolbar" onSubmit={handleSearch}>
+            <Input
+              className="toolbar__spacer"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setSearched(false); }}
+              placeholder="Buscar por nombre o correo"
+              aria-label="Buscar usuario por nombre o correo"
+            />
+            <Select className="inline-select" value={selectedZona} onChange={(e) => setSelectedZona(e.target.value)} aria-label="Zona a asignar">
+              {ZONAS.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
+            </Select>
+            <Button type="submit" variant="secondary" icon={<Search size={15} />} loading={searching} disabled={!search.trim()}>
+              Buscar
+            </Button>
+          </form>
+
           {searchResults.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+            <div className="result-list">
               {searchResults.map((u) => (
-                <div key={u.id || u._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderRadius: 8, background: theme.bg, border: `1px solid ${theme.border}` }}>
-                  <div>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: theme.text, margin: 0 }}>{u.nombre} {u.apellido}</p>
-                    <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>{u.email} • {u.rol}</p>
+                <div key={userId(u)} className="result-item">
+                  <div className="cell-user">
+                    <Avatar src={u.avatar} name={fullName(u)} />
+                    <div className="cell-user__text">
+                      <span className="cell-user__name">{fullName(u)}</span>
+                      <span className="cell-user__meta">{u.email} · {u.rol}</span>
+                    </div>
                   </div>
-                  <button onClick={() => handleAddModerador(u)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: theme.success, color: '#fff', fontSize: 11, cursor: 'pointer' }}>Asignar → {selectedZona}</button>
+                  <Button size="sm" variant="soft-success" icon={<UserPlus size={14} />} onClick={() => handleAddModerador(u)}>
+                    Asignar a {zonaLabel(selectedZona)}
+                  </Button>
                 </div>
               ))}
             </div>
           )}
-          {search && searchResults.length === 0 && !searching && <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>Sin resultados. Prueba otro nombre/email.</p>}
+          {searched && !searching && searchResults.length === 0 && (
+            <p className="text-sm text-muted">Sin resultados. Prueba con otro nombre o correo.</p>
+          )}
         </div>
-        {error && <div style={{ padding:10, background:`${theme.danger}15`, color:theme.danger, borderRadius:8, marginBottom:12, fontSize:13 }}>{error}</div>}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: theme.muted, margin: 0 }}>Filtrar por zona:</p>
-          <select value={zonaFilter} onChange={(e) => setZonaFilter(e.target.value)} style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }}>
-            <option value="all">Todas</option>
-            <option value="cali">Cali</option>
-            <option value="popayan">Popayán</option>
-            <option value="pasto">Pasto</option>
-          </select>
-          <span style={{ fontSize: 11, color: theme.muted }}>{mods.length} moderador(es)</span>
-        </div>
-        <DataTable columns={columns} data={filteredMods} loading={loading} emptyMessage={zonaFilter !== 'all' ? `No hay moderadores en ${zonaFilter}` : 'No hay moderadores'} />
+      </Card>
+
+      <div className="toolbar">
+        <SegmentedFilter options={zonaOptions} value={zonaFilter} onChange={setZonaFilter} ariaLabel="Filtrar por zona" />
       </div>
-      <Modal isOpen={edit.open} onClose={() => setEdit({ open: false, user: null, zona: 'cali' })} title={`Modificar ${edit.user?.nombre || ''} ${edit.user?.apellido || ''}`} size="sm">
-        <div style={{ fontSize:12, color:theme.muted, marginBottom:12 }}>{edit.user?.email} — actual: <b style={{ color:theme.warning }}>{edit.user?.zonaModerador || edit.user?.zona_moderador || '-'}</b></div>
-        <label style={{ fontSize:12, fontWeight:600, color:theme.muted, display:'block', marginBottom:6 }}>Nueva zona</label>
-        <select value={edit.zona} onChange={(e) => setEdit({ ...edit, zona: e.target.value })} style={{ width:'100%', padding:'8px 10px', borderRadius:8, border:`1px solid ${theme.border}`, background:theme.bg, color:theme.text, fontSize:13 }}>
-          <option value="cali">Cali</option>
-          <option value="popayan">Popayán</option>
-          <option value="pasto">Pasto</option>
-        </select>
-        <button onClick={handleModify} style={{ marginTop:12, width:'100%', padding:'8px 0', borderRadius:8, border:'none', background:theme.accent, color:'#fff', fontWeight:700, cursor:'pointer' }}>Guardar cambios</button>
+
+      {notice && <Alert variant="success" onClose={() => setNotice(null)}>{notice}</Alert>}
+      {error && <div className="page-error" role="alert">{error}</div>}
+
+      <DataTable
+        columns={columns}
+        data={filteredMods}
+        loading={loading}
+        emptyMessage={zonaFilter !== 'all' ? `No hay moderadores en ${zonaLabel(zonaFilter)}` : 'No hay moderadores'}
+      />
+
+      <Modal
+        isOpen={!!edit}
+        onClose={() => setEdit(null)}
+        title={`Modificar ${fullName(edit)}`}
+        description={edit ? `${edit.email || ''} · zona actual: ${zonaLabel(getZonaModerador(edit))}` : undefined}
+        size="sm"
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => setEdit(null)} disabled={savingEdit}>Cancelar</Button>
+            <Button onClick={handleModify} loading={savingEdit}>Guardar cambios</Button>
+          </>
+        )}
+      >
+        <Select label="Nueva zona" value={editZona} onChange={(e) => setEditZona(e.target.value)}>
+          {ZONAS.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
+        </Select>
       </Modal>
     </div>
   );

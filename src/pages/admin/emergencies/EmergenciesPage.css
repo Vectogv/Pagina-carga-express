@@ -1,0 +1,22 @@
+.emergency-detail { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.emergency-party {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-sunken);
+  min-width: 0;
+}
+
+.emergency-section { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.emergency-section__head { display: flex; align-items: center; gap: var(--space-3); }
+
+.emergency-section__title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
