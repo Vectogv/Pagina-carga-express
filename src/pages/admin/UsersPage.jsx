@@ -11,6 +11,7 @@ import {
   setModerator,
   setLeader,
   registerUser,
+  resetPassword,
 } from '../../api/admin';
 import { getRolUsuario, getLabelRol } from '../../utils/roles';
 
@@ -206,6 +207,9 @@ function UsersPage() {
   const [addModal, setAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ nombre: '', apellido: '', email: '', password: '', telefono: '', rol: 'cliente', esModerador: false, zonaModerador: 'cali' });
   const [addSaving, setAddSaving] = useState(false);
+  const [pwModal, setPwModal] = useState({ open: false, user: null });
+  const [pwForm, setPwForm] = useState({ password: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
   const fetchUsers = useCallback(async () => {
@@ -313,6 +317,37 @@ function UsersPage() {
       fetchUsers();
     } catch (err) {
       alert(err.response?.data?.message || 'Error al asignar líder');
+    }
+  };
+
+  const openPassword = (user) => {
+    setPwForm({ password: '', confirm: '' });
+    setPwModal({ open: true, user });
+  };
+
+  const handlePasswordSave = async () => {
+    if (!pwModal.user) return;
+    if (!pwForm.password || pwForm.password.length < 6) {
+      setToast({ msg: 'La contraseña debe tener al menos 6 caracteres', ok: false });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    if (pwForm.password !== pwForm.confirm) {
+      setToast({ msg: 'Las contraseñas no coinciden', ok: false });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    setPwSaving(true);
+    try {
+      await resetPassword(pwModal.user.id || pwModal.user._id, { password: pwForm.password });
+      setPwModal({ open: false, user: null });
+      setToast({ msg: 'Contraseña actualizada ✓', ok: true });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      setToast({ msg: err.response?.data?.message || 'Error al cambiar contraseña', ok: false });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setPwSaving(false);
     }
   };
 
@@ -439,6 +474,12 @@ function UsersPage() {
               onClick={(e) => { e.stopPropagation(); openEdit(user); }}
             >
               Editar
+            </button>
+            <button
+              style={{ ...styles.actionBtn, backgroundColor: `${theme.warning}20`, color: theme.warning }}
+              onClick={(e) => { e.stopPropagation(); openPassword(user); }}
+            >
+              Contraseña
             </button>
             <button
               style={{
@@ -612,6 +653,40 @@ function UsersPage() {
         </div>
         <button style={styles.saveBtn} onClick={handleSaveEdit}>
           Guardar Cambios
+        </button>
+      </Modal>
+
+      <Modal
+        isOpen={pwModal.open}
+        onClose={() => setPwModal({ open: false, user: null })}
+        title="Resetear Contraseña"
+        size="sm"
+      >
+        <div style={{ background: `${theme.cards}`, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12, color: theme.muted }}>
+          <b style={{ color: theme.text }}>{pwModal.user?.nombre} {pwModal.user?.apellido}</b> — {pwModal.user?.email}
+        </div>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Nueva contraseña</label>
+          <input
+            style={styles.input}
+            type="password"
+            value={pwForm.password}
+            onChange={(e) => setPwForm({ ...pwForm, password: e.target.value })}
+            placeholder="Mínimo 6 caracteres"
+          />
+        </div>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Confirmar contraseña</label>
+          <input
+            style={styles.input}
+            type="password"
+            value={pwForm.confirm}
+            onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+            placeholder="Repite la contraseña"
+          />
+        </div>
+        <button style={{ ...styles.saveBtn, opacity: pwSaving ? 0.6 : 1 }} disabled={pwSaving} onClick={handlePasswordSave}>
+          {pwSaving ? 'Guardando...' : 'Guardar Contraseña'}
         </button>
       </Modal>
 

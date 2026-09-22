@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getDrivers, approveVerification, rejectVerification, notifyDriver, reportDriver, updateUser, deleteUser, suspendUser, setLeader, updateDriverCity } from '../../api/admin';
+import { getDrivers, approveVerification, rejectVerification, notifyDriver, reportDriver, updateUser, deleteUser, suspendUser, setLeader, updateDriverCity, resetPassword } from '../../api/admin';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import Modal from '../../components/admin/Modal';
 import { resolveStorageUrl } from '../../utils/storage';
@@ -40,6 +40,9 @@ export default function DriversPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [action, setAction] = useState(null);
   const [nota, setNota] = useState('');
+  const [passwordModal, setPasswordModal] = useState({ open: false, driver: null });
+  const [pwForm, setPwForm] = useState({ password: '', confirm: '' });
+  const [savingPw, setSavingPw] = useState(false);
   const [toast, setToast] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -151,6 +154,23 @@ export default function DriversPage() {
       fetchDrivers();
     } catch (err) { showToast(err.response?.data?.message || 'Error al editar', false); }
     finally { setSavingEdit(false); }
+  };
+  const openPassword = (driver) => {
+    setPwForm({ password: '', confirm: '' });
+    setPasswordModal({ open: true, driver });
+  };
+  const handlePasswordSave = async () => {
+    const driver = passwordModal.driver;
+    if (!driver) return;
+    if (!pwForm.password || pwForm.password.length < 6) return showToast('La contraseña debe tener al menos 6 caracteres', false);
+    if (pwForm.password !== pwForm.confirm) return showToast('Las contraseñas no coinciden', false);
+    setSavingPw(true);
+    try {
+      await resetPassword(driver.usuarioId || driver.usuario?.id, { password: pwForm.password });
+      showToast('Contraseña actualizada ✓');
+      setPasswordModal({ open: false, driver: null });
+    } catch (err) { showToast(err.response?.data?.message || 'Error al cambiar contraseña', false); }
+    finally { setSavingPw(false); }
   };
 
   const handleExport = () => {
@@ -326,6 +346,7 @@ export default function DriversPage() {
                           <div style={styles.actionsCell}>
                             <button onClick={() => setDetailModal({ open: true, driver: row })} style={styles.iconBtn} title="Ver detalle">👁️</button>
                             <button onClick={() => openEdit(row)} style={styles.iconBtn} title="Editar">✏️</button>
+                            <button onClick={() => openPassword(row)} style={styles.iconBtn} title="Resetear contraseña">🔑</button>
                             <button onClick={() => setAction({ type: 'delete', driver: row })} style={styles.iconBtnDanger} title="Eliminar">🗑️</button>
                             <button onClick={() => setAction({ type: 'suspend', driver: row })} style={styles.iconBtn} title={u.suspendido ? 'Activar' : 'Suspender'}>{u.suspendido ? '▶️' : '⏸️'}</button>
                             <button onClick={() => setAction({ type: 'leader', driver: row })} style={{ ...styles.iconBtn, color: u.esLider ? '#f59e0b' : undefined }} title={u.esLider ? 'Quitar líder' : 'Hacer líder'}>⭐</button>
@@ -447,6 +468,28 @@ export default function DriversPage() {
               <button onClick={() => setEditModal({ open: false, driver: null })} style={styles.cancelBtn}>Cancelar</button>
               <button onClick={handleEditSave} disabled={savingEdit} style={{ ...styles.saveBtn, opacity: savingEdit ? 0.6 : 1 }}>
                 {savingEdit ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal isOpen={passwordModal.open} onClose={() => setPasswordModal({ open: false, driver: null })} title="Resetear Contraseña" size="sm">
+        {passwordModal.driver && (
+          <div>
+            <p style={{ marginTop: 0 }}>Nueva contraseña para <strong>{passwordModal.driver.usuario?.nombre} {passwordModal.driver.usuario?.apellido}</strong> ({passwordModal.driver.usuario?.email || passwordModal.driver.usuarioId}).</p>
+            <div>
+              <p style={styles.editLabel}>Nueva contraseña</p>
+              <input type="password" value={pwForm.password} onChange={(e) => setPwForm({ ...pwForm, password: e.target.value })} style={styles.editInput} placeholder="Mínimo 6 caracteres" />
+            </div>
+            <div>
+              <p style={styles.editLabel}>Confirmar contraseña</p>
+              <input type="password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} style={styles.editInput} placeholder="Repite la contraseña" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <button onClick={() => setPasswordModal({ open: false, driver: null })} style={styles.cancelBtn}>Cancelar</button>
+              <button onClick={handlePasswordSave} disabled={savingPw} style={{ ...styles.saveBtn, opacity: savingPw ? 0.6 : 1 }}>
+                {savingPw ? 'Guardando...' : 'Guardar Contraseña'}
               </button>
             </div>
           </div>
