@@ -47,7 +47,25 @@
   color: var(--text-muted);
 }
 
+.chat__list-search {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
 .chat__list-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+
+/* Bloque de no leídas: separado visualmente de las conversaciones ya leídas. */
+.chat__unread-block {
+  background: var(--danger-subtle);
+  border-bottom: 1px solid var(--border);
+}
+
+.chat__section--unread {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--danger);
+}
 
 .chat__section {
   margin: 0;
@@ -173,6 +191,45 @@
   white-space: nowrap;
 }
 
+/* ── Estado de la conexión en tiempo real ──────────── */
+.chat__conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.chat__conn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.chat__conn--conectado .chat__conn-dot { background: var(--success); }
+.chat__conn--conectando .chat__conn-dot,
+.chat__conn--reconectando .chat__conn-dot {
+  background: var(--warning);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.chat__conn--reconectando,
+.chat__conn--sin-conexion { color: var(--danger); font-weight: var(--font-semibold); }
+.chat__conn--sin-conexion .chat__conn-dot { background: var(--danger); }
+
+.chat__searching {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.chat__searching svg { animation: spin 1s linear infinite; }
+
 .chat__messages {
   flex: 1;
   min-height: 0;
@@ -239,6 +296,31 @@
 }
 
 .chat-msg--me .chat-msg__time { color: var(--primary-contrast); opacity: 0.75; }
+
+/* Mensaje que no se pudo enviar: se conserva el texto y se puede reintentar. */
+.chat-msg--failed .chat-msg__bubble {
+  background: var(--danger-subtle);
+  border-color: var(--danger-border);
+  color: var(--text-primary);
+  opacity: 0.95;
+}
+
+.chat-msg--failed .chat-msg__time { color: var(--danger); opacity: 1; }
+
+.chat-msg__failed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--danger);
+}
+
+.chat-contact__hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 
 .chat__send-error {
   padding: var(--space-2) var(--space-4);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { ChevronRight, MapPin } from 'lucide-react';
@@ -13,6 +13,8 @@ import { errorMessage, formatDateTime, toList } from '../../utils/format';
 import {
   PageHeader, SegmentedFilter, DataTable, Pagination, StatusBadge, Button, Toast, ToastContainer,
 } from '../../components/ui';
+import RouteMap from '../../components/maps/RouteMap';
+import { sosRouteProps, hasRoutePoints } from '../../components/maps/sosRoute';
 import EmergencyDetailModal from './emergencias/EmergencyDetailModal';
 import './emergencias/EmergenciasPage.css';
 
@@ -131,6 +133,12 @@ export default function ModeratorEmergenciasPage() {
     });
     return () => { socket.disconnect(); };
   }, []);
+
+  // SOS sin resolver más reciente con coordenadas: mapa compacto sobre la tabla.
+  const destacada = useMemo(() => (tab === 'historico' ? null : emergencies
+    .filter((e) => e.estado !== 'resuelta' && hasRoutePoints(sosRouteProps(e)))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0] || null), [emergencies, tab]);
+  const mapaDestacado = useMemo(() => (destacada ? sosRouteProps(destacada) : null), [destacada]);
 
   const showToast = (message, ok = true) => setToast({ message, variant: ok ? 'success' : 'danger' });
 
@@ -307,6 +315,18 @@ export default function ModeratorEmergenciasPage() {
       </div>
 
       {error && <div className="page-error" role="alert">{error}</div>}
+
+      {destacada && (
+        <div className="em-highlight">
+          <div className="em-highlight__head">
+            <h4 className="section-title">SOS más reciente · <span className="text-mono">#{String(destacada.id || '').slice(0, 8)}</span></h4>
+            <Button size="sm" variant="ghost" onClick={() => openDetail(destacada)} aria-label="Ver el caso del SOS más reciente">
+              Ver caso <ChevronRight size={14} />
+            </Button>
+          </div>
+          <RouteMap {...mapaDestacado} alto={170} compacto />
+        </div>
+      )}
 
       <DataTable
         columns={columns}

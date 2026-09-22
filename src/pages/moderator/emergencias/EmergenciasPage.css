@@ -109,3 +109,25 @@
   border-color: var(--primary);
   color: var(--primary-contrast);
 }
+
+/* Mapa compacto del SOS sin resolver más reciente, sobre la tabla */
+.em-highlight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  min-width: 0;
+}
+
+.em-highlight__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.em-highlight__head .section-title { margin: 0; }

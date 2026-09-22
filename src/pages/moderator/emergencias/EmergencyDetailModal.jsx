@@ -3,6 +3,8 @@ import { formatCurrency, formatDateTime } from '../../../utils/format';
 import {
   Modal, Badge, Button, StatusBadge, Textarea,
 } from '../../../components/ui';
+import RouteMap from '../../../components/maps/RouteMap';
+import { sosRouteProps, hasRoutePoints } from '../../../components/maps/sosRoute';
 import EmergencyChat from './EmergencyChat';
 
 const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
@@ -34,6 +36,7 @@ export default function EmergencyDetailModal({
   const parties = resolveParties(selected, tripDetail);
   const conductor = tripDetail?.conductor;
   const hasLocation = selected.lat && selected.lng;
+  const mapa = sosRouteProps(selected, tripDetail);
   const busy = actionLoading === selected.id;
   const chatTitle = parties?.solicitante
     ? `Chat con ${parties.solicitante.nombre || selected.usuario?.nombre || 'solicitante'}`
@@ -81,6 +84,13 @@ export default function EmergencyDetailModal({
             )}
           </p>
         </section>
+
+        {hasRoutePoints(mapa) && (
+          <section className="em-card">
+            <h4 className="section-title">Mapa del SOS</h4>
+            <RouteMap {...mapa} alto={280} />
+          </section>
+        )}
 
         {parties && (
           <div className="two-col">

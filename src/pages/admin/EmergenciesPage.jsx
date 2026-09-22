@@ -7,6 +7,8 @@ import { errorMessage, formatDate, toList } from '../../utils/format';
 import {
   PageHeader, DataTable, ConfirmDialog, StatusBadge, Button, Badge, Textarea,
 } from '../../components/ui';
+import RouteMap from '../../components/maps/RouteMap';
+import { sosRouteProps, hasRoutePoints } from '../../components/maps/sosRoute';
 import EmergencyDetailModal from './emergencies/EmergencyDetailModal';
 import { shortId, userName, ruta, coords } from './emergencies/emergencyUtils';
 import './emergencies/EmergenciesPage.css';
@@ -47,6 +49,12 @@ export default function EmergenciesPage() {
 
   const pending = useMemo(() => emergencies.filter((e) => e.status === 'pending'), [emergencies]);
   const resolved = useMemo(() => emergencies.filter((e) => e.status === 'resolved'), [emergencies]);
+
+  // SOS activo más reciente con coordenadas: se muestra en un mapa compacto sobre la tabla.
+  const destacada = useMemo(() => pending
+    .filter((e) => hasRoutePoints(sosRouteProps(e)))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0] || null, [pending]);
+  const mapaDestacado = useMemo(() => (destacada ? sosRouteProps(destacada) : null), [destacada]);
 
   const openDetail = async (row) => {
     setDetail(row);
@@ -155,6 +163,17 @@ export default function EmergenciesPage() {
           <h3 className="emergency-section__title">Activas</h3>
           <Badge variant="danger">{pending.length} pendientes</Badge>
         </div>
+        {destacada && (
+          <div className="emergency-highlight">
+            <div className="emergency-highlight__head">
+              <h4 className="section-title">SOS más reciente · <span className="text-mono">#{shortId(destacada.id)}</span></h4>
+              <Button size="sm" variant="ghost" icon={<Eye size={14} />} onClick={() => openDetail(destacada)}>
+                Ver caso
+              </Button>
+            </div>
+            <RouteMap {...mapaDestacado} alto={170} compacto />
+          </div>
+        )}
         <DataTable
           columns={columns}
           data={pending}

@@ -4,6 +4,13 @@
   gap: var(--space-5);
 }
 
+.coverage__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
 .coverage__notice {
   padding: var(--space-3);
   border-radius: var(--radius-md);
@@ -54,6 +61,14 @@
   border: 0;
 }
 
+.coverage__map-open {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 1;
+  box-shadow: var(--shadow-md);
+}
+
 .coverage__map-empty {
   position: absolute;
   inset: 0;
@@ -71,4 +86,5 @@
 @media (max-width: 800px) {
   .coverage__grid { grid-template-columns: minmax(0, 1fr); }
   .coverage__bounds { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coverage__row { grid-template-columns: minmax(0, 1fr); }
 }

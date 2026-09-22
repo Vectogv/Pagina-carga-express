@@ -1,5 +1,7 @@
 import { MapPin, Siren } from 'lucide-react';
 import { Modal, StatusBadge } from '../../../components/ui';
+import RouteMap from '../../../components/maps/RouteMap';
+import { sosRouteProps, hasRoutePoints } from '../../../components/maps/sosRoute';
 import { formatCurrency, formatDateTime } from '../../../utils/format';
 import EmergencyChat from './EmergencyChat';
 import { shortId, userName, ruta, coords, mapsUrl } from './emergencyUtils';
@@ -81,6 +83,8 @@ function TripSection({ emergency, trip }) {
 }
 
 export default function EmergencyDetailModal({ emergency, trip, chat, onClose }) {
+  const mapa = sosRouteProps(emergency, trip);
+
   return (
     <Modal
       isOpen={!!emergency}
@@ -105,6 +109,13 @@ export default function EmergencyDetailModal({ emergency, trip, chat, onClose })
               <Detail label="Fecha">{formatDateTime(emergency.createdAt)}</Detail>
             </div>
           </section>
+
+          {hasRoutePoints(mapa) && (
+            <section className="stack">
+              <h3 className="section-title">Mapa del SOS</h3>
+              <RouteMap {...mapa} alto={280} />
+            </section>
+          )}
 
           {emergency.description && (
             <section className="stack">

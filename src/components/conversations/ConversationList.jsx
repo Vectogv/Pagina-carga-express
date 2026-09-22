@@ -1,8 +1,9 @@
-import { Fragment } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Calendar, Lock, MapPin, MessagesSquare, Plus } from 'lucide-react';
-import { formatTime } from '../../utils/format';
-import { Avatar, Badge, Button } from '../ui';
-import { ROL_BADGE, fechaSalidaDe, formatFechaSalida, getRolEtiqueta, sortByRecency } from './conversationUtils';
+import { Avatar, Badge, Button, SearchInput } from '../ui';
+import {
+  ROL_BADGE, fechaSalidaDe, formatFechaSalida, formatHoraLista, getRolEtiqueta, sortByRecency,
+} from './conversationUtils';
 
 const LABEL_SEQ = ['Moderación', 'Clientes'];
 
@@ -25,6 +26,12 @@ function groupConversations(conversations, other) {
   return secciones;
 }
 
+/** Texto donde busca el filtro local (nombre, ciudad, rol, correo y último mensaje). */
+const textoBuscable = (c, o) => [
+  o?.nombre, c.nombre, o?.email, o?.ciudad, o?.zonaModerador, c.ciudad,
+  ROL_BADGE[getRolEtiqueta(o)]?.label, c.ultimoMensaje,
+].filter(Boolean).join(' ').toLowerCase();
+
 function ConversationItem({ conversation: c, contact: u, active, onSelect }) {
   const rol = ROL_BADGE[getRolEtiqueta(u)];
   const nombre = u?.nombre || c.nombre || 'Usuario';
@@ -43,7 +50,7 @@ function ConversationItem({ conversation: c, contact: u, active, onSelect }) {
       <span className="chat-item__body">
         <span className="chat-item__top">
           <span className="chat-item__name truncate">{nombre}</span>
-          <span className="chat-item__time">{formatTime(c.ultimoMensajeAt)}</span>
+          <span className="chat-item__time">{formatHoraLista(c.ultimoMensajeAt || c.updatedAt)}</span>
         </span>
         <span className="chat-item__meta">
           <Badge variant={rol.variant} size="sm">{rol.label}</Badge>
@@ -58,7 +65,19 @@ function ConversationItem({ conversation: c, contact: u, active, onSelect }) {
 }
 
 export default function ConversationList({ conversations, loading, selectedId, unreadTotal, canCreate, other, onSelect, onNew }) {
-  const secciones = groupConversations(conversations, other);
+  const [filtro, setFiltro] = useState('');
+
+  const { noLeidas, secciones, vacioPorFiltro } = useMemo(() => {
+    const q = filtro.trim().toLowerCase();
+    const lista = q ? conversations.filter((c) => textoBuscable(c, other(c)).includes(q)) : conversations;
+    const sinLeer = sortByRecency(lista.filter((c) => (c.noLeidos || 0) > 0));
+    const leidas = lista.filter((c) => !((c.noLeidos || 0) > 0));
+    return {
+      noLeidas: sinLeer,
+      secciones: groupConversations(leidas, other),
+      vacioPorFiltro: Boolean(q) && lista.length === 0,
+    };
+  }, [conversations, filtro, other]);
 
   return (
     <div className="chat__list">
@@ -76,6 +95,12 @@ export default function ConversationList({ conversations, loading, selectedId, u
         )}
       </div>
 
+      {conversations.length > 0 && (
+        <div className="chat__list-search">
+          <SearchInput value={filtro} onChange={setFiltro} placeholder="Filtrar conversaciones…" />
+        </div>
+      )}
+
       <div className="chat__list-scroll">
         {loading && <p className="chat__placeholder">Cargando conversaciones…</p>}
         {!loading && conversations.length === 0 && (
@@ -84,6 +109,28 @@ export default function ConversationList({ conversations, loading, selectedId, u
             <span>Sin conversaciones</span>
           </div>
         )}
+        {!loading && vacioPorFiltro && (
+          <p className="chat__placeholder">{`Sin resultados para “${filtro.trim()}”`}</p>
+        )}
+
+        {!loading && noLeidas.length > 0 && (
+          <div className="chat__unread-block">
+            <p className="chat__section chat__section--unread">
+              Sin leer
+              <span className="chat-count">{noLeidas.length}</span>
+            </p>
+            {noLeidas.map((c) => (
+              <ConversationItem
+                key={c.id}
+                conversation={c}
+                contact={other(c)}
+                active={String(selectedId) === String(c.id)}
+                onSelect={onSelect}
+              />
+            ))}
+          </div>
+        )}
+
         {!loading && secciones.map((s) => (
           <Fragment key={s.label}>
             <p className="chat__section">{s.label}</p>
