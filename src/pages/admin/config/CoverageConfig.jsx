@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MapPin, Plus, Save, Trash2, RotateCcw } from 'lucide-react';
 import { getCoverage, updateCoverage } from '../../../api/admin';
 import { errorMessage, toList } from '../../../utils/format';
-import { Card, Input, Button, Badge, LoadingState, EmptyState } from '../../../components/ui';
+import { Card, Input, Button, Badge, LoadingState, EmptyState, Alert } from '../../../components/ui';
 import './CoverageConfig.css';
 
 const KM_PER_DEG = 111.32;
@@ -153,18 +153,23 @@ export default function CoverageConfig({ notify }) {
   const [initial, setInitial] = useState('[]');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [backendDesactualizado, setBackendDesactualizado] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError('');
+    setBackendDesactualizado(false);
     try {
       const res = await getCoverage();
       const next = toList(res.data, 'zonasCobertura').map(toRow);
       setRows(next);
       setInitial(JSON.stringify(next));
     } catch (err) {
-      setLoadError(errorMessage(err, 'No se pudieron cargar las zonas'));
+      // Si falta el endpoint, el backend todavía es el anterior: guardar zonas en
+      // el formato nuevo dejaría la cobertura ilegible y bloquearía los viajes.
+      if (err?.response?.status === 404) setBackendDesactualizado(true);
+      else setLoadError(errorMessage(err, 'No se pudieron cargar las zonas'));
     } finally {
       setLoading(false);
     }
@@ -177,6 +182,9 @@ export default function CoverageConfig({ notify }) {
   const remove = (key) => setRows((prev) => prev.filter((r) => r.key !== key));
 
   const handleSave = async () => {
+    if (backendDesactualizado) {
+      return notify('El servidor aún no admite este formato de zonas. Despliega el backend antes de guardar.', 'danger');
+    }
     const payload = [];
     for (const r of rows) {
       const bounds = boundsOf(r);
@@ -212,7 +220,7 @@ export default function CoverageConfig({ notify }) {
                 Descartar
               </Button>
             )}
-            <Button icon={<Save size={15} />} onClick={handleSave} loading={saving} disabled={!dirty}>
+            <Button icon={<Save size={15} />} onClick={handleSave} loading={saving} disabled={!dirty || backendDesactualizado}>
               Guardar zonas
             </Button>
           </>
@@ -225,6 +233,14 @@ export default function CoverageConfig({ notify }) {
         </p>
       </Card>
 
+      {backendDesactualizado && (
+        <Alert variant="warning" title="El servidor todavía no admite este formato">
+          Este editor guarda cada ciudad como un rectángulo, y la versión del servidor en línea aún espera el formato
+          anterior (centro y radio). Despliega el backend actualizado antes de guardar zonas: si se guardan ahora, el
+          servidor no podría leerlas y rechazaría todos los viajes.
+        </Alert>
+      )}
+
       {loadError && (
         <div className="page-error" role="alert">
           <span>{loadError}</span>
@@ -232,7 +248,7 @@ export default function CoverageConfig({ notify }) {
         </div>
       )}
 
-      {rows.length === 0 && !loadError && (
+      {rows.length === 0 && !loadError && !backendDesactualizado && (
         <Card>
           <EmptyState
             icon={<MapPin size={22} />}
