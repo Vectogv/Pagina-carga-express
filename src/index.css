@@ -95,8 +95,8 @@ a {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -104,12 +104,22 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
+  background: #2a2f4a;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox: barras visibles y finas */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2f4a transparent;
 }
 
 /* Responsive */
@@ -156,4 +166,13 @@ a {
 [class*="table-wrap"] {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+}
+
+/* Tablas internas siempre desbordan según su contenido para que la barra aparezca */
+.table-wrap table,
+[class*="tableWrap"] table,
+[class*="table-wrap"] table {
+  width: max-content;
+  min-width: 100%;
 }

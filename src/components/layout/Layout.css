@@ -21,6 +21,7 @@
   padding: var(--space-5);
   background: transparent;
   min-height: 0;
+  scrollbar-gutter: stable;
 }
 
 .app-centered {

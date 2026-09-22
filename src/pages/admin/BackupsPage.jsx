@@ -128,15 +128,16 @@ function BackupsPage() {
       )}
 
       <div style={styles.card}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>ID</th>
-              <th style={styles.th}>Fecha</th>
-              <th style={styles.th}>Tamaño</th>
-              <th style={styles.th}>Estado</th>
-            </tr>
-          </thead>
+        <div style={styles.tableWrap}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>ID</th>
+                <th style={styles.th}>Fecha</th>
+                <th style={styles.th}>Tamaño</th>
+                <th style={styles.th}>Estado</th>
+              </tr>
+            </thead>
           <tbody>
             {backups.length === 0 ? (
               <tr>
@@ -178,6 +179,7 @@ function BackupsPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div style={styles.toastContainer}>
@@ -244,6 +246,7 @@ const styles = {
     border: `1px solid ${theme.border}`,
     overflow: 'hidden',
   },
+  tableWrap: { overflowX: 'auto', WebkitOverflowScrolling: 'touch', minWidth: 0 },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: {
     padding: '14px 20px',

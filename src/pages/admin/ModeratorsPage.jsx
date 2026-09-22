@@ -11,11 +11,12 @@ export default function ModeratorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [edit, setEdit] = useState({ open: false, user: null, zona: 'cali' });
-  const [addOpen, setAddOpen] = useState(false);
+  const [, setAddOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [selectedZona, setSelectedZona] = useState('cali');
+  const [zonaFilter, setZonaFilter] = useState('all');
 
   const fetchMods = useCallback(async () => {
     setLoading(true);
@@ -60,7 +61,7 @@ export default function ModeratorsPage() {
       const list = Array.isArray(d) ? d : (d.users || d.data || []);
       // Solo usuarios que NO son moderadores y NO son admin
       setSearchResults(list.filter((u) => !u.esModerador && !u.es_moderador && (u.rol || '').toLowerCase() !== 'admin'));
-    } catch (err) { setSearchResults([]); }
+    } catch { setSearchResults([]); }
     finally { setSearching(false); }
   };
 
@@ -71,6 +72,10 @@ export default function ModeratorsPage() {
       fetchMods();
     } catch (err) { alert(err.response?.data?.message || 'Error al asignar'); }
   };
+
+  const filteredMods = zonaFilter === 'all'
+    ? mods
+    : mods.filter((u) => (u.zonaModerador || u.zona_moderador || '').toLowerCase() === zonaFilter);
 
   const columns = [
     { key: 'nombre', label: 'Nombre', render: (_, u) => `${u.nombre || ''} ${u.apellido || ''}`.trim() || '-' },
@@ -116,7 +121,17 @@ export default function ModeratorsPage() {
           {search && searchResults.length === 0 && !searching && <p style={{ fontSize: 11, color: theme.muted, margin: 0 }}>Sin resultados. Prueba otro nombre/email.</p>}
         </div>
         {error && <div style={{ padding:10, background:`${theme.danger}15`, color:theme.danger, borderRadius:8, marginBottom:12, fontSize:13 }}>{error}</div>}
-        <DataTable columns={columns} data={mods} loading={loading} emptyMessage="No hay moderadores" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: theme.muted, margin: 0 }}>Filtrar por zona:</p>
+          <select value={zonaFilter} onChange={(e) => setZonaFilter(e.target.value)} style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: 12 }}>
+            <option value="all">Todas</option>
+            <option value="cali">Cali</option>
+            <option value="popayan">Popayán</option>
+            <option value="pasto">Pasto</option>
+          </select>
+          <span style={{ fontSize: 11, color: theme.muted }}>{mods.length} moderador(es)</span>
+        </div>
+        <DataTable columns={columns} data={filteredMods} loading={loading} emptyMessage={zonaFilter !== 'all' ? `No hay moderadores en ${zonaFilter}` : 'No hay moderadores'} />
       </div>
       <Modal isOpen={edit.open} onClose={() => setEdit({ open: false, user: null, zona: 'cali' })} title={`Modificar ${edit.user?.nombre || ''} ${edit.user?.apellido || ''}`} size="sm">
         <div style={{ fontSize:12, color:theme.muted, marginBottom:12 }}>{edit.user?.email} — actual: <b style={{ color:theme.warning }}>{edit.user?.zonaModerador || edit.user?.zona_moderador || '-'}</b></div>

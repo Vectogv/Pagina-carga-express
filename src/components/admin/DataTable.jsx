@@ -20,9 +20,12 @@ const styles = {
   },
   scrollContainer: {
     overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    paddingBottom: 4,
   },
   table: {
-    width: '100%',
+    minWidth: '100%',
+    width: 'max-content',
     borderCollapse: 'collapse',
   },
   th: {
