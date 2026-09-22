@@ -8,7 +8,8 @@ import './users.css';
 
 /**
  * Asignar / modificar / quitar moderador.
- * Doc: PUT /api/admin/users/:id/moderator {esModerador, zonaModerador:"cali"|"popayan"|"pasto"}
+ * PUT /api/admin/users/:id/moderator {esModerador, zonaModerador}. La zona debe ser
+ * la clave de una de las configuradas en Configuración → Cobertura.
  */
 export default function ModeratorModal({ user, onClose, onSaved }) {
   const [esModerador, setEsModerador] = useState(!!user.esModerador);
