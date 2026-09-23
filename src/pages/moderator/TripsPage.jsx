@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { ChevronRight, Siren, X } from 'lucide-react';
 import {
-  getModeratorTrips, getModeratorTripDetail, getModeratorEmergencies, getMapboxToken,
+  getModeratorTrips, getModeratorTripDetail, getModeratorEmergencies,
 } from '../../api/moderator';
+import { loadMapboxToken } from '../../components/maps/useMapboxToken';
 import { tokenStore } from '../../api/axios';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { SOCKET_URL } from '../../config';
@@ -95,10 +96,12 @@ export default function ModeratorTripsPage() {
     if (selectedId) fetchDetail(selectedId);
   }, [selectedId, fetchDetail]);
 
+  // Mismo cargador que el resto de los mapas: una sola petición por sesión y el
+  // nombre del campo (mapboxAccessToken) en un único sitio.
   useEffect(() => {
-    getMapboxToken()
-      .then((r) => setMapboxToken(r.data?.token || r.data?.accessToken || null))
-      .catch(() => { /* Sin token de Mapbox: el detalle muestra las coordenadas en texto. */ });
+    let vivo = true;
+    loadMapboxToken().then((t) => { if (vivo) setMapboxToken(t || null); });
+    return () => { vivo = false; };
   }, []);
 
   useEffect(() => {

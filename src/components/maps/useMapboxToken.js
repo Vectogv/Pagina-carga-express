@@ -3,7 +3,14 @@ import { getMapboxToken } from '../../api/moderator';
 
 // El token de Mapbox lo entrega GET /api/config/mapbox. Se cachea a nivel de módulo para
 // pedirlo una sola vez por sesión (y no en cada render / apertura de modal).
+//
+// El backend responde { mapboxAccessToken } (app/controllers/mapbox_controller.ts).
+// Aquí se leía solo `token`/`accessToken`, así que el token nunca llegaba y el mapa
+// del SOS caía siempre al modo degradado aunque estuviera bien configurado.
 const RETRY_MS = 60000;
+
+/** Nombre del campo según el backend, con alias tolerados por si cambia. */
+const tokenDe = (data) => data?.mapboxAccessToken || data?.token || data?.accessToken || '';
 
 let cached = null; // null = sin pedir, '' = no disponible, string = token
 let pending = null;
@@ -15,7 +22,7 @@ export function loadMapboxToken() {
   if (cached === '' && Date.now() - failedAt < RETRY_MS) return Promise.resolve('');
   if (!pending) {
     pending = getMapboxToken()
-      .then((res) => res.data?.token || res.data?.accessToken || '')
+      .then((res) => tokenDe(res.data))
       .catch(() => '')
       .then((token) => {
         cached = token;
