@@ -72,7 +72,90 @@
 
 .login__hint { font-size: var(--text-sm); color: var(--text-muted); text-align: center; }
 
+/* Cuentas de prueba: visibles a propósito para poder probar la plataforma. */
+.login__demo {
+  border: 1px dashed var(--border-strong, var(--border));
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-subtle, transparent);
+}
+
+.login__demo-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.login__demo-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.login__demo-pass { font-size: var(--text-xs); color: var(--text-muted); }
+
+.login__demo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.login__demo-item {
+  display: grid;
+  grid-template-columns: 78px 72px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.login__demo-rol { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); }
+.login__demo-zona { font-size: var(--text-xs); color: var(--text-muted); }
+.login__demo-email { font-size: var(--text-xs); color: var(--text-secondary); min-width: 0; }
+
+.login__demo-btn {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated, transparent);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.login__demo-btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-strong, var(--border)); }
+.login__demo-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.login__demo-btn:focus-visible { outline: 2px solid var(--focus-ring, currentColor); outline-offset: 2px; }
+
+.login__demo-note { font-size: var(--text-xs); color: var(--text-muted); margin: 0; }
+
+.login__demo-aviso {
+  font-size: var(--text-xs);
+  color: var(--color-warning, var(--text-secondary));
+  margin: 0;
+}
+
 @media (max-width: 900px) {
   .login { grid-template-columns: 1fr; }
   .login__aside { display: none; }
+}
+
+@media (max-width: 460px) {
+  /* En pantalla estrecha el correo pasa a su propia línea para no desbordar. */
+  .login__demo-item {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 'rol btn' 'email email';
+    row-gap: 2px;
+  }
+  .login__demo-rol { grid-area: rol; }
+  .login__demo-btn { grid-area: btn; }
+  .login__demo-email { grid-area: email; }
+  .login__demo-zona { display: none; }
 }
