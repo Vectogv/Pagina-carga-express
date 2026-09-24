@@ -1,34 +1,49 @@
-import { Badge, StatusBadge } from '../../../components/ui';
-import { formatDate } from '../../../utils/format';
-import { DISPUTE_TYPES, shortId, claimantName, tripRef } from './disputeUtils';
+import { StatusBadge } from '../../../components/ui';
+import { formatDate, formatCurrency } from '../../../utils/format';
+import { tripRef, money } from './disputeUtils';
 
-export function DisputeTypeBadge({ type }) {
-  const [label, variant] = DISPUTE_TYPES[type] || [type || '—', 'neutral'];
-  return <Badge variant={variant} size="sm">{label}</Badge>;
-}
-
-export function DisputeStatusBadge({ status }) {
-  return <StatusBadge status={status === 'resolved' ? 'resuelto' : 'pendiente'} />;
-}
-
-function Detail({ label, children }) {
+/** Celda de persona (nombre + dato secundario) para la tabla y el detalle. */
+export function PersonCell({ nombre, meta }) {
   return (
-    <div className="detail-list__item">
-      <span className="detail-list__label">{label}</span>
-      <span className="detail-list__value">{children}</span>
+    <div className="cell-user__text">
+      <span className="cell-user__name">{nombre || '—'}</span>
+      {meta && <span className="cell-user__meta">{meta}</span>}
     </div>
   );
 }
 
-export function DisputeFields({ row }) {
+/** Resumen común mostrado tanto en el detalle como en el modal de resolución. */
+export function DisputeSummary({ row }) {
   return (
     <div className="detail-list">
-      <Detail label="ID disputa"><span className="text-mono">#{shortId(row.id)}</span></Detail>
-      <Detail label="Viaje"><span className="text-mono">{tripRef(row)}</span></Detail>
-      <Detail label="Reclamante">{claimantName(row)}</Detail>
-      <Detail label="Tipo"><DisputeTypeBadge type={row.type} /></Detail>
-      <Detail label="Estado"><DisputeStatusBadge status={row.status} /></Detail>
-      <Detail label="Fecha">{formatDate(row.createdAt)}</Detail>
+      <div className="detail-list__item">
+        <span className="detail-list__label">Disputa</span>
+        <span className="detail-list__value text-mono">#{row.id}</span>
+      </div>
+      <div className="detail-list__item">
+        <span className="detail-list__label">Viaje</span>
+        <span className="detail-list__value text-mono">{tripRef(row)}</span>
+      </div>
+      <div className="detail-list__item">
+        <span className="detail-list__label">Cliente</span>
+        <span className="detail-list__value">{row.cliente?.nombre || '—'}</span>
+      </div>
+      <div className="detail-list__item">
+        <span className="detail-list__label">Conductor</span>
+        <span className="detail-list__value">{row.conductor?.nombre || '—'}</span>
+      </div>
+      <div className="detail-list__item">
+        <span className="detail-list__label">Monto del viaje</span>
+        <span className="detail-list__value">{money(row) != null ? formatCurrency(money(row)) : '—'}</span>
+      </div>
+      <div className="detail-list__item">
+        <span className="detail-list__label">Estado</span>
+        <span className="detail-list__value"><StatusBadge status={row.estado} /></span>
+      </div>
+      <div className="detail-list__item">
+        <span className="detail-list__label">Fecha de apertura</span>
+        <span className="detail-list__value">{formatDate(row.createdAt)}</span>
+      </div>
     </div>
   );
 }
