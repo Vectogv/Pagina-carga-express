@@ -3,7 +3,7 @@ import { Modal, StatusBadge, statusLabel } from '../../../components/ui';
 import { formatDateTime } from '../../../utils/format';
 import {
   tripStatus, tripClient, tripDriver, tripOrigin, tripDestination, tripPrice, tripDate,
-  placeText, money, shortId,
+  personName, placeText, money, shortId,
 } from './tripUtils';
 
 function Detail({ label, children }) {
@@ -19,9 +19,10 @@ function Person({ role, person, fallback }) {
   return (
     <div className="trip-person">
       <span className="detail-list__label">{role}</span>
-      <span className="text-strong truncate">{person?.nombre || person?.name || fallback}</span>
+      <span className="text-strong truncate">{person ? personName(person) : fallback}</span>
       <span className="text-sm text-muted truncate">{person?.email || '—'}</span>
-      <span className="text-sm text-muted">{person?.telefono || person?.phone || '—'}</span>
+      <span className="text-sm text-muted">{person?.telefono || '—'}</span>
+      {person?.placa && <span className="text-sm text-muted">{person.tipoVehiculo} · {person.placa}</span>}
     </div>
   );
 }
@@ -69,10 +70,11 @@ export default function TripDetailModal({ trip, onClose }) {
           <section className="stack">
             <h3 className="section-title">Información del viaje</h3>
             <div className="detail-list">
-              <Detail label="Fecha">{formatDateTime(tripDate(trip))}</Detail>
+              <Detail label="Fecha de solicitud">{formatDateTime(tripDate(trip))}</Detail>
               <Detail label="Estado">{statusLabel(status)}</Detail>
-              <Detail label="Distancia">{trip.distancia || trip.distance || '—'}</Detail>
-              <Detail label="Duración">{trip.duracion || trip.duration || '—'}</Detail>
+              <Detail label="Carga">{trip.carga || '—'}</Detail>
+              {trip.calificacionCliente != null && <Detail label="Calificación del cliente">{trip.calificacionCliente} / 5</Detail>}
+              {trip.motivoCancelacion && <Detail label="Motivo de cancelación">{trip.motivoCancelacion}</Detail>}
             </div>
           </section>
 
@@ -80,9 +82,18 @@ export default function TripDetailModal({ trip, onClose }) {
             <h3 className="section-title">Pago</h3>
             <div className="detail-list">
               <Detail label="Precio"><span className="trip-price">{money(tripPrice(trip))}</span></Detail>
-              <Detail label="Método de pago">{trip.metodoPago || trip.paymentMethod || '—'}</Detail>
-              <Detail label="Comisión">{money(trip.comision || trip.commission || 0)}</Detail>
-              <Detail label="Propina">{money(trip.propina || trip.tip || 0)}</Detail>
+              {trip.precioEstimado != null && <Detail label="Precio estimado">{money(trip.precioEstimado)}</Detail>}
+              {trip.precioFinal != null && <Detail label="Precio final">{money(trip.precioFinal)}</Detail>}
+            </div>
+          </section>
+
+          <section className="stack">
+            <h3 className="section-title">Cronología</h3>
+            <div className="detail-list">
+              {trip.aceptadoAt && <Detail label="Aceptado">{formatDateTime(trip.aceptadoAt)}</Detail>}
+              {trip.completadoAt && <Detail label="Completado">{formatDateTime(trip.completadoAt)}</Detail>}
+              {trip.finalizadoAt && <Detail label="Finalizado">{formatDateTime(trip.finalizadoAt)}</Detail>}
+              {trip.canceladoAt && <Detail label="Cancelado">{formatDateTime(trip.canceladoAt)}</Detail>}
             </div>
           </section>
         </div>

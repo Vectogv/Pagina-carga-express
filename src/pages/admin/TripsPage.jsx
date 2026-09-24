@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { getTrips } from '../../api/admin';
 import { errorMessage, formatDateTime, toList } from '../../utils/format';
@@ -12,14 +12,19 @@ import {
 } from './trips/tripUtils';
 import './trips/TripsPage.css';
 
-const LIMIT = 15;
+const ROWS_PER_PAGE = 15;
 
+// GET /api/admin/trips (admin_controller.ts#trips) solo pagina (page/limit); no
+// filtra por estado, texto ni fecha. Se trae un lote amplio y se filtra en el
+// cliente, igual que en Conductores.
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Todos' },
-  { value: 'pendiente', label: 'Pendiente' },
-  { value: 'activo', label: 'Activo' },
-  { value: 'completado', label: 'Completado' },
+  { value: 'buscando_conductor', label: 'Buscando conductor' },
+  { value: 'aceptado', label: 'Aceptado' },
+  { value: 'en_curso', label: 'En curso' },
+  { value: 'finalizado', label: 'Finalizado' },
   { value: 'cancelado', label: 'Cancelado' },
+  { value: 'disputa', label: 'En disputa' },
 ];
 
 const clip = (s) => {
@@ -33,8 +38,6 @@ export default function TripsPage() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -44,33 +47,43 @@ export default function TripsPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = { page, limit: LIMIT, search };
-      if (statusFilter !== 'all') params.status = statusFilter;
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo) params.dateTo = dateTo;
-      const res = await getTrips(params);
-      const d = res.data;
-      const list = toList(d, 'trips');
-      setTrips(list);
-      setTotal(Array.isArray(d) ? list.length : (d?.total || list.length));
-      setTotalPages(Array.isArray(d) ? 1 : (d?.totalPages || 1));
+      const res = await getTrips({ page: 1, limit: 100 });
+      setTrips(toList(res.data, 'trips'));
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar viajes'));
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, dateFrom, dateTo]);
+  }, []);
 
-  useEffect(() => {
-    const t = setTimeout(fetchTrips, 300);
-    return () => clearTimeout(t);
-  }, [fetchTrips]);
+  useEffect(() => { fetchTrips(); }, [fetchTrips]);
 
-  // Cualquier cambio de filtro vuelve a la primera página.
   const withReset = (setter) => (val) => {
     setter(val);
     setPage(1);
   };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const from = dateFrom ? new Date(dateFrom).getTime() : null;
+    const to = dateTo ? new Date(dateTo).getTime() + 24 * 60 * 60 * 1000 : null;
+    return trips.filter((trip) => {
+      if (statusFilter !== 'all' && tripStatus(trip) !== statusFilter) return false;
+      const created = trip.createdAt ? new Date(trip.createdAt).getTime() : null;
+      if (from != null && (created == null || created < from)) return false;
+      if (to != null && (created == null || created >= to)) return false;
+      if (!q) return true;
+      const haystack = [
+        personName(tripClient(trip)), personName(tripDriver(trip)),
+        tripOrigin(trip), tripDestination(trip), trip.carga, trip.id,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [trips, search, statusFilter, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
 
   const columns = [
     {
@@ -141,12 +154,12 @@ export default function TripsPage() {
 
       <DataTable
         columns={columns}
-        data={trips}
+        data={paginated}
         loading={loading}
         emptyMessage="No se encontraron viajes"
         emptyDescription="Ajusta la búsqueda o los filtros para ver otros resultados."
         onRowClick={setSelected}
-        footer={total > 0 ? <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} /> : null}
+        footer={filtered.length > 0 ? <Pagination page={currentPage} totalPages={totalPages} total={filtered.length} onChange={setPage} /> : null}
       />
 
       <TripDetailModal trip={selected} onClose={() => setSelected(null)} />
