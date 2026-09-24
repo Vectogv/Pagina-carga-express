@@ -9,9 +9,12 @@ import {
 import './PaymentsPage.css';
 
 const userIdOf = (p) => p?.userId || p?.id;
-const userNameOf = (p) => p?.userName || p?.user || 'Desconocido';
-const methodOf = (p) => p?.paymentMethod || p?.method || p?.metodo || '—';
-const dateOf = (p) => p?.date || p?.createdAt || p?.fecha;
+// Campos reales de GET /api/admin/payments/pending (admin_controller.ts#pendingPayments):
+// { userId, nombre, email, montoComprobante, montoDeuda, monto, concepto, comprobante, comprobanteSubidoAt, deudaFechaLimite }
+const userNameOf = (p) => p?.nombre || p?.userName || p?.user || 'Desconocido';
+const amountOf = (p) => Number(p?.montoComprobante ?? p?.monto ?? p?.amount ?? 0);
+const methodOf = (p) => p?.concepto || p?.paymentMethod || p?.method || p?.metodo || '—';
+const dateOf = (p) => p?.comprobanteSubidoAt || p?.date || p?.fecha || p?.createdAt;
 const proofOf = (p) => p?.proof || p?.proofUrl || p?.comprobante || p?.receipt || '';
 
 /** Imagen de comprobante con fallback cuando no carga. */
@@ -71,7 +74,7 @@ export default function PaymentsPage() {
     }
   };
 
-  const total = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const total = payments.reduce((s, p) => s + amountOf(p), 0);
 
   const columns = [
     {
@@ -88,14 +91,29 @@ export default function PaymentsPage() {
         </button>
       ) : <span className="text-muted text-sm">Sin comprobante</span>),
     },
-    { key: 'userName', label: 'Usuario', render: (_, row) => <span className="text-strong">{userNameOf(row)}</span> },
+    {
+      key: 'userName',
+      label: 'Usuario',
+      render: (_, row) => (
+        <div>
+          <span className="text-strong">{userNameOf(row)}</span>
+          {row.email && <div className="text-muted text-sm">{row.email}</div>}
+        </div>
+      ),
+    },
     {
       key: 'amount',
-      label: 'Monto',
+      label: 'Monto del comprobante',
       align: 'right',
-      render: (v) => <span className="text-success text-strong">{formatCurrency(v)}</span>,
+      render: (_, row) => <span className="text-success text-strong">{formatCurrency(amountOf(row))}</span>,
     },
-    { key: 'paymentMethod', label: 'Método', render: (_, row) => methodOf(row) },
+    {
+      key: 'debt',
+      label: 'Deuda',
+      align: 'right',
+      render: (_, row) => (row.montoDeuda != null ? formatCurrency(row.montoDeuda) : '—'),
+    },
+    { key: 'paymentMethod', label: 'Concepto', render: (_, row) => methodOf(row) },
     { key: 'date', label: 'Fecha', render: (_, row) => <span className="nowrap">{formatDateTime(dateOf(row))}</span> },
     {
       key: 'actions',
@@ -115,7 +133,7 @@ export default function PaymentsPage() {
   ];
 
   const isConfirm = pending?.action === 'confirm';
-  const pendingDesc = pending ? `${formatCurrency(pending.payment.amount)} de ${userNameOf(pending.payment)}` : '';
+  const pendingDesc = pending ? `${formatCurrency(amountOf(pending.payment))} de ${userNameOf(pending.payment)}` : '';
 
   return (
     <div className="page">
@@ -189,7 +207,7 @@ export default function PaymentsPage() {
               </div>
               <div className="detail-list__item">
                 <dt className="detail-list__label">Monto</dt>
-                <dd className="detail-list__value text-success text-strong">{formatCurrency(proofPayment.amount)}</dd>
+                <dd className="detail-list__value text-success text-strong">{formatCurrency(amountOf(proofPayment))}</dd>
               </div>
               <div className="detail-list__item">
                 <dt className="detail-list__label">Método de pago</dt>
