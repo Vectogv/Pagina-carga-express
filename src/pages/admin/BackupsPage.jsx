@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Clock, DatabaseBackup, Plus, RefreshCw } from 'lucide-react';
 import { getBackups, runBackup } from '../../api/admin';
-import { errorMessage, formatBytes, formatDateTime, toList } from '../../utils/format';
+import { errorMessage, formatDateTime, toList } from '../../utils/format';
 import {
   PageHeader, DataTable, Badge, Button, StatCard, Toast, ToastContainer,
 } from '../../components/ui';
@@ -12,24 +12,26 @@ const STATUS_VARIANT = {
   error: 'danger', fallido: 'danger', failed: 'danger',
 };
 
-const statusOf = (b) => b.status || b.estado || '';
-const dateOf = (b) => b.createdAt || b.fecha || b.date;
+// LogRespaldo (admin_controller.ts#backupLogs) no guarda tamaño del archivo;
+// solo fecha, estado ('exitoso'|'fallido'), archivo y, si falló, errorMensaje.
+const statusOf = (b) => b.estado || '';
+const dateOf = (b) => b.createdAt || b.fecha;
 
 const columns = [
   {
     key: 'id',
     label: 'ID',
-    render: (_, b) => <span className="text-mono text-muted">{String(b.id || b._id || '—').slice(0, 8)}</span>,
+    render: (_, b) => <span className="text-mono text-muted">{String(b.id ?? '—')}</span>,
   },
   { key: 'createdAt', label: 'Fecha', render: (_, b) => <span className="nowrap">{formatDateTime(dateOf(b))}</span> },
   {
-    key: 'size',
-    label: 'Tamaño',
-    align: 'right',
-    render: (_, b) => {
-      const size = b.size || b.tamano;
-      return size ? formatBytes(size) : '—';
-    },
+    key: 'detalle',
+    label: 'Detalle',
+    render: (_, b) => (
+      <span className="truncate" style={{ display: 'inline-block', maxWidth: 320 }} title={b.errorMensaje || b.archivo || ''}>
+        {statusOf(b) === 'fallido' ? (b.errorMensaje || 'Sin detalle del error') : (b.archivo || '—')}
+      </span>
+    ),
   },
   {
     key: 'status',
