@@ -6,13 +6,15 @@ import {
   PageHeader, SegmentedFilter, DataTable, ConfirmDialog, StatusBadge, Button,
 } from '../../components/ui';
 
-// Estados del backend (inglés) → claves del mapa de StatusBadge.
-const STATUS_KEYS = { pending: 'pendiente', approved: 'aprobada', rejected: 'rechazada' };
-
 const shortId = (id) => String(id ?? '').slice(0, 8);
 
+// GET /api/admin/cancellation-requests (admin_controller.ts#cancellationRequests)
+// solo devuelve solicitudes con estado 'pendiente'; una vez aprobada/rechazada
+// deja de aparecer en el listado. Por eso las procesadas en esta sesión se
+// guardan aparte para poder seguir viéndolas en los filtros correspondientes.
 export default function CancellationRequestsPage() {
   const [requests, setRequests] = useState([]);
+  const [resolvedHere, setResolvedHere] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
@@ -22,7 +24,7 @@ export default function CancellationRequestsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await getCancellationRequests();
+      const res = await getCancellationRequests({ page: 1, limit: 100 });
       setRequests(toList(res.data));
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar las solicitudes de cancelación'));
@@ -35,25 +37,30 @@ export default function CancellationRequestsPage() {
     fetchRequests();
   }, [fetchRequests]);
 
+  const all = useMemo(() => [...requests, ...resolvedHere], [requests, resolvedHere]);
+
   const filtered = useMemo(
-    () => (filter === 'all' ? requests : requests.filter((r) => r.status === filter)),
-    [requests, filter],
+    () => (filter === 'all' ? all : all.filter((r) => r.estado === filter)),
+    [all, filter],
   );
 
   const filterOptions = useMemo(() => [
-    { value: 'all', label: 'Todas', count: requests.length },
-    { value: 'pending', label: 'Pendientes', count: requests.filter((r) => r.status === 'pending').length },
-    { value: 'approved', label: 'Aprobadas', count: requests.filter((r) => r.status === 'approved').length },
-    { value: 'rejected', label: 'Rechazadas', count: requests.filter((r) => r.status === 'rejected').length },
-  ], [requests]);
+    { value: 'all', label: 'Todas', count: all.length },
+    { value: 'pendiente', label: 'Pendientes', count: all.filter((r) => r.estado === 'pendiente').length },
+    { value: 'aprobado', label: 'Aprobadas', count: all.filter((r) => r.estado === 'aprobado').length },
+    { value: 'rechazado', label: 'Rechazadas', count: all.filter((r) => r.estado === 'rechazado').length },
+  ], [all]);
 
   const isApprove = confirmAction?.action === 'approve';
 
   const handleConfirm = async () => {
     if (!confirmAction) return;
+    const { row } = confirmAction;
     try {
-      if (isApprove) await approveCancellation(confirmAction.row.id);
-      else await rejectCancellation(confirmAction.row.id);
+      if (isApprove) await approveCancellation(row.id);
+      else await rejectCancellation(row.id);
+      setResolvedHere((prev) => [{ ...row, estado: isApprove ? 'aprobado' : 'rechazado' }, ...prev]);
+      setConfirmAction(null);
       await fetchRequests();
     } catch (err) {
       setError(errorMessage(err, `Error al ${isApprove ? 'aprobar' : 'rechazar'} la solicitud`));
@@ -65,24 +72,32 @@ export default function CancellationRequestsPage() {
     {
       key: 'tripId',
       label: 'Viaje',
-      render: (val, row) => {
-        const id = val || row.trip?.id;
-        return id ? <span className="text-mono text-strong">#{shortId(id)}</span> : '—';
-      },
+      render: (val, row) => (
+        <div className="cell-user__text">
+          <span className="text-mono text-strong">#{shortId(val)}</span>
+          <span className="cell-user__meta truncate">{row.origenDireccion || '—'} → {row.destinoDireccion || '—'}</span>
+        </div>
+      ),
     },
-    { key: 'requester', label: 'Solicitante', render: (val, row) => val || row.requester?.name || row.user?.name || '—' },
     {
-      key: 'reason',
+      key: 'conductor',
+      label: 'Conductor',
+      render: (val) => (val?.nombre || val?.placa)
+        ? <span>{val.nombre || '—'}{val.placa ? ` · ${val.placa}` : ''}</span>
+        : '—',
+    },
+    {
+      key: 'motivo',
       label: 'Motivo',
       render: (val) => <span className="truncate" style={{ display: 'inline-block', maxWidth: 240 }} title={val || ''}>{val || '—'}</span>,
     },
-    { key: 'status', label: 'Estado', render: (val) => <StatusBadge status={STATUS_KEYS[val] || val} /> },
+    { key: 'estado', label: 'Estado', render: (val) => <StatusBadge status={val} /> },
     { key: 'createdAt', label: 'Fecha', render: (val) => <span className="text-muted nowrap">{formatDate(val)}</span> },
     {
       key: 'acciones',
       label: '',
       align: 'right',
-      render: (_, row) => row.status === 'pending' && (
+      render: (_, row) => row.estado === 'pendiente' && (
         <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
           <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={() => setConfirmAction({ row, action: 'approve' })}>
             Aprobar
