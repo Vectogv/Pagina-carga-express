@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import {
   Users, Truck, ShieldCheck, Route, Wallet, Siren, FileCheck, Scale, CreditCard, Percent,
   TriangleAlert, Ban, Megaphone, ClipboardList, Settings, DatabaseBackup, UserRound,
-  Activity, Bell, Zap, Wifi, Moon, Pin, ChevronRight,
+  Wifi, Moon, Pin, ChevronRight, PackageCheck,
 } from 'lucide-react';
-import { getDashboard, getUsers, getDrivers } from '../../api/admin';
+import {
+  getDashboard, getUsers, getDrivers, getEmergencies, getVerifications, getDisputes, getPendingPayments,
+} from '../../api/admin';
 import { getModeratorDashboard } from '../../api/moderator';
 import { getRolUsuario } from '../../utils/roles';
 import { errorMessage, formatCurrency, toList } from '../../utils/format';
@@ -25,13 +27,12 @@ const SHORTCUTS = [
   { title: 'Mi perfil', icon: <UserRound size={16} />, to: '/admin/profile' },
 ];
 
-const itemText = (item) => (typeof item === 'string' ? item : item.text || item.label || JSON.stringify(item));
-
 function DashboardPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userStats, setUserStats] = useState(null);
+  const [pending, setPending] = useState(null);
   const [ciudad, setCiudad] = useState('todas');
   const [ciudadStats, setCiudadStats] = useState(null);
   const [ciudadError, setCiudadError] = useState(null);
@@ -91,6 +92,33 @@ function DashboardPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // El dashboard (admin_controller.ts#dashboard) no trae conteos de pendientes;
+  // se piden aparte a los mismos endpoints que ya filtran "pendiente" en el
+  // backend, así el número es real y no un campo inventado.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [emRes, verRes, dispRes, payRes] = await Promise.all([
+          getEmergencies({ page: 1, limit: 100 }),
+          getVerifications({ page: 1, limit: 100 }),
+          getDisputes({ page: 1, limit: 100 }),
+          getPendingPayments(),
+        ]);
+        if (cancelled) return;
+        setPending({
+          emergencies: toList(emRes.data).length,
+          verifications: toList(verRes.data).length,
+          disputes: toList(dispRes.data).length,
+          payments: toList(payRes.data).length,
+        });
+      } catch {
+        // Complementario: si falla, las tarjetas muestran "—".
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const header = (
     <PageHeader
       title="Resumen general"
@@ -130,18 +158,13 @@ function DashboardPage() {
     { title: 'Clientes', value: userStats?.byRol.cliente ?? '—', icon: <Users size={ICON} />, color: 'var(--success)', to: '/admin/clients' },
     { title: 'Conductores', value: userStats?.byRol.conductor ?? data?.totalDrivers ?? '—', icon: <Truck size={ICON} />, color: 'var(--accent-violet)', to: '/admin/drivers' },
     { title: 'Moderación', value: userStats?.moderadores ?? '—', icon: <ShieldCheck size={ICON} />, color: 'var(--warning)', to: '/admin/moderators' },
-    { title: 'Viajes activos', value: data?.activeTrips ?? data?.trips ?? 0, icon: <Route size={ICON} />, color: 'var(--primary)', to: '/admin/trips' },
-    {
-      title: 'Ingresos totales',
-      value: typeof (data?.totalEarnings ?? data?.earnings) === 'string' ? (data?.totalEarnings ?? data?.earnings) : formatCurrency(data?.totalEarnings ?? data?.earnings ?? 0),
-      icon: <Wallet size={ICON} />,
-      color: 'var(--success)',
-      to: '/admin/earnings',
-    },
-    { title: 'Emergencias pendientes', value: data?.pendingEmergencies ?? data?.emergencies ?? 0, icon: <Siren size={ICON} />, color: 'var(--danger)', to: '/admin/emergencies' },
-    { title: 'Verificaciones pendientes', value: data?.pendingVerifications ?? data?.verifications ?? 0, icon: <FileCheck size={ICON} />, color: 'var(--info)', to: '/admin/verifications' },
-    { title: 'Disputas abiertas', value: data?.openDisputes ?? data?.disputes ?? 0, icon: <Scale size={ICON} />, color: 'var(--warning)', to: '/admin/disputes' },
-    { title: 'Pagos pendientes', value: data?.pendingPayments ?? data?.payments ?? 0, icon: <CreditCard size={ICON} />, color: 'var(--accent-violet)', to: '/admin/payments' },
+    { title: 'Vehículos activos', value: data?.activeVehicles ?? '—', icon: <Route size={ICON} />, color: 'var(--primary)', to: '/admin/drivers' },
+    { title: 'Envíos hoy', value: data?.todayShipments ?? '—', icon: <PackageCheck size={ICON} />, color: 'var(--info)', to: '/admin/trips' },
+    { title: 'Ingresos totales', value: formatCurrency(data?.totalEarnings ?? 0), icon: <Wallet size={ICON} />, color: 'var(--success)', to: '/admin/earnings' },
+    { title: 'Emergencias pendientes', value: pending?.emergencies ?? '—', icon: <Siren size={ICON} />, color: 'var(--danger)', to: '/admin/emergencies' },
+    { title: 'Verificaciones pendientes', value: pending?.verifications ?? '—', icon: <FileCheck size={ICON} />, color: 'var(--info)', to: '/admin/verifications' },
+    { title: 'Disputas abiertas', value: pending?.disputes ?? '—', icon: <Scale size={ICON} />, color: 'var(--warning)', to: '/admin/disputes' },
+    { title: 'Pagos pendientes', value: pending?.payments ?? '—', icon: <CreditCard size={ICON} />, color: 'var(--accent-violet)', to: '/admin/payments' },
   ];
 
   const cityReady = ciudadStats && ciudadStats.ciudad === ciudad;
@@ -179,12 +202,6 @@ function DashboardPage() {
         </>
       )}
 
-      <div className="dashboard__panels">
-        <SummaryCard title="Actividad reciente" icon={<Activity size={16} />} items={data?.recentActivity ?? []} />
-        <SummaryCard title="Alertas" icon={<Bell size={16} />} items={data?.alerts ?? []} />
-        <SummaryCard title="Acciones rápidas" icon={<Zap size={16} />} items={data?.quickActions ?? []} />
-      </div>
-
       <Card title="Accesos directos" description="Otras secciones del panel.">
         <nav className="dashboard__shortcuts" aria-label="Accesos directos">
           {SHORTCUTS.map((s) => (
@@ -197,29 +214,6 @@ function DashboardPage() {
         </nav>
       </Card>
     </div>
-  );
-}
-
-function SummaryCard({ title, icon, items }) {
-  return (
-    <Card
-      title={(
-        <span className="dashboard__card-title">
-          <span className="dashboard__card-icon">{icon}</span>
-          {title}
-        </span>
-      )}
-    >
-      {items.length === 0 ? (
-        <p className="text-sm text-muted">Sin datos disponibles</p>
-      ) : (
-        <ul className="dashboard__list">
-          {items.slice(0, 5).map((item, i) => (
-            <li key={i} className="dashboard__list-item">{itemText(item)}</li>
-          ))}
-        </ul>
-      )}
-    </Card>
   );
 }
 
