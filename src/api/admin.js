@@ -87,6 +87,9 @@ export const rejectPayment = (userId) => api.put(`${BASE}/payments/${userId}/rej
 
 // Config - doc: PUT {nequiNumero?,nequiNombre?}, PUT coverage {zonasCobertura:[]}, PUT banner multipart banner_imagen
 export const updateConfig = (data) => api.put(`${BASE}/config`, data)
+// No hay GET /api/admin/config; el valor actual de Nequi (global, no por usuario)
+// se lee de payment_controller.ts#info, el mismo que usa la app cliente.
+export const getPaymentConfig = () => api.get('/api/payment/debt')
 export const getCoverage = () => api.get(`${BASE}/config/coverage`)
 export const updateCoverage = (data) => api.put(`${BASE}/config/coverage`, data)
 export const updateBanner = (formData) =>
