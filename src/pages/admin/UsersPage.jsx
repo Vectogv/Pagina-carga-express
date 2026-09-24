@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Ban, CircleCheck, KeyRound, Pencil, Shield, Star, Trash2, UserPlus } from 'lucide-react';
 import { getUsers, suspendUser, deleteUser, setLeader, resetPassword } from '../../api/admin';
 import { getRolUsuario } from '../../utils/roles';
-import { errorMessage, formatCurrency, fullName, toList } from '../../utils/format';
+import { errorMessage, fullName, toList } from '../../utils/format';
 import {
   Alert, Avatar, Button, ConfirmDialog, DataTable, PageHeader, Pagination, SearchInput, SegmentedFilter, StatusBadge,
 } from '../../components/ui';
@@ -171,15 +171,6 @@ export default function UsersPage() {
     { key: 'telefono', label: 'Teléfono', render: (_, u) => u.telefono || u.phone || '—' },
     { key: 'rol', label: 'Rol', render: (_, u) => <RoleBadge user={u} /> },
     { key: 'estado', label: 'Estado', render: (_, u) => <StatusBadge status={userStatus(u)} /> },
-    {
-      key: 'deuda',
-      label: 'Deuda',
-      align: 'right',
-      render: (_, u) => {
-        const debt = Number(u.deuda || u.debt || 0);
-        return <span className={`nowrap ${debt > 0 ? 'text-danger' : 'text-muted'}`}>{formatCurrency(debt)}</span>;
-      },
-    },
     {
       key: 'acciones',
       label: '',
