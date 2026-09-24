@@ -25,12 +25,16 @@ export default function EmergenciesPage() {
   const [chat, setChat] = useState(EMPTY_CHAT);
   const [confirm, setConfirm] = useState(null);
   const [notes, setNotes] = useState('');
+  // GET /api/admin/emergencies (admin_controller.ts#emergencies) solo trae alertas
+  // con atendida=false: no hay endpoint de historial de resueltas con estos campos.
+  // Se guardan aquí, en el cliente, las que se resuelven durante esta sesión.
+  const [resolvedHere, setResolvedHere] = useState([]);
 
   const fetchEmergencies = useCallback(async () => {
     try {
       setError(null);
       const res = await getEmergencies({ page: 1, limit: 100 });
-      setEmergencies(toList(res.data, 'emergencies').map((e) => ({ ...e, status: e.atendida ? 'resolved' : 'pending' })));
+      setEmergencies(toList(res.data, 'emergencies').map((e) => ({ ...e, status: 'pending' })));
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar las emergencias'));
     } finally {
@@ -48,7 +52,7 @@ export default function EmergenciesPage() {
   }, [fetchEmergencies]);
 
   const pending = useMemo(() => emergencies.filter((e) => e.status === 'pending'), [emergencies]);
-  const resolved = useMemo(() => emergencies.filter((e) => e.status === 'resolved'), [emergencies]);
+  const resolved = resolvedHere;
 
   // SOS activo más reciente con coordenadas: se muestra en un mapa compacto sobre la tabla.
   const destacada = useMemo(() => pending
@@ -96,6 +100,8 @@ export default function EmergenciesPage() {
       } catch {
         // La constancia en el chat es opcional.
       }
+      setResolvedHere((prev) => [{ ...confirm, status: 'resolved', atendida: true }, ...prev]);
+      closeConfirm();
       await fetchEmergencies();
     } catch (err) {
       setError(errorMessage(err, 'Error al resolver la emergencia'));
