@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { getModeratorReports } from '../../api/admin';
 import { errorMessage, formatDate, toList } from '../../utils/format';
-import { PageHeader, DataTable, Badge, StatusBadge, Button } from '../../components/ui';
+import { PageHeader, DataTable, StatusBadge, Button } from '../../components/ui';
 
 // El backend puede devolver `moderador` / `conductor` como objeto ({ nombre, placa }) o como texto.
 const nameOf = (v) => (v && typeof v === 'object' ? v.nombre || v.name : v);
@@ -51,15 +51,10 @@ function ModeratorReportsPage() {
       },
     },
     {
-      key: 'type',
-      label: 'Tipo',
-      render: (val, row) => (val || row.tipo ? <Badge variant="primary">{val || row.tipo}</Badge> : <span className="text-muted">—</span>),
-    },
-    {
-      key: 'content',
+      key: 'descripcion',
       label: 'Contenido',
       render: (val, row) => {
-        const text = val || row.contenido || row.descripcion || row.description || '';
+        const text = val || row.descripcion || '';
         return (
           <span className="truncate text-secondary" style={{ display: 'inline-block', maxWidth: 320 }} title={text}>
             {text || '—'}

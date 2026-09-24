@@ -7,8 +7,9 @@ import {
 } from '../../components/ui';
 
 const shortId = (id) => String(id ?? '').slice(0, 8);
-const reporterName = (r) => r?.reportedBy || r?.reporter?.name || '—';
-const reportedName = (r) => r?.against || r?.reported?.name || '—';
+// admin_controller.ts#reports: el reporte lo hace el cliente contra el conductor de su viaje.
+const reporterName = (r) => r?.cliente?.nombre || '—';
+const reportedName = (r) => r?.conductor?.nombre || '—';
 
 function Detail({ label, children }) {
   return (
@@ -46,14 +47,14 @@ export default function ReportsPage() {
   }, [fetchReports]);
 
   const filtered = useMemo(
-    () => (filter === 'all' ? reports : reports.filter((r) => r.status === filter)),
+    () => (filter === 'all' ? reports : reports.filter((r) => r.estado === filter)),
     [reports, filter],
   );
 
   const filterOptions = useMemo(() => [
     { value: 'all', label: 'Todos', count: reports.length },
-    { value: 'pending', label: 'Pendientes', count: reports.filter((r) => r.status === 'pending').length },
-    { value: 'resolved', label: 'Resueltos', count: reports.filter((r) => r.status === 'resolved').length },
+    { value: 'pendiente', label: 'Pendientes', count: reports.filter((r) => r.estado === 'pendiente').length },
+    { value: 'resuelto', label: 'Resueltos', count: reports.filter((r) => r.estado === 'resuelto').length },
   ], [reports]);
 
   const openResolve = (row) => {
@@ -86,17 +87,17 @@ export default function ReportsPage() {
     { key: 'reportedBy', label: 'Reportado por', render: (_, row) => <span className="text-strong">{reporterName(row)}</span> },
     { key: 'against', label: 'Contra', render: (_, row) => reportedName(row) },
     {
-      key: 'reason',
+      key: 'motivo',
       label: 'Motivo',
       render: (val) => <span className="truncate" style={{ display: 'inline-block', maxWidth: 240 }} title={val || ''}>{val || '—'}</span>,
     },
-    { key: 'status', label: 'Estado', render: (val) => <StatusBadge status={val === 'resolved' ? 'resuelto' : 'pendiente'} /> },
+    { key: 'estado', label: 'Estado', render: (val) => <StatusBadge status={val} /> },
     { key: 'createdAt', label: 'Fecha', render: (val) => <span className="text-muted nowrap">{formatDate(val)}</span> },
     {
       key: 'acciones',
       label: '',
       align: 'right',
-      render: (_, row) => row.status !== 'resolved' && (
+      render: (_, row) => row.estado !== 'resuelto' && (
         <Button size="sm" variant="soft-primary" icon={<CircleCheck size={14} />} onClick={() => openResolve(row)}>
           Resolver
         </Button>
@@ -147,16 +148,16 @@ export default function ReportsPage() {
               <h3 className="section-title">Reporte</h3>
               <div className="detail-list">
                 <Detail label="Reportado por">{reporterName(resolving)}</Detail>
-                <Detail label="Contra">{reportedName(resolving)}</Detail>
-                <Detail label="Motivo">{resolving.reason || '—'}</Detail>
+                <Detail label="Contra">{reportedName(resolving)}{resolving.conductor?.placa && ` (${resolving.conductor.placa})`}</Detail>
+                <Detail label="Motivo">{resolving.motivo || '—'}</Detail>
                 <Detail label="Fecha">{formatDate(resolving.createdAt)}</Detail>
               </div>
             </section>
 
-            {resolving.description && (
+            {resolving.descripcion && (
               <section className="stack">
                 <h3 className="section-title">Descripción</h3>
-                <p className="text-secondary">{resolving.description}</p>
+                <p className="text-secondary">{resolving.descripcion}</p>
               </section>
             )}
 
