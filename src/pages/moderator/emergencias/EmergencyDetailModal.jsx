@@ -129,7 +129,6 @@ export default function EmergencyDetailModal({
             <div className="detail-list">
               <div className="detail-list__item"><span className="detail-list__label">Nombre</span><span className="detail-list__value">{conductor?.nombre || '—'}</span></div>
               <div className="detail-list__item"><span className="detail-list__label">Placa</span><span className="detail-list__value text-mono">{conductor?.placa || '—'}</span></div>
-              <div className="detail-list__item"><span className="detail-list__label">Cédula</span><span className="detail-list__value">{conductor?.cedula || conductor?.cedulaConductor || '—'}</span></div>
               <div className="detail-list__item">
                 <span className="detail-list__label">Teléfono</span>
                 <span className="detail-list__value">{conductor?.telefono ? <PhoneLink value={conductor.telefono} /> : '—'}</span>

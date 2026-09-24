@@ -4,11 +4,15 @@ import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { errorMessage, formatDateTime, fullName, toList } from '../../utils/format';
 import { PageHeader, DataTable, StatusBadge } from '../../components/ui';
 
+// GET /api/moderator/reports (myReports) solo trae {id, conductorId, descripcion,
+// estado, createdAt}: no viene un objeto/nombre de conductor, así que se muestra
+// el id en vez de dejar la celda vacía.
 const conductorName = (r) => {
   if (typeof r.conductor === 'string') return r.conductor;
   if (r.conductor) return fullName(r.conductor);
   if (r.conductorName) return r.conductorName;
   if (r.driver) return fullName(r.driver);
+  if (r.conductorId) return `Conductor #${r.conductorId}`;
   return '—';
 };
 

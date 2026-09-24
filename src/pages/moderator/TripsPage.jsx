@@ -190,7 +190,9 @@ export default function ModeratorTripsPage() {
       label: 'Precio',
       align: 'right',
       render: (_, r) => {
-        const p = r.precioCliente || r.precioFinal;
+        // El listado /api/moderator/trips no trae `precioCliente` (solo lo expone
+        // el detalle vía `dinero`): se usa el final si ya está fijado, o el estimado.
+        const p = r.precioFinal || r.precioEstimado;
         return p ? <span className="nowrap">{formatCurrency(p)}</span> : '—';
       },
     },
