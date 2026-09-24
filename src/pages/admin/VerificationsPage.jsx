@@ -1,34 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Check, ExternalLink, FileText, X } from 'lucide-react';
+import { Check, Eye, X } from 'lucide-react';
 import { getVerifications, approveVerification, rejectVerification } from '../../api/admin';
 import { resolveStorageUrl } from '../../utils/storage';
-import { errorMessage, formatDate, toList } from '../../utils/format';
+import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
 import {
-  Avatar, Badge, Button, ConfirmDialog, DataTable, Modal, PageHeader, Textarea,
+  Avatar, Button, ConfirmDialog, DataTable, Modal, PageHeader, Textarea,
 } from '../../components/ui';
 
-const DOC_STATUS = {
-  approved: ['Aprobado', 'success'],
-  rejected: ['Rechazado', 'danger'],
-  pending: ['Pendiente', 'warning'],
-};
-
-function DocStatus({ status }) {
-  const [label, variant] = DOC_STATUS[status] || [status || 'Pendiente', 'warning'];
-  return (
-    <Badge variant={variant}>
-      <span className="badge__dot" aria-hidden="true" />
-      {label}
-    </Badge>
-  );
-}
-
-const driverName = (row) => row?.conductorName || row?.conductor?.name || row?.name || '';
-const driverCedula = (row) => row?.cedula || row?.conductor?.cedula || '';
-
-const isImage = (doc) => doc.type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.url || '');
-
-function DocThumb({ label, path }) {
+function Photo({ label, path }) {
+  if (!path) return null;
   const url = resolveStorageUrl(path);
   return (
     <div className="stack">
@@ -40,6 +20,9 @@ function DocThumb({ label, path }) {
   );
 }
 
+// GET /api/admin/verifications (admin_controller.ts#pendingVerifications) solo
+// trae conductores con estadoVerificacion 'pendiente' y no incluye estado por
+// documento; la única acción posible es aprobar o rechazar al conductor entero.
 export default function VerificationsPage() {
   const [verifications, setVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +35,7 @@ export default function VerificationsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getVerifications();
+      const res = await getVerifications({ page: 1, limit: 100 });
       setVerifications(toList(res.data));
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar las verificaciones'));
@@ -67,7 +50,8 @@ export default function VerificationsPage() {
 
   const handleApprove = async () => {
     try {
-      await approveVerification(confirmAction.conductorId || confirmAction.id);
+      await approveVerification(confirmAction.id);
+      closeConfirm();
       await fetchVerifications();
     } catch (err) {
       setError(errorMessage(err, 'Error al aprobar verificación'));
@@ -76,9 +60,9 @@ export default function VerificationsPage() {
 
   const handleReject = async () => {
     try {
-      // Doc §18: {nota} opcional
       const payload = nota.trim() ? { nota: nota.trim() } : {};
-      await rejectVerification(confirmAction.conductorId || confirmAction.id, payload);
+      await rejectVerification(confirmAction.id, payload);
+      closeConfirm();
       await fetchVerifications();
     } catch (err) {
       setError(errorMessage(err, 'Error al rechazar verificación'));
@@ -92,27 +76,40 @@ export default function VerificationsPage() {
 
   const columns = [
     {
-      key: 'conductor',
+      key: 'usuario',
       label: 'Conductor',
       render: (_, row) => (
         <div className="cell-user">
-          <Avatar name={driverName(row)} />
+          <Avatar name={fullName(row.usuario)} />
           <div className="cell-user__text">
-            <span className="cell-user__name">{driverName(row) || '—'}</span>
-            <span className="cell-user__meta">{driverCedula(row) || '—'}</span>
+            <span className="cell-user__name">{fullName(row.usuario) || 'Sin nombre'}</span>
+            <span className="cell-user__meta">{row.usuario?.email || '—'}</span>
           </div>
         </div>
       ),
     },
-    { key: 'cedula', label: 'Cédula', render: (val, row) => <DocStatus status={row.cedulaStatus || val || 'pending'} /> },
-    { key: 'licencia', label: 'Licencia', render: (val, row) => <DocStatus status={row.licenciaStatus || val || 'pending'} /> },
-    { key: 'vehiculo', label: 'Vehículo', render: (val, row) => <DocStatus status={row.vehiculoStatus || val || 'pending'} /> },
+    { key: 'cedula', label: 'Cédula', render: (v) => v || '—' },
+    {
+      key: 'vehiculo',
+      label: 'Vehículo',
+      render: (_, row) => (
+        <div className="cell-user__text">
+          <span>{row.tipoVehiculo || '—'}</span>
+          <span className="cell-user__meta">{row.placa || ''}{row.capacidad ? ` (${row.capacidad})` : ''}</span>
+        </div>
+      ),
+    },
+    { key: 'telefono', label: 'Teléfono', render: (_, row) => row.usuario?.telefono || '—' },
+    { key: 'createdAt', label: 'Solicitado', render: (v) => <span className="nowrap">{formatDate(v)}</span> },
     {
       key: 'acciones',
       label: '',
       align: 'right',
       render: (_, row) => (
-        <div className="row row--end">
+        <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
+          <Button size="sm" variant="ghost" icon={<Eye size={14} />} onClick={(e) => { e.stopPropagation(); setSelected(row); }}>
+            Ver
+          </Button>
           <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={ask(row, 'approve')}>Aprobar</Button>
           <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={ask(row, 'reject')}>Rechazar</Button>
         </div>
@@ -120,18 +117,12 @@ export default function VerificationsPage() {
     },
   ];
 
-  const docs = selected ? [
-    selected.cedulaImage && { label: 'Cédula', path: selected.cedulaImage },
-    selected.licenciaImage && { label: 'Licencia', path: selected.licenciaImage },
-    selected.vehiculoImage && { label: 'Vehículo', path: selected.vehiculoImage },
-  ].filter(Boolean) : [];
-  const extraDocs = selected?.documents || [];
   const isApprove = confirmAction?.type === 'approve';
-  const confirmName = driverName(confirmAction) || 'este conductor';
+  const confirmName = fullName(confirmAction?.usuario) || 'este conductor';
 
   return (
     <div className="page">
-      <PageHeader title="Verificaciones" description="Revisa y gestiona la documentación de los conductores." />
+      <PageHeader title="Verificaciones" description="Conductores a la espera de que se revise su documentación." />
 
       {error && (
         <div className="page-error" role="alert">
@@ -156,52 +147,41 @@ export default function VerificationsPage() {
             <div className="detail-list">
               <div className="detail-list__item">
                 <span className="detail-list__label">Conductor</span>
-                <span className="detail-list__value">{driverName(selected) || '—'}</span>
+                <span className="detail-list__value">{fullName(selected.usuario) || '—'}</span>
+              </div>
+              <div className="detail-list__item">
+                <span className="detail-list__label">Correo</span>
+                <span className="detail-list__value">{selected.usuario?.email || '—'}</span>
+              </div>
+              <div className="detail-list__item">
+                <span className="detail-list__label">Teléfono</span>
+                <span className="detail-list__value">{selected.usuario?.telefono || '—'}</span>
               </div>
               <div className="detail-list__item">
                 <span className="detail-list__label">Cédula</span>
-                <span className="detail-list__value">{driverCedula(selected) || '—'}</span>
+                <span className="detail-list__value">{selected.cedula || '—'}</span>
+              </div>
+              <div className="detail-list__item">
+                <span className="detail-list__label">Vehículo</span>
+                <span className="detail-list__value">{selected.tipoVehiculo || '—'} {selected.placa ? `· ${selected.placa}` : ''}</span>
+              </div>
+              <div className="detail-list__item">
+                <span className="detail-list__label">Capacidad</span>
+                <span className="detail-list__value">{selected.capacidad || '—'}</span>
               </div>
               <div className="detail-list__item">
                 <span className="detail-list__label">Fecha de solicitud</span>
                 <span className="detail-list__value">{formatDate(selected.createdAt)}</span>
               </div>
-              <div className="detail-list__item">
-                <span className="detail-list__label">Estado cédula</span>
-                <span><DocStatus status={selected.cedulaStatus || 'pending'} /></span>
-              </div>
-              <div className="detail-list__item">
-                <span className="detail-list__label">Estado licencia</span>
-                <span><DocStatus status={selected.licenciaStatus || 'pending'} /></span>
-              </div>
-              <div className="detail-list__item">
-                <span className="detail-list__label">Estado vehículo</span>
-                <span><DocStatus status={selected.vehiculoStatus || 'pending'} /></span>
-              </div>
             </div>
 
-            {(docs.length > 0 || extraDocs.length > 0) && (
-              <>
-                <hr className="divider" />
-                <h3 className="section-title">Documentos cargados</h3>
-                <div className="form-grid">
-                  {docs.map((d) => <DocThumb key={d.label} label={d.label} path={d.path} />)}
-                  {extraDocs.map((doc, i) => {
-                    const label = doc.label || `Documento ${i + 1}`;
-                    return isImage(doc) ? (
-                      <DocThumb key={doc.url || i} label={label} path={doc.url} />
-                    ) : (
-                      <div key={doc.url || i} className="stack">
-                        <span className="detail-list__label">{label}</span>
-                        <a href={resolveStorageUrl(doc.url)} target="_blank" rel="noopener noreferrer" className="row text-primary-color text-sm">
-                          <FileText size={16} /> Ver documento <ExternalLink size={13} />
-                        </a>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
+            <hr className="divider" />
+            <h3 className="section-title">Documentos cargados</h3>
+            <div className="form-grid">
+              <Photo label="Cédula" path={selected.fotoCedula} />
+              <Photo label="Licencia" path={selected.fotoLicencia} />
+              <Photo label="Vehículo" path={selected.fotoVehiculo} />
+            </div>
           </div>
         )}
       </Modal>
