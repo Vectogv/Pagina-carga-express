@@ -8,12 +8,9 @@ import {
 import './CommissionsPage.css';
 
 const keyOf = (c) => c?.conductorId || c?.id;
-const nameOf = (c) => c?.conductorName || c?.conductor || 'Desconocido';
-const isPaid = (c) => {
-  const s = c?.status || c?.estado;
-  return s === 'paid' || s === 'pagado';
-};
-const amountOf = (c) => c?.commission || c?.platformFee || 0;
+const nameOf = (c) => c?.nombre || 'Desconocido';
+const isPaid = (c) => c?.pagada === true;
+const amountOf = (c) => c?.monto ?? c?.comisionPendiente ?? 0;
 
 export default function CommissionsPage() {
   const [commissions, setCommissions] = useState([]);
@@ -51,7 +48,9 @@ export default function CommissionsPage() {
     setNotice(null);
     try {
       await markCommissionPaid(id);
-      setCommissions((prev) => prev.map((c) => (keyOf(c) === id ? { ...c, status: 'paid', estado: 'pagado' } : c)));
+      // El backend deja de listar a este conductor en /commissions una vez pagado
+      // (solo devuelve a quienes tienen comisionPendiente > 0), así que se quita de la tabla.
+      setCommissions((prev) => prev.filter((c) => keyOf(c) !== id));
       setNotice(`Comisión de ${nameOf(selected)} marcada como pagada.`);
     } catch (err) {
       setError(errorMessage(err, 'Error al marcar como pagado'));
@@ -83,11 +82,20 @@ export default function CommissionsPage() {
   const paidTotal = commissions.filter(isPaid).reduce((s, c) => s + Number(amountOf(c) || 0), 0);
 
   const columns = [
-    { key: 'conductorName', label: 'Conductor', render: (_, row) => <span className="text-strong">{nameOf(row)}</span> },
-    { key: 'totalAmount', label: 'Monto total', align: 'right', render: (v) => formatCurrency(v) },
+    {
+      key: 'nombre',
+      label: 'Conductor',
+      render: (_, row) => (
+        <div className="cell-user__text">
+          <span className="text-strong">{nameOf(row)}</span>
+          <span className="cell-user__meta">{row.placa || '—'}</span>
+        </div>
+      ),
+    },
+    { key: 'totalBruto', label: 'Monto total', align: 'right', render: (v) => formatCurrency(v) },
     {
       key: 'commission',
-      label: 'Comisión',
+      label: 'Comisión pendiente',
       align: 'right',
       render: (_, row) => <span className="text-warning text-strong">{formatCurrency(amountOf(row))}</span>,
     },
@@ -176,11 +184,12 @@ export default function CommissionsPage() {
               <li key={entry.id || idx} className="commissions__history-item">
                 <div className="commissions__history-text">
                   <span className="text-sm text-muted">
-                    {entry.period || (entry.date ? formatDate(entry.date) : `Período ${idx + 1}`)}
+                    {entry.createdAt ? formatDate(entry.createdAt) : `Comisión ${idx + 1}`}
+                    {entry.viaje?.origen && ` · ${entry.viaje.origen} → ${entry.viaje.destino}`}
                   </span>
-                  <span className="text-strong">{formatCurrency(entry.amount || entry.commission || 0)}</span>
+                  <span className="text-strong">{formatCurrency(entry.comision ?? 0)}</span>
                 </div>
-                <StatusBadge status={isPaid(entry) ? 'pagado' : 'pendiente'} />
+                <StatusBadge status={entry.pagada ? 'pagado' : 'pendiente'} />
               </li>
             ))}
           </ul>
