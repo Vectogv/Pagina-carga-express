@@ -12,7 +12,9 @@ const toDate = (v) => {
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
-export const formatCurrency = (v) => currency.format(Number(v) || 0);
+// Intl mete un espacio (o NBSP) entre el "$" y el número (ej. "$ 90.000");
+// se quita para que quede "$90.000", como se ve en el resto de la app.
+export const formatCurrency = (v) => currency.format(Number(v) || 0).replace(/\s/g, '');
 export const formatNumber = (v) => number.format(Number(v) || 0);
 export const formatDateTime = (v) => { const d = toDate(v); return d ? dateTime.format(d) : '—'; };
 export const formatDate = (v) => { const d = toDate(v); return d ? dateOnly.format(d) : '—'; };
