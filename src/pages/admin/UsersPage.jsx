@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Ban, CircleCheck, KeyRound, Pencil, Shield, Star, Trash2, Unlock, UserPlus } from 'lucide-react';
 import { getUsers, suspendUser, deleteUser, setLeader, resetPassword, clearDebt } from '../../api/admin';
 import { getRolUsuario } from '../../utils/roles';
-import { errorMessage, fullName, toList } from '../../utils/format';
+import { errorMessage, formatCurrency, fullName, toList } from '../../utils/format';
 import {
-  Alert, Avatar, Button, ConfirmDialog, DataTable, PageHeader, Pagination, SearchInput, SegmentedFilter, StatusBadge,
+  Alert, Avatar, Badge, Button, ConfirmDialog, DataTable, PageHeader, Pagination, SearchInput, SegmentedFilter, StatusBadge,
 } from '../../components/ui';
 import RoleBadge from './users/RoleBadge';
 import EditUserModal from './users/EditUserModal';
@@ -34,18 +34,30 @@ const matchesRole = (u, rol) => {
 
 const userStatus = (u) => (u.suspendido ? 'suspendido' : (u.estado || u.status || 'activo'));
 
-// GET /api/admin/users (admin_controller.ts#users) no selecciona tieneDeudaActiva/estadoCuenta/
-// montoDeuda: solo devuelve id, nombre, apellido, email, rol, telefono, edad, avatar, suspendido,
-// esModerador, zonaModerador, esLider, createdAt. Sin esos campos no se puede saber desde este
-// listado quién tiene deuda real, así que "Liberar cuenta" se ofrece para todo cliente/conductor
-// (únicos roles con deuda posible). Si el backend llegara a incluir esos campos, se respeta la
-// condición real (deuda activa o estado distinto de 'activa').
-const canClearDebt = (u) => {
-  if (u.rol !== 'cliente' && u.rol !== 'conductor') return false;
-  if (u.tieneDeudaActiva != null || u.estadoCuenta != null) {
-    return u.tieneDeudaActiva === true || (!!u.estadoCuenta && u.estadoCuenta !== 'activa');
-  }
-  return true;
+// GET /api/admin/users (admin_controller.ts#users) incluye tieneDeudaActiva/estadoCuenta/
+// montoDeuda para clientes y conductores (tolerante a snake_case, como u.esModerador ||
+// u.es_moderador en ModeratorsPage). Solo se ofrece "Liberar cuenta" cuando de verdad hay
+// algo que liberar; si por lo que sea el backend no manda esos campos (versión vieja del API),
+// el fallback es no mostrar el botón en vez de ofrecerlo a ciegas.
+const debtInfo = (u) => {
+  if (u.rol !== 'cliente' && u.rol !== 'conductor') return null;
+  const tieneDeudaActiva = u.tieneDeudaActiva ?? u.tiene_deuda_activa;
+  const estadoCuenta = u.estadoCuenta ?? u.estado_cuenta;
+  if (tieneDeudaActiva == null && estadoCuenta == null) return null;
+  const tieneDeuda = tieneDeudaActiva === true || (!!estadoCuenta && estadoCuenta !== 'activa');
+  if (!tieneDeuda) return null;
+  const montoDeuda = u.montoDeuda ?? u.monto_deuda;
+  return { estadoCuenta, monto: Number(montoDeuda) || 0 };
+};
+
+const canClearDebt = (u) => !!debtInfo(u);
+
+/** Etiqueta corta de deuda/estado de cuenta para la fila del usuario, o null si no aplica. */
+const debtLabel = (u) => {
+  const info = debtInfo(u);
+  if (!info) return null;
+  if (info.estadoCuenta === 'esperando_confirmacion') return 'Pago en revisión';
+  return info.monto > 0 ? `Debe ${formatCurrency(info.monto)}` : 'Cuenta no activa';
 };
 
 /**
@@ -196,7 +208,16 @@ export default function UsersPage() {
     },
     { key: 'telefono', label: 'Teléfono', render: (_, u) => u.telefono || u.phone || '—' },
     { key: 'rol', label: 'Rol', render: (_, u) => <RoleBadge user={u} /> },
-    { key: 'estado', label: 'Estado', render: (_, u) => <StatusBadge status={userStatus(u)} /> },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (_, u) => (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+          <StatusBadge status={userStatus(u)} />
+          {debtLabel(u) && <Badge variant="warning" size="sm">{debtLabel(u)}</Badge>}
+        </div>
+      ),
+    },
     {
       key: 'acciones',
       label: '',
