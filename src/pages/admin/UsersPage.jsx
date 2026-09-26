@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Ban, CircleCheck, KeyRound, Pencil, Shield, Star, Trash2, UserPlus } from 'lucide-react';
-import { getUsers, suspendUser, deleteUser, setLeader, resetPassword } from '../../api/admin';
+import { Ban, CircleCheck, KeyRound, Pencil, Shield, Star, Trash2, Unlock, UserPlus } from 'lucide-react';
+import { getUsers, suspendUser, deleteUser, setLeader, resetPassword, clearDebt } from '../../api/admin';
 import { getRolUsuario } from '../../utils/roles';
-import { errorMessage, fullName, toList } from '../../utils/format';
+import { errorMessage, formatCurrency, fullName, toList } from '../../utils/format';
 import {
-  Alert, Avatar, Button, ConfirmDialog, DataTable, PageHeader, Pagination, SearchInput, SegmentedFilter, StatusBadge,
+  Alert, Avatar, Badge, Button, ConfirmDialog, DataTable, PageHeader, Pagination, SearchInput, SegmentedFilter, StatusBadge,
 } from '../../components/ui';
 import RoleBadge from './users/RoleBadge';
 import EditUserModal from './users/EditUserModal';
@@ -33,6 +33,32 @@ const matchesRole = (u, rol) => {
 };
 
 const userStatus = (u) => (u.suspendido ? 'suspendido' : (u.estado || u.status || 'activo'));
+
+// GET /api/admin/users (admin_controller.ts#users) incluye tieneDeudaActiva/estadoCuenta/
+// montoDeuda para clientes y conductores (tolerante a snake_case, como u.esModerador ||
+// u.es_moderador en ModeratorsPage). Solo se ofrece "Liberar cuenta" cuando de verdad hay
+// algo que liberar; si por lo que sea el backend no manda esos campos (versión vieja del API),
+// el fallback es no mostrar el botón en vez de ofrecerlo a ciegas.
+const debtInfo = (u) => {
+  if (u.rol !== 'cliente' && u.rol !== 'conductor') return null;
+  const tieneDeudaActiva = u.tieneDeudaActiva ?? u.tiene_deuda_activa;
+  const estadoCuenta = u.estadoCuenta ?? u.estado_cuenta;
+  if (tieneDeudaActiva == null && estadoCuenta == null) return null;
+  const tieneDeuda = tieneDeudaActiva === true || (!!estadoCuenta && estadoCuenta !== 'activa');
+  if (!tieneDeuda) return null;
+  const montoDeuda = u.montoDeuda ?? u.monto_deuda;
+  return { estadoCuenta, monto: Number(montoDeuda) || 0 };
+};
+
+const canClearDebt = (u) => !!debtInfo(u);
+
+/** Etiqueta corta de deuda/estado de cuenta para la fila del usuario, o null si no aplica. */
+const debtLabel = (u) => {
+  const info = debtInfo(u);
+  if (!info) return null;
+  if (info.estadoCuenta === 'esperando_confirmacion') return 'Pago en revisión';
+  return info.monto > 0 ? `Debe ${formatCurrency(info.monto)}` : 'Cuenta no activa';
+};
 
 /**
  * Paginación desde las cabeceras X-Total-Count / X-Last-Page (cuerpo = array).
@@ -63,6 +89,7 @@ export default function UsersPage() {
   const [modUser, setModUser] = useState(null);
   const [pwUser, setPwUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [debtTarget, setDebtTarget] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const fetchUsers = useCallback(async () => {
@@ -127,6 +154,17 @@ export default function UsersPage() {
     }
   };
 
+  const handleClearDebt = async () => {
+    try {
+      const name = fullName(debtTarget);
+      await clearDebt(userId(debtTarget));
+      setNotice({ variant: 'success', msg: `Deuda saldada: la cuenta de ${name} quedó activa.` });
+      fetchUsers();
+    } catch (err) {
+      setError(errorMessage(err, 'Error al liberar la cuenta'));
+    }
+  };
+
   const handleSaved = (msg = 'Usuario actualizado') => {
     setEditUser(null);
     setModUser(null);
@@ -170,7 +208,16 @@ export default function UsersPage() {
     },
     { key: 'telefono', label: 'Teléfono', render: (_, u) => u.telefono || u.phone || '—' },
     { key: 'rol', label: 'Rol', render: (_, u) => <RoleBadge user={u} /> },
-    { key: 'estado', label: 'Estado', render: (_, u) => <StatusBadge status={userStatus(u)} /> },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (_, u) => (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+          <StatusBadge status={userStatus(u)} />
+          {debtLabel(u) && <Badge variant="warning" size="sm">{debtLabel(u)}</Badge>}
+        </div>
+      ),
+    },
     {
       key: 'acciones',
       label: '',
@@ -213,6 +260,17 @@ export default function UsersPage() {
             >
               {suspended ? 'Activar' : 'Suspender'}
             </Button>
+            {canClearDebt(u) && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setDebtTarget(u)}
+                aria-label={`Liberar cuenta de ${name}`}
+                title="Liberar cuenta (saldar deuda sin comprobante)"
+              >
+                <Unlock size={15} />
+              </Button>
+            )}
             <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(u)} aria-label={`Eliminar a ${name}`} title="Eliminar">
               <Trash2 size={15} />
             </Button>
@@ -276,6 +334,15 @@ export default function UsersPage() {
         message={`Se eliminará la cuenta de ${fullName(deleteTarget)}. Esta acción no se puede deshacer.`}
         confirmText="Eliminar"
         danger
+      />
+
+      <ConfirmDialog
+        isOpen={!!debtTarget}
+        onClose={() => setDebtTarget(null)}
+        onConfirm={handleClearDebt}
+        title="Liberar cuenta"
+        message={`¿Saldar la deuda de ${fullName(debtTarget)} y reactivar su cuenta? Úsalo cuando pagó por otro medio.`}
+        confirmText="Liberar cuenta"
       />
     </div>
   );
