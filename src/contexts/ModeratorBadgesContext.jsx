@@ -7,11 +7,12 @@ import { SOCKET_URL } from '../config';
 
 const Ctx = createContext(null);
 
-// Estado global de los badges del moderador (Emergencias y Conversatorio).
+// Estado global de los badges del moderador (Emergencias, Conversatorio y Tickets).
 // Polling cada 60s + actualización inmediata por socket.
 export function ModeratorBadgesProvider({ children }) {
   const [emergencyBadge, setEmergencyBadge] = useState(0);
   const [unreadBadge, setUnreadBadge] = useState(0);
+  const [ticketBadge, setTicketBadge] = useState(0);
   const openEmergencyRef = useRef(null);
   const openConversationRef = useRef(null);
 
@@ -34,12 +35,24 @@ export function ModeratorBadgesProvider({ children }) {
     }
   }, []);
 
+  // Tickets de soporte abiertos (sin atender) en la zona del moderador.
+  const refreshTickets = useCallback(async () => {
+    if (!tokenStore.access) return;
+    try {
+      const { data } = await api.get('/api/moderator/tickets/count');
+      setTicketBadge(data?.abiertos ?? 0);
+    } catch {
+      // Silencioso: el badge es informativo y se reintenta en el siguiente polling.
+    }
+  }, []);
+
   useEffect(() => {
     refreshEmergencies();
     refreshUnread();
-    const id = setInterval(() => { refreshEmergencies(); refreshUnread(); }, 60000);
+    refreshTickets();
+    const id = setInterval(() => { refreshEmergencies(); refreshUnread(); refreshTickets(); }, 60000);
     return () => clearInterval(id);
-  }, [refreshEmergencies, refreshUnread]);
+  }, [refreshEmergencies, refreshUnread, refreshTickets]);
 
   useEffect(() => {
     const token = tokenStore.access;
@@ -49,7 +62,9 @@ export function ModeratorBadgesProvider({ children }) {
       auth: { token: `Bearer ${token}` },
       query: { token: `Bearer ${token}` },
     });
-    socket.on('connect', () => { refreshEmergencies(); refreshUnread(); });
+    socket.on('connect', () => { refreshEmergencies(); refreshUnread(); refreshTickets(); });
+    // Ticket nuevo, reabierto o tomado → recalcular con el endpoint autoritativo.
+    ['ticket:nuevo', 'ticket:estado'].forEach((ev) => socket.on(ev, () => refreshTickets()));
     // Cambio de estado de una emergencia → recalcular con el endpoint autoritativo.
     ['emergency:new', 'emergency:acknowledged', 'emergency:resolved', 'emergency:alert', 'moderator:emergency:update'].forEach((ev) => socket.on(ev, () => refreshEmergencies()));
     socket.on('emergency:message', (data) => {
@@ -63,12 +78,12 @@ export function ModeratorBadgesProvider({ children }) {
       setUnreadBadge((p) => p + 1);
     });
     return () => { socket.disconnect(); };
-  }, [refreshEmergencies, refreshUnread]);
+  }, [refreshEmergencies, refreshUnread, refreshTickets]);
 
   // Favicon con badge rojo (total de pendientes de atención).
   useEffect(() => {
-    updateFaviconBadge(emergencyBadge + unreadBadge);
-  }, [emergencyBadge, unreadBadge]);
+    updateFaviconBadge(emergencyBadge + unreadBadge + ticketBadge);
+  }, [emergencyBadge, unreadBadge, ticketBadge]);
 
   const setOpenEmergency = useCallback((id) => { openEmergencyRef.current = id ?? null; }, []);
   const setOpenConversation = useCallback((id) => { openConversationRef.current = id ?? null; }, []);
@@ -79,14 +94,16 @@ export function ModeratorBadgesProvider({ children }) {
   const value = useMemo(() => ({
     emergencyBadge,
     unreadBadge,
-    totalBadges: emergencyBadge + unreadBadge,
+    ticketBadge,
+    totalBadges: emergencyBadge + unreadBadge + ticketBadge,
     refreshEmergencies,
     refreshUnread,
+    refreshTickets,
     setOpenEmergency,
     setOpenConversation,
     clearEmergency,
     clearUnread,
-  }), [emergencyBadge, unreadBadge, refreshEmergencies, refreshUnread, setOpenEmergency, setOpenConversation, clearEmergency, clearUnread]);
+  }), [emergencyBadge, unreadBadge, ticketBadge, refreshEmergencies, refreshUnread, refreshTickets, setOpenEmergency, setOpenConversation, clearEmergency, clearUnread]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
