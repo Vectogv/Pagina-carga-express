@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Ban, CircleCheck, KeyRound, Pencil, Shield, Star, Trash2, UserPlus } from 'lucide-react';
-import { getUsers, suspendUser, deleteUser, setLeader, resetPassword } from '../../api/admin';
+import { Ban, CircleCheck, KeyRound, Pencil, Shield, Star, Trash2, Unlock, UserPlus } from 'lucide-react';
+import { getUsers, suspendUser, deleteUser, setLeader, resetPassword, clearDebt } from '../../api/admin';
 import { getRolUsuario } from '../../utils/roles';
 import { errorMessage, fullName, toList } from '../../utils/format';
 import {
@@ -34,6 +34,20 @@ const matchesRole = (u, rol) => {
 
 const userStatus = (u) => (u.suspendido ? 'suspendido' : (u.estado || u.status || 'activo'));
 
+// GET /api/admin/users (admin_controller.ts#users) no selecciona tieneDeudaActiva/estadoCuenta/
+// montoDeuda: solo devuelve id, nombre, apellido, email, rol, telefono, edad, avatar, suspendido,
+// esModerador, zonaModerador, esLider, createdAt. Sin esos campos no se puede saber desde este
+// listado quién tiene deuda real, así que "Liberar cuenta" se ofrece para todo cliente/conductor
+// (únicos roles con deuda posible). Si el backend llegara a incluir esos campos, se respeta la
+// condición real (deuda activa o estado distinto de 'activa').
+const canClearDebt = (u) => {
+  if (u.rol !== 'cliente' && u.rol !== 'conductor') return false;
+  if (u.tieneDeudaActiva != null || u.estadoCuenta != null) {
+    return u.tieneDeudaActiva === true || (!!u.estadoCuenta && u.estadoCuenta !== 'activa');
+  }
+  return true;
+};
+
 /**
  * Paginación desde las cabeceras X-Total-Count / X-Last-Page (cuerpo = array).
  * Si no llegan, se habilita "siguiente" cuando la página vino llena.
@@ -63,6 +77,7 @@ export default function UsersPage() {
   const [modUser, setModUser] = useState(null);
   const [pwUser, setPwUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [debtTarget, setDebtTarget] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const fetchUsers = useCallback(async () => {
@@ -124,6 +139,17 @@ export default function UsersPage() {
       fetchUsers();
     } catch (err) {
       setError(errorMessage(err, 'Error al eliminar usuario'));
+    }
+  };
+
+  const handleClearDebt = async () => {
+    try {
+      const name = fullName(debtTarget);
+      await clearDebt(userId(debtTarget));
+      setNotice({ variant: 'success', msg: `Deuda saldada: la cuenta de ${name} quedó activa.` });
+      fetchUsers();
+    } catch (err) {
+      setError(errorMessage(err, 'Error al liberar la cuenta'));
     }
   };
 
@@ -213,6 +239,17 @@ export default function UsersPage() {
             >
               {suspended ? 'Activar' : 'Suspender'}
             </Button>
+            {canClearDebt(u) && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setDebtTarget(u)}
+                aria-label={`Liberar cuenta de ${name}`}
+                title="Liberar cuenta (saldar deuda sin comprobante)"
+              >
+                <Unlock size={15} />
+              </Button>
+            )}
             <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(u)} aria-label={`Eliminar a ${name}`} title="Eliminar">
               <Trash2 size={15} />
             </Button>
@@ -276,6 +313,15 @@ export default function UsersPage() {
         message={`Se eliminará la cuenta de ${fullName(deleteTarget)}. Esta acción no se puede deshacer.`}
         confirmText="Eliminar"
         danger
+      />
+
+      <ConfirmDialog
+        isOpen={!!debtTarget}
+        onClose={() => setDebtTarget(null)}
+        onConfirm={handleClearDebt}
+        title="Liberar cuenta"
+        message={`¿Saldar la deuda de ${fullName(debtTarget)} y reactivar su cuenta? Úsalo cuando pagó por otro medio.`}
+        confirmText="Liberar cuenta"
       />
     </div>
   );
