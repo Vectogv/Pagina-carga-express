@@ -158,6 +158,7 @@ export default function ModeratorTripsPage() {
   const refreshAfterEmergencyAction = () => {
     fetchDetail(selectedId);
     fetchEmergencies();
+    fetchTrips();
   };
 
   const columns = [

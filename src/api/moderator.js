@@ -35,6 +35,12 @@ export const getModeratorDashboard = (ciudad) => api.get('/api/moderator/dashboa
 // Viajes — nuevo GET /api/moderator/trips filtrado por ciudad del moderador
 export const getModeratorTrips = (params) => api.get('/api/moderator/trips', { params })
 export const getModeratorTripDetail = (id) => api.get(`/api/moderator/trips/${id}`)
+// H1: el cliente tuvo 10 min para confirmar/rechazar el cierre y no respondió;
+// el moderador de la zona decide. data: { resolucion: 'finalizar' | 'disputa', nota (>=10 caracteres) }
+export const resolveClose = (id, data) => api.post(`/api/moderator/trips/${id}/resolve-close`, data)
+
+// Reservas — viajes programados con anticipación en la ciudad del moderador (sin conductor asignado aún o ya en curso)
+export const getModeratorReservations = (params) => api.get('/api/moderator/reservations', { params })
 
 // Chat de emergencia — GET/POST /api/emergency/:alertaId/messages
 export const getEmergencyMessages = (alertaId) => api.get(`/api/emergency/${alertaId}/messages`)
