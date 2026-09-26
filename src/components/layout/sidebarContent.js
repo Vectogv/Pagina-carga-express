@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, Wallet, TrendingUp, BadgeCheck,
   Flag, Scale, Siren, CircleX, CreditCard, Megaphone, ChartColumn, Pin, MessagesSquare,
-  ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, Bell,
+  ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, Bell, LifeBuoy,
 } from 'lucide-react';
 
 // Navegación agrupada. Cada item: { icon, label, to, end? }
@@ -27,6 +27,7 @@ export const adminNav = [
       { icon: Scale, label: 'Disputas', to: '/admin/disputes' },
       { icon: CircleX, label: 'Cancelaciones', to: '/admin/cancellation-requests' },
       { icon: Flag, label: 'Reportes', to: '/admin/reports' },
+      { icon: LifeBuoy, label: 'Tickets de soporte', to: '/admin/tickets' },
     ],
   },
   {
@@ -66,6 +67,7 @@ export const moderatorNav = [
     items: [
       { icon: Route, label: 'Viajes', to: '/moderator/trips' },
       { icon: Siren, label: 'Emergencias', to: '/moderator/emergencies' },
+      { icon: LifeBuoy, label: 'Tickets de soporte', to: '/moderator/tickets' },
     ],
   },
   {

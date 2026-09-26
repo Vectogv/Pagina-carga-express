@@ -31,7 +31,7 @@ function CitySelector() {
 
 function ModeratorShell() {
   const location = useLocation();
-  const { emergencyBadge, unreadBadge, clearEmergency, clearUnread } = useModeratorBadges();
+  const { emergencyBadge, unreadBadge, ticketBadge, clearEmergency, clearUnread } = useModeratorBadges();
   const { isAdmin, ciudadLabel } = useModeratorCity();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -44,6 +44,8 @@ function ModeratorShell() {
   const badges = {
     '/moderator/emergencies': emergencyBadge,
     '/moderator/conversations': unreadBadge,
+    // Tickets abiertos sin atender: baja solo cuando alguien los toma (el backend manda).
+    '/moderator/tickets': ticketBadge,
   };
 
   const { group, label } = findNavEntry(moderatorNav, location.pathname);

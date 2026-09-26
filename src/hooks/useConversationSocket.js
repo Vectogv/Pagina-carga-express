@@ -28,13 +28,16 @@ export const ETIQUETA_CONEXION = {
  * - Al desmontar se quitan los listeners y se cierra el socket.
  *
  * @param evento      nombre del evento a escuchar (p. ej. 'conversation:message')
- * @param onEvento    se llama con el payload del evento
+ *                    o una lista de nombres
+ * @param onEvento    se llama con el payload del evento y el nombre del evento
  * @param onReconectar se llama al reconectar (no en la primera conexión) para
  *                     recuperar lo que se perdió mientras no había red
  * @param authKey     identificador del usuario; sin él no se conecta
  */
 export default function useConversationSocket({ evento, onEvento, onReconectar, authKey }) {
   const [estado, setEstado] = useState(CONEXION.CONECTANDO);
+  // Clave estable para el efecto: una lista nueva en cada render no debe reconectar.
+  const eventosKey = Array.isArray(evento) ? evento.join(',') : String(evento || '');
   const onEventoRef = useRef(onEvento);
   const onReconectarRef = useRef(onReconectar);
 
@@ -59,7 +62,8 @@ export default function useConversationSocket({ evento, onEvento, onReconectar, 
     // No es estado de React: solo distingue la primera conexión de una reconexión.
     let huboConexion = false;
 
-    const alEvento = (data) => { onEventoRef.current?.(data); };
+    const eventos = eventosKey.split(',').filter(Boolean);
+    const alEvento = eventos.map((nombre) => [nombre, (data) => { onEventoRef.current?.(data, nombre); }]);
 
     const alConectar = () => {
       setEstado(CONEXION.CONECTADO);
@@ -83,7 +87,7 @@ export default function useConversationSocket({ evento, onEvento, onReconectar, 
 
     const alFallarReconexion = () => { setEstado(CONEXION.SIN_CONEXION); };
 
-    socket.on(evento, alEvento);
+    alEvento.forEach(([nombre, fn]) => socket.on(nombre, fn));
     socket.on('connect', alConectar);
     socket.on('disconnect', alDesconectar);
     socket.on('connect_error', alErrorConexion);
@@ -91,7 +95,7 @@ export default function useConversationSocket({ evento, onEvento, onReconectar, 
     socket.io.on('reconnect_failed', alFallarReconexion);
 
     return () => {
-      socket.off(evento, alEvento);
+      alEvento.forEach(([nombre, fn]) => socket.off(nombre, fn));
       socket.off('connect', alConectar);
       socket.off('disconnect', alDesconectar);
       socket.off('connect_error', alErrorConexion);
@@ -99,7 +103,7 @@ export default function useConversationSocket({ evento, onEvento, onReconectar, 
       socket.io.off('reconnect_failed', alFallarReconexion);
       socket.disconnect();
     };
-  }, [authKey, evento]);
+  }, [authKey, eventosKey]);
 
   return estado;
 }

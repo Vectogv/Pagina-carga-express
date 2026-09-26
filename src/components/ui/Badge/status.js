@@ -29,6 +29,10 @@ const STATUS = {
   atendida: ['Atendida', 'warning'],
   resuelta: ['Resuelta', 'success'],
   resuelto: ['Resuelto', 'success'],
+  // Tickets de soporte
+  abierto: ['Abierto', 'danger'],
+  en_proceso: ['En proceso', 'warning'],
+  cerrado: ['Cerrado', 'neutral'],
   // Cuentas / pagos
   activo: ['Activo', 'success'],
   activa: ['Activa', 'success'],
