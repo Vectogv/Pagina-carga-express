@@ -22,3 +22,8 @@
 .select__field--error { border-color: var(--danger); }
 .select__error { font-size: var(--text-sm); color: var(--danger); }
 .select__helper { font-size: var(--text-sm); color: var(--text-muted); }
+
+/* iOS hace zoom automático si un campo enfocado tiene menos de 16px. */
+@media (max-width: 640px) {
+  .select__field { font-size: 16px; }
+}

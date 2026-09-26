@@ -66,7 +66,11 @@ export default function DataTable({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={`dtable__td ${col.align ? `dtable__td--${col.align}` : ''}`}>
+                  <td
+                    key={col.key}
+                    className={`dtable__td ${col.align ? `dtable__td--${col.align}` : ''}`}
+                    data-label={col.label || ''}
+                  >
                     {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '—')}
                   </td>
                 ))}

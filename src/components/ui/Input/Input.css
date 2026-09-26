@@ -35,3 +35,8 @@
 .input__helper { font-size: var(--text-sm); color: var(--text-muted); }
 
 .input__field--textarea { resize: vertical; min-height: 88px; line-height: 1.5; }
+
+/* iOS hace zoom automático si un campo enfocado tiene menos de 16px. */
+@media (max-width: 640px) {
+  .input__field { font-size: 16px; }
+}
