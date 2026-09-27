@@ -2,6 +2,7 @@ import {
   LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, Wallet, TrendingUp, BadgeCheck,
   Flag, Scale, Siren, CircleX, CreditCard, Megaphone, ChartColumn, Pin, MessagesSquare,
   ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, Bell, LifeBuoy,
+  CalendarClock,
 } from 'lucide-react';
 
 // Navegación agrupada. Cada item: { icon, label, to, end? }
@@ -66,6 +67,7 @@ export const moderatorNav = [
     title: 'Operación',
     items: [
       { icon: Route, label: 'Viajes', to: '/moderator/trips' },
+      { icon: CalendarClock, label: 'Reservas', to: '/moderator/reservations' },
       { icon: Siren, label: 'Emergencias', to: '/moderator/emergencies' },
       { icon: LifeBuoy, label: 'Tickets de soporte', to: '/moderator/tickets' },
     ],

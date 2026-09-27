@@ -42,6 +42,7 @@ const moderator = {
   avisos: lazy(() => import('./pages/moderator/AvisosPage')),
   profile: lazy(() => import('./pages/moderator/ProfilePage')),
   trips: lazy(() => import('./pages/moderator/TripsPage')),
+  reservations: lazy(() => import('./pages/moderator/ReservationsPage')),
   emergencies: lazy(() => import('./pages/moderator/EmergenciasPage')),
   tickets: lazy(() => import('./pages/moderator/TicketsPage')),
   conversations: lazy(() => import('./pages/moderator/ConversationsPage')),
