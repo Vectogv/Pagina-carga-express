@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  ArrowRight, ClipboardList, Clock, Inbox, MapPin, Megaphone, MessageSquare, Navigation, RefreshCw, Siren, Truck,
+  ArrowRight, BadgeCheck, ClipboardList, Clock, Gavel, Inbox, LifeBuoy, MapPin, Megaphone, MessageSquare, Navigation, RefreshCw, Siren, Truck,
 } from 'lucide-react';
 import {
   getModeratorDrivers,
@@ -16,6 +16,7 @@ import {
 import { tokenStore } from '../../api/axios';
 import { useModeratorBadges } from '../../contexts/ModeratorBadgesContext';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { SOCKET_URL } from '../../config';
 import { formatTime, timeAgo, toList } from '../../utils/format';
 import {
@@ -44,8 +45,9 @@ const tripRoute = (t) => {
 
 const tripConductor = (t) => (t.conductor ? t.conductor.nombre || t.conductor.telefono || t.conductor.placa || null : null);
 
-const TRIP_ORDER = { en_curso: 0, sos: 1, aceptado: 2 };
-const ACTIVE_TRIP_STATES = ['aceptado', 'en_curso', 'sos'];
+// SOS primero; luego lo que está en ruta y lo que va hacia el origen.
+const TRIP_ORDER = { sos: 0, pendiente_confirmacion: 1, en_curso: 2, entregado: 3, esperando_confirmacion: 4, conductor_llegada: 5, conductor_en_camino: 6, aceptado: 7 };
+const ACTIVE_TRIP_STATES = Object.keys(TRIP_ORDER);
 const ACTIVE_EMERGENCY_STATES = ['pendiente', 'atendida'];
 
 const LIVE_LABEL = {
@@ -89,7 +91,8 @@ function SeeAll({ to, label = 'Ver todo' }) {
 
 export default function ModeratorDashboard() {
   const navigate = useNavigate();
-  const { emergencyBadge, unreadBadge } = useModeratorBadges();
+  const { emergencyBadge, closuresBadge, ticketBadge, unreadBadge } = useModeratorBadges();
+  const { user: authUser } = useAuth();
   const { ciudadParams } = useModeratorCity();
   const [user, setUser] = useState(readStoredUser);
   const [drivers, setDrivers] = useState([]);
@@ -103,7 +106,7 @@ export default function ModeratorDashboard() {
   const [updatedAt, setUpdatedAt] = useState(null);
   const [socketStatus, setSocketStatus] = useState('conectando');
 
-  const myId = readStoredUser().id ?? null;
+  const myId = authUser?.id ?? null;
 
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
@@ -127,6 +130,8 @@ export default function ModeratorDashboard() {
   }, [ciudadParams]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+  const fetchAllRef = useRef(fetchAll);
+  useEffect(() => { fetchAllRef.current = fetchAll; }, [fetchAll]);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,20 +157,20 @@ export default function ModeratorDashboard() {
     socket.on('disconnect', () => setSocketStatus('desconectado'));
     socket.on('connect_error', () => setSocketStatus('error'));
     socket.on('moderator:trip:update', (payload) => {
-      setTrips((prev) => mergeItem(prev, payload));
+      // El evento trae la fecha en timestamps.createdAt; las listas la leen en createdAt.
+      const trip = { ...payload, createdAt: payload.createdAt ?? payload.timestamps?.createdAt };
+      setTrips((prev) => mergeItem(prev, trip));
       setUpdatedAt(new Date());
     });
     socket.on('moderator:emergency:update', (payload) => {
       setEmergencies((prev) => mergeItem(prev, payload));
       setUpdatedAt(new Date());
     });
-    socket.on('emergency:alert', (payload) => {
-      setEmergencies((prev) => mergeItem(prev, payload));
-      setUpdatedAt(new Date());
-    });
+    // Solo llega a admins y es de cualquier ciudad: se recarga con el filtro de ciudad del backend.
+    socket.on('emergency:alert', () => fetchAllRef.current());
     socket.on('conversation:message', (payload) => {
       const convId = payload.conversacionId || payload.conversationId;
-      const fromMe = payload.remitente?.id === myId;
+      const fromMe = String(payload.remitente?.id) === String(myId);
       if (convId) {
         setConversations((prev) => prev.map((c) => (
           String(c.id) === String(convId)
@@ -199,14 +204,14 @@ export default function ModeratorDashboard() {
   const pendEmerg = activeEmergencies.filter((e) => e.estado === 'pendiente').length;
 
   const comunicadosPend = comunicados.filter((c) => ((c.estado || 'pendiente').toLowerCase()) === 'pendiente').length;
-  const pendientesAction = pendVerif + comunicadosPend;
 
+  // Lo que requiere acción del moderador, en el mismo orden que el Resumen de la app.
   const kpis = [
-    { title: 'Conductores', value: asignados, subtitle: `${online} en línea`, icon: <Truck size={16} />, color: 'var(--primary)', to: '/moderator/drivers' },
-    { title: 'Viajes activos', value: activeTrips.length, subtitle: `${enCurso} en curso`, icon: <Navigation size={16} />, color: 'var(--info)', to: '/moderator/trips' },
-    { title: 'Emergencias', value: emergencyBadge, subtitle: `${pendEmerg} pendientes`, icon: <Siren size={16} />, color: 'var(--danger)', to: '/moderator/emergencies' },
-    { title: 'Pendientes', value: pendientesAction, subtitle: 'Requieren acción', icon: <Clock size={16} />, color: 'var(--warning)', to: '/moderator/comunicados' },
-    { title: 'Comunicaciones', value: unreadBadge, subtitle: 'Sin responder', icon: <MessageSquare size={16} />, color: 'var(--accent-violet)', to: '/moderator/conversations' },
+    { title: 'Emergencias activas', value: emergencyBadge, subtitle: `${pendEmerg} sin atender`, icon: <Siren size={16} />, color: 'var(--danger)', to: '/moderator/emergencies' },
+    { title: 'Cierres por resolver', value: closuresBadge, subtitle: 'El cliente no confirmó', icon: <Gavel size={16} />, color: 'var(--warning)', to: '/moderator/cierres' },
+    { title: 'Tickets abiertos', value: ticketBadge, subtitle: 'Sin tomar', icon: <LifeBuoy size={16} />, color: 'var(--info)', to: '/moderator/tickets' },
+    { title: 'Por verificar', value: pendVerif, subtitle: 'Conductores nuevos', icon: <BadgeCheck size={16} />, color: 'var(--primary)', to: '/moderator/drivers' },
+    { title: 'Mensajes', value: unreadBadge, subtitle: 'Sin responder', icon: <MessageSquare size={16} />, color: 'var(--accent-violet)', to: '/moderator/conversations' },
   ];
 
   const tripsToShow = [...activeTrips]
@@ -305,7 +310,11 @@ export default function ModeratorDashboard() {
           )}
         </Card>
 
-        <Card title="Viajes en tiempo real" description="En curso, aceptados y SOS" actions={<SeeAll to="/moderator/trips" />}>
+        <Card
+          title="Viajes en tiempo real"
+          description={`${activeTrips.length} en servicio · ${enCurso} en ruta`}
+          actions={<SeeAll to="/moderator/trips" />}
+        >
           {tripsToShow.length === 0 ? (
             <PanelEmpty icon={Truck} title="Sin viajes activos" description="Los viajes aparecerán aquí cuando estén en curso." />
           ) : (
@@ -419,7 +428,8 @@ export default function ModeratorDashboard() {
         <Card title="Acciones rápidas" description="Atajos a las secciones de moderación">
           <div className="ccop-actions">
             <Button variant="soft-danger" icon={<Siren size={15} />} onClick={() => navigate('/moderator/emergencies')}>Gestionar emergencias</Button>
-            <Button variant="soft-primary" icon={<MessageSquare size={15} />} onClick={() => navigate('/moderator/conversations')}>Abrir conversatorio</Button>
+            <Button variant="soft-primary" icon={<Gavel size={15} />} onClick={() => navigate('/moderator/cierres')}>Resolver cierres</Button>
+            <Button variant="secondary" icon={<MessageSquare size={15} />} onClick={() => navigate('/moderator/conversations')}>Abrir conversatorio</Button>
             <Button variant="secondary" icon={<Truck size={15} />} onClick={() => navigate('/moderator/drivers')}>Ver conductores</Button>
             <Button variant="secondary" icon={<Navigation size={15} />} onClick={() => navigate('/moderator/trips')}>Ver viajes</Button>
             <Button variant="secondary" icon={<Megaphone size={15} />} onClick={() => navigate('/moderator/comunicados')}>Comunicados</Button>

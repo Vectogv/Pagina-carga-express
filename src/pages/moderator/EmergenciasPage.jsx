@@ -94,6 +94,8 @@ export default function ModeratorEmergenciasPage() {
 
   useEffect(() => { fetchEmergencies(); }, [fetchEmergencies]);
   useEffect(() => { tabRef.current = tab; }, [tab]);
+  const fetchRef = useRef(fetchEmergencies);
+  useEffect(() => { fetchRef.current = fetchEmergencies; }, [fetchEmergencies]);
   useEffect(() => {
     selectedIdRef.current = selected?.id ?? null;
     setOpenEmergency(selected?.id ?? null);
@@ -115,7 +117,8 @@ export default function ModeratorEmergenciasPage() {
         if (idx >= 0) {
           if (isActivas && payload.estado === 'resuelta') return prev.filter((e) => !sameId(e.id, payload.id));
           const next = [...prev];
-          next[idx] = { ...next[idx], ...payload };
+          // La lista trae quién atendió como `administrador`; el socket lo manda como `atendidoPor`.
+          next[idx] = { ...next[idx], ...payload, ...(payload.atendidoPor ? { administrador: payload.atendidoPor } : {}) };
           return next;
         }
         if (payload.estado === 'pendiente' && isActivas) return [payload, ...prev];
@@ -123,9 +126,9 @@ export default function ModeratorEmergenciasPage() {
       });
       setSelected((prev) => (prev && sameId(prev.id, payload.id) ? { ...prev, ...payload } : prev));
     });
-    socket.on('emergency:alert', (payload) => {
-      if (tabRef.current !== 'activas') return;
-      setEmergencies((prev) => (prev.some((e) => sameId(e.id, payload.id)) ? prev : [payload, ...prev]));
+    // Solo llega a admins y es de cualquier ciudad: se recarga la lista, que el backend ya filtra por ciudad.
+    socket.on('emergency:alert', () => {
+      if (tabRef.current === 'activas') fetchRef.current();
     });
     socket.on('emergency:message', (data) => {
       if (!selectedIdRef.current || !sameId(data.alertaId, selectedIdRef.current)) return;
@@ -166,8 +169,11 @@ export default function ModeratorEmergenciasPage() {
     setObservacion('');
     setNuevoTexto('');
     loadMessages(row.id);
+    const viajeId = row.viajeId || row.tripId || row.viaje?.id;
+    // SOS sin viaje (p. ej. cliente sin servicio activo): no hay detalle que pedir.
+    if (!viajeId) return;
     try {
-      const res = await getModeratorTripDetail(row.viajeId || row.tripId || row.viaje?.id);
+      const res = await getModeratorTripDetail(viajeId);
       if (sameId(selectedIdRef.current, row.id)) setTripDetail(res.data?.data || res.data);
     } catch {
       // Sin detalle del viaje: el caso se muestra solo con los datos de la alerta.
@@ -213,7 +219,7 @@ export default function ModeratorEmergenciasPage() {
       };
       setSelected((prev) => ({ ...prev, ...patch }));
       setEmergencies((prev) => prev.map((e) => (sameId(e.id, id) ? { ...e, ...patch } : e)));
-      showToast('Caso abierto');
+      showToast('Emergencia marcada como atendida');
     } catch (err) {
       const s = err.response?.status;
       if (s === 409) showToast('Ya no está pendiente', false);
@@ -242,7 +248,7 @@ export default function ModeratorEmergenciasPage() {
         administrador: updated.atendidoPor || prev.administrador,
       }));
       setEmergencies((prev) => prev.map((e) => (sameId(e.id, id) ? { ...e, estado: updated.estado || 'resuelta', observacion: updated.observacion } : e)));
-      showToast('Caso resuelto');
+      showToast('Emergencia resuelta');
       setObservacion('');
     } catch (err) {
       if (err.response?.status === 409) showToast('Ya fue resuelta', false);

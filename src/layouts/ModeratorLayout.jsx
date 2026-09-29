@@ -31,18 +31,22 @@ function CitySelector() {
 
 function ModeratorShell() {
   const location = useLocation();
-  const { emergencyBadge, unreadBadge, ticketBadge, clearEmergency, clearUnread } = useModeratorBadges();
+  const {
+    emergencyBadge, closuresBadge, unreadBadge, ticketBadge, clearUnread,
+  } = useModeratorBadges();
   const { isAdmin, ciudadLabel } = useModeratorCity();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Al entrar a cada sección, su badge se pone en 0 (los mensajes/hilos leídos se marcan en el backend).
+  // Al entrar al Conversatorio su badge se pone en 0 (los hilos leídos se marcan en el backend).
+  // Emergencias, Cierres y Tickets NO se limpian al entrar: cuentan casos abiertos y bajan
+  // solo cuando se atienden/resuelven (el backend manda).
   useEffect(() => {
-    if (location.pathname === '/moderator/emergencies') clearEmergency();
     if (location.pathname === '/moderator/conversations') clearUnread();
-  }, [location.pathname, clearEmergency, clearUnread]);
+  }, [location.pathname, clearUnread]);
 
   const badges = {
     '/moderator/emergencies': emergencyBadge,
+    '/moderator/cierres': closuresBadge,
     '/moderator/conversations': unreadBadge,
     // Tickets abiertos sin atender: baja solo cuando alguien los toma (el backend manda).
     '/moderator/tickets': ticketBadge,
@@ -77,10 +81,11 @@ function ModeratorShell() {
 
 export default function ModeratorLayout() {
   return (
-    <ModeratorBadgesProvider>
-      <ModeratorCityProvider>
+    // La ciudad va por fuera: los badges (cierres) usan la ciudad elegida por el admin.
+    <ModeratorCityProvider>
+      <ModeratorBadgesProvider>
         <ModeratorShell />
-      </ModeratorCityProvider>
-    </ModeratorBadgesProvider>
+      </ModeratorBadgesProvider>
+    </ModeratorCityProvider>
   );
 }

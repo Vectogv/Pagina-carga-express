@@ -8,7 +8,7 @@ const STATUS = {
   conductor_llegada: ['Conductor en origen', 'primary'],
   en_curso: ['En curso', 'warning'],
   esperando_confirmacion: ['Esperando confirmación', 'warning'],
-  pendiente_confirmacion: ['Pendiente de confirmación', 'warning'],
+  pendiente_confirmacion: ['Cierre por resolver', 'warning'],
   pendiente_cierre: ['Pendiente de cierre', 'warning'],
   finalizado: ['Finalizado', 'success'],
   completado: ['Completado', 'success'],

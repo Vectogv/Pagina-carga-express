@@ -63,8 +63,24 @@ export default function ModeratorComunicadosPage() {
   const columns = [
     { key: 'titulo', label: 'Título', render: (v) => <span className="text-strong">{v || '—'}</span> },
     { key: 'contenido', label: 'Contenido', render: (v) => <span className="truncate" style={{ display: 'inline-block', maxWidth: 320 }}>{v || '—'}</span> },
-    { key: 'estado', label: 'Estado', render: (v) => <StatusBadge status={v || 'pendiente'} /> },
-    { key: 'createdAt', label: 'Fecha', render: (v) => <span className="nowrap">{formatDate(v)}</span> },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (v, r) => (
+        <div className="stack" style={{ gap: 'var(--space-1)' }}>
+          <StatusBadge status={v || 'pendiente'} />
+          {v === 'rechazado' && r.notaRechazo && (
+            <span className="text-muted text-sm">Motivo: {r.notaRechazo}</span>
+          )}
+        </div>
+      ),
+    },
+    { key: 'createdAt', label: 'Creado', render: (v) => <span className="nowrap">{formatDate(v)}</span> },
+    {
+      key: 'publicadoAt',
+      label: 'Publicado',
+      render: (v) => <span className="nowrap">{v ? formatDate(v) : 'Aún no'}</span>,
+    },
   ];
 
   return (

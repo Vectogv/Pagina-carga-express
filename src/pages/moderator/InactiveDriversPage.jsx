@@ -49,7 +49,7 @@ export default function InactiveDriversPage() {
       label: 'Conductor',
       render: (_, r) => (
         <div className="cell-user">
-          <Avatar src={r.usuario?.avatar} name={driverName(r)} />
+          <Avatar src={r.fotoConductor} name={driverName(r)} />
           <div className="cell-user__text">
             <span className="cell-user__name">{driverName(r)}</span>
             <span className="cell-user__meta">{r.usuario?.email || '—'}</span>
@@ -61,10 +61,9 @@ export default function InactiveDriversPage() {
     {
       key: 'dias',
       label: 'Inactividad',
-      render: (_, r) => {
-        const d = r.diasInactivo ?? r.dias;
-        return <Badge variant="warning">{d != null ? `${d} días` : '7+ días'}</Badge>;
-      },
+      // El backend no envía la fecha del último viaje: solo garantiza que el
+      // conductor lleva más de 7 días sin viajes y está desconectado.
+      render: () => <Badge variant="warning">Más de 7 días</Badge>,
     },
     {
       key: 'acciones',
@@ -82,7 +81,7 @@ export default function InactiveDriversPage() {
     <div className="page">
       <PageHeader
         title="Conductores inactivos"
-        description="Conductores con 7 o más días sin viajes y desconectados en tu ciudad. Envíales un recordatorio por notificación push."
+        description="Conductores de tu ciudad que llevan más de 7 días sin viajes y están desconectados. Envíales un recordatorio por notificación push."
       />
 
       {error && <div className="page-error" role="alert">{error}</div>}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { ChevronRight, Siren, X } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import {
   getModeratorTrips, getModeratorTripDetail, getModeratorEmergencies,
 } from '../../api/moderator';
@@ -15,16 +16,25 @@ import {
 import TripDetailModal from './trips/TripDetailModal';
 import './trips/TripsPage.css';
 
-const ALERT_SOUND = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
-
+// El listado solo trae viajes con conductor asignado. El backend acepta varios estados separados por coma.
+const EN_SERVICIO = 'aceptado,conductor_en_camino,conductor_llegada,en_curso,entregado,esperando_confirmacion';
 const ESTADO_OPTIONS = [
-  ['', 'Todos (con conductor)'],
-  ['pendiente', 'Pendiente'],
-  ['aceptado', 'Aceptado'],
-  ['en_curso', 'En curso'],
-  ['finalizado', 'Finalizado'],
+  ['', 'Todos'],
+  [EN_SERVICIO, 'En servicio'],
+  ['pendiente_confirmacion', 'Cierre por resolver'],
   ['sos', 'SOS'],
+  ['aceptado', 'Aceptado'],
+  ['conductor_en_camino', 'Conductor en camino'],
+  ['conductor_llegada', 'Conductor en el origen'],
+  ['en_curso', 'En curso'],
+  ['entregado', 'Entregado'],
+  ['esperando_confirmacion', 'Esperando confirmación del cliente'],
+  ['finalizado', 'Finalizado'],
+  ['disputa', 'En disputa'],
+  ['cancelado', 'Cancelado'],
 ];
+
+const VALID_ESTADOS = new Set(ESTADO_OPTIONS.map(([v]) => v));
 
 const SOCKET_BADGE = {
   conectado: ['success', 'En vivo'],
@@ -39,16 +49,20 @@ export default function ModeratorTripsPage() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [estado, setEstado] = useState('');
+  // ?estado= permite llegar ya filtrado desde el Centro de control.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const estadoParam = searchParams.get('estado') || '';
+  const estado = VALID_ESTADOS.has(estadoParam) ? estadoParam : '';
+  const setEstado = (value) => setSearchParams(value ? { estado: value } : {}, { replace: true });
+  const estadoRef = useRef(estado);
+  useEffect(() => { estadoRef.current = estado; }, [estado]);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
   const [emergencies, setEmergencies] = useState([]);
-  const [emergencyBanner, setEmergencyBanner] = useState(null);
   const [socketStatus, setSocketStatus] = useState('desconectado');
   const [mapboxToken, setMapboxToken] = useState(null);
-  const audioRef = useRef(null);
   const selectedIdRef = useRef(null);
 
   const fetchTrips = useCallback(async () => {
@@ -91,6 +105,8 @@ export default function ModeratorTripsPage() {
 
   useEffect(() => { fetchTrips(); }, [fetchTrips]);
   useEffect(() => { fetchEmergencies(); }, [fetchEmergencies]);
+  const fetchEmergenciesRef = useRef(fetchEmergencies);
+  useEffect(() => { fetchEmergenciesRef.current = fetchEmergencies; }, [fetchEmergencies]);
   useEffect(() => {
     selectedIdRef.current = selectedId;
     if (selectedId) fetchDetail(selectedId);
@@ -119,33 +135,32 @@ export default function ModeratorTripsPage() {
       next[idx] = { ...next[idx], ...payload };
       return next;
     };
+    // moderator:trip:update trae la fecha en timestamps.createdAt; la tabla la lee en createdAt.
+    // Un viaje que ya no cumple el filtro sale de la lista; uno nuevo solo entra si lo cumple.
+    const upsertTrip = (payload) => (prev) => {
+      const trip = { ...payload, createdAt: payload.createdAt ?? payload.timestamps?.createdAt };
+      const filtro = estadoRef.current;
+      if (filtro && !filtro.split(',').includes(trip.estado)) {
+        return prev.filter((t) => String(t.id) !== String(trip.id));
+      }
+      return upsert(trip)(prev);
+    };
 
     socket.on('connect', () => setSocketStatus('conectado'));
     socket.on('disconnect', () => setSocketStatus('desconectado'));
     socket.on('connect_error', () => setSocketStatus('error'));
     socket.on('moderator:trip:update', (payload) => {
-      setTrips(upsert(payload));
+      setTrips(upsertTrip(payload));
       if (String(selectedIdRef.current) === String(payload.id)) fetchDetail(payload.id);
     });
     socket.on('moderator:emergency:update', (payload) => {
+      // El aviso sonoro y el banner los muestra el EmergencyBanner global del layout.
       setEmergencies(upsert(payload));
-      if (payload.estado === 'pendiente') {
-        setEmergencyBanner(payload);
-        try {
-          if (!audioRef.current) audioRef.current = new Audio(ALERT_SOUND);
-          audioRef.current.play().catch(() => { /* autoplay bloqueado por el navegador */ });
-        } catch {
-          // Audio no soportado en este navegador.
-        }
-      }
       const current = selectedIdRef.current;
       if (current && String(payload.viajeId || payload.tripId) === String(current)) fetchDetail(current);
     });
-    socket.on('emergency:alert', (payload) => {
-      setEmergencyBanner(payload);
-      setEmergencies((prev) => [payload, ...prev]);
-    });
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
+    // Solo llega a admins y es de cualquier ciudad: se recarga con el filtro de ciudad del backend.
+    socket.on('emergency:alert', () => fetchEmergenciesRef.current());
     return () => { socket.disconnect(); };
   }, [fetchDetail]);
 
@@ -221,7 +236,7 @@ export default function ModeratorTripsPage() {
     <div className="page">
       <PageHeader
         title="Viajes"
-        description="Seguimiento en tiempo real de los viajes de tu ciudad."
+        description="Seguimiento en tiempo real de los viajes con conductor asignado en tu ciudad."
         actions={(
           <Badge variant={socketVariant}>
             <span className="badge__dot" aria-hidden="true" />
@@ -240,23 +255,6 @@ export default function ModeratorTripsPage() {
           {ESTADO_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </Select>
       </div>
-
-      {emergencyBanner && (
-        <div className="trips-alert" role="alert">
-          <span className="trips-alert__icon"><Siren size={18} /></span>
-          <div className="trips-alert__text">
-            <span className="trips-alert__title">
-              Emergencia{emergencyBanner.usuario?.nombre ? ` · ${emergencyBanner.usuario.nombre}` : ''} · {emergencyBanner.motivo || 'Emergencia'}
-            </span>
-            <span className="trips-alert__meta">
-              Viaje #{emergencyBanner.viajeId || '—'}{emergencyBanner.createdAt ? ` · ${formatDateTime(emergencyBanner.createdAt)}` : ''}
-            </span>
-          </div>
-          <Button size="icon" variant="ghost" onClick={() => setEmergencyBanner(null)} aria-label="Descartar aviso">
-            <X size={15} />
-          </Button>
-        </div>
-      )}
 
       {error && <div className="page-error" role="alert">{error}</div>}
 

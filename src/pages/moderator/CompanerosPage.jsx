@@ -13,13 +13,16 @@ const ROLE_FILTERS = [
   { value: 'cliente', label: 'Clientes' },
 ];
 
-const rolVariant = (r) => {
-  if (r.esModerador) return 'warning';
-  if (r.rol === 'conductor') return 'success';
-  if (r.rol === 'cliente') return 'info';
-  return 'neutral';
-};
-const rolLabel = (r) => (r.esModerador ? `Moderador · ${r.zonaModerador || r.zona || '—'}` : (r.rol || 'Usuario'));
+// El backend manda `etiqueta` (MODERADOR / ADMIN / CONDUCTOR / CLIENTE) como rol legible.
+const etiquetaDe = (r) => (r.etiqueta || (r.esModerador ? 'MODERADOR' : r.rol || '')).toUpperCase();
+const ROL_VARIANT = { MODERADOR: 'warning', CONDUCTOR: 'success', CLIENTE: 'info' };
+const ROL_LABEL = { MODERADOR: 'Moderador', ADMIN: 'Administrador', CONDUCTOR: 'Conductor', CLIENTE: 'Cliente' };
+const rolVariant = (r) => ROL_VARIANT[etiquetaDe(r)] || 'neutral';
+const rolLabel = (r) => ROL_LABEL[etiquetaDe(r)] || 'Usuario';
+const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+// Solo los moderadores tienen zona asignada.
+const zonaLabel = (r) => capitalize((r.zonaModerador || '').trim()) || '—';
+const MIN_CLIENT_QUERY = 3;
 
 export default function CompanerosPage() {
   const { ciudadParams } = useModeratorCity();
@@ -33,7 +36,7 @@ export default function CompanerosPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getContactableUsers({ q, search: q, limit: 100, ...ciudadParams });
+      const res = await getContactableUsers({ q: q.trim() || undefined, limit: 100, ...ciudadParams });
       setContacts(toList(res.data, 'users', 'contactableUsers'));
     } catch (err) {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
@@ -53,6 +56,8 @@ export default function CompanerosPage() {
     if (roleFilter === 'moderador') return !!c.esModerador;
     return (c.rol || '') === roleFilter;
   });
+  // El backend solo devuelve clientes cuando la búsqueda tiene al menos 3 letras.
+  const needsClientQuery = roleFilter === 'cliente' && q.trim().length < MIN_CLIENT_QUERY;
 
   const columns = [
     {
@@ -68,7 +73,7 @@ export default function CompanerosPage() {
     { key: 'rol', label: 'Rol', render: (_, r) => <Badge variant={rolVariant(r)}>{rolLabel(r)}</Badge> },
     { key: 'email', label: 'Correo', render: (v) => v || '—' },
     { key: 'telefono', label: 'Teléfono', render: (v, r) => r.telefono || r.phone || v || '—' },
-    { key: 'etiqueta', label: 'Zona', render: (_, r) => r.etiqueta || r.zona || r.zonaModerador || '—' },
+    { key: 'zonaModerador', label: 'Zona', render: (_, r) => zonaLabel(r) },
   ];
 
   return (
@@ -84,9 +89,13 @@ export default function CompanerosPage() {
 
       <DataTable
         columns={columns}
-        data={filtered}
+        data={needsClientQuery ? [] : filtered}
         loading={loading}
-        emptyMessage={q ? `Sin resultados para “${q}”` : 'No hay compañeros para mostrar'}
+        emptyMessage={
+          needsClientQuery
+            ? 'Escribe al menos 3 letras para buscar clientes'
+            : (q ? `Sin resultados para “${q}”` : 'No hay compañeros para mostrar')
+        }
       />
     </div>
   );

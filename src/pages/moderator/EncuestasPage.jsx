@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ChartColumn, Plus, X } from 'lucide-react';
 import { createEncuesta, getEncuestaResults, getMyEncuestas } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { errorMessage, formatNumber, toList } from '../../utils/format';
+import { errorMessage, formatDate, formatNumber, toList } from '../../utils/format';
 import {
   PageHeader, DataTable, Modal, Button, Input, StatusBadge, Toast, ToastContainer,
 } from '../../components/ui';
@@ -10,20 +10,30 @@ import './EncuestasPage.css';
 
 const EMPTY_FORM = { pregunta: '', opciones: ['', ''], fechaCierre: '' };
 
-/** Intenta leer los resultados como [{label, votos}]; el formato del backend no está fijado. */
-function parseResults(data) {
-  const src = data?.data && !Array.isArray(data.data) ? data.data : data;
-  const arr = toList(src, 'resultados', 'opciones', 'results', 'votos');
-  const rows = arr.map((o) => {
-    if (typeof o !== 'object' || o === null) return null;
-    const label = o.opcion ?? o.texto ?? o.label ?? o.nombre ?? o.option;
-    const votos = o.votos ?? o.count ?? o.total ?? o.cantidad ?? o.respuestas;
-    if (label === undefined || typeof votos !== 'number') return null;
-    return { label: String(label), votos };
+const toOptions = (v) => {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') {
+    try { const arr = JSON.parse(v); return Array.isArray(arr) ? arr : []; } catch { return []; }
+  }
+  return [];
+};
+
+/**
+ * Arma una fila por opción de la encuesta. El backend manda `opciones` (todas) y
+ * `resultados` [{opcion, total}] solo con las opciones que recibieron votos, así
+ * que se cruzan para que las opciones sin votos aparezcan con 0.
+ */
+function parseResults(data, encuesta) {
+  const opciones = toOptions(data?.opciones ?? encuesta?.opciones).map(String);
+  const conteo = new Map();
+  (Array.isArray(data?.resultados) ? data.resultados : []).forEach((r) => {
+    if (r && r.opcion !== undefined) conteo.set(String(r.opcion), Number(r.total) || 0);
   });
-  if (!rows.length || rows.some((r) => !r)) return null;
-  const total = rows.reduce((acc, r) => acc + r.votos, 0);
-  return { rows, total, pregunta: src?.pregunta };
+  const labels = [...opciones, ...[...conteo.keys()].filter((k) => !opciones.includes(k))];
+  const rows = labels.map((label) => ({ label, votos: conteo.get(label) || 0 }));
+  const sumaVotos = rows.reduce((acc, r) => acc + r.votos, 0);
+  const total = typeof data?.totalRespuestas === 'number' ? data.totalRespuestas : sumaVotos;
+  return { rows, total, pregunta: data?.pregunta };
 }
 
 export default function ModeratorEncuestasPage() {
@@ -98,6 +108,7 @@ export default function ModeratorEncuestasPage() {
   const columns = [
     { key: 'pregunta', label: 'Pregunta', render: (v, r) => <span className="text-strong">{v || r.titulo || '—'}</span> },
     { key: 'opciones', label: 'Opciones', render: (v) => `${(v || []).length} opciones` },
+    { key: 'fechaCierre', label: 'Cierre', render: (v) => (v ? formatDate(v) : 'Sin fecha de cierre') },
     { key: 'estado', label: 'Estado', render: (v) => <StatusBadge status={v || 'pendiente'} /> },
     {
       key: 'acciones',
@@ -111,7 +122,7 @@ export default function ModeratorEncuestasPage() {
     },
   ];
 
-  const parsed = results ? parseResults(results.data) : null;
+  const parsed = results ? parseResults(results.data, results.encuesta) : null;
 
   return (
     <div className="page">
@@ -185,7 +196,7 @@ export default function ModeratorEncuestasPage() {
         description={parsed?.pregunta || results?.encuesta?.pregunta}
         footer={<Button variant="secondary" onClick={() => setResults(null)}>Cerrar</Button>}
       >
-        {parsed ? (
+        {parsed?.rows.length ? (
           <div className="stack">
             {parsed.rows.map((r) => {
               const pct = parsed.total ? Math.round((r.votos / parsed.total) * 100) : 0;
@@ -199,10 +210,14 @@ export default function ModeratorEncuestasPage() {
                 </div>
               );
             })}
-            <p className="text-muted text-sm">Total: {formatNumber(parsed.total)} respuestas</p>
+            <p className="text-muted text-sm">
+              {parsed.total > 0
+                ? `Total: ${formatNumber(parsed.total)} ${parsed.total === 1 ? 'respuesta' : 'respuestas'}`
+                : 'Aún no hay respuestas.'}
+            </p>
           </div>
         ) : (
-          <pre className="poll-raw">{JSON.stringify(results?.data, null, 2)}</pre>
+          <p className="text-muted">Aún no hay respuestas.</p>
         )}
       </Modal>
 

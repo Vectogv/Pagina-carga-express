@@ -24,4 +24,9 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_', ignoreRestSiblings: true }],
     },
   },
+  {
+    // vite.config.js corre en Node (lee process.env).
+    files: ['vite.config.js'],
+    languageOptions: { globals: globals.node },
+  },
 ])

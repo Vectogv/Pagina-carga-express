@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Car, CheckCheck, CircleCheck, Gavel, MapPin, Phone, Siren, Star } from 'lucide-react';
-import { acknowledgeEmergency, resolveClose, resolveEmergency } from '../../../api/moderator';
+import { Car, CheckCheck, CircleCheck, MapPin, Phone, Siren, Star } from 'lucide-react';
+import { acknowledgeEmergency, resolveEmergency } from '../../../api/moderator';
+import PendingCloseResolver from '../../../components/moderator/PendingCloseResolver';
+import { Textarea } from '../../../components/ui/Input/Input';
 import ServiceStatusTimeline from '../../../components/moderator/ServiceStatusTimeline';
 import { errorMessage, formatCurrency, formatDateTime, fullName } from '../../../utils/format';
 import { resolveStorageUrl } from '../../../utils/storage';
 import {
   Modal, Avatar, Badge, Button, StatusBadge, LoadingState,
 } from '../../../components/ui';
-import { Textarea } from '../../../components/ui/Input/Input';
 
 // Mapbox Static API exige colores hex en la URL (no admite variables CSS). Equivalen a --success / --danger.
 const PIN_ORIGIN = '22c55e';
@@ -52,60 +53,9 @@ function RouteMap({ origen, destino, mapboxToken }) {
   );
 }
 
-// H1: el cliente tuvo `confirmacionTimeoutMin` minutos para confirmar o rechazar
-// el cierre del viaje y no respondió; el moderador de la zona (o un admin) lo resuelve.
-function PendingCloseResolver({ tripId, onResolved }) {
-  const [nota, setNota] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-
-  const resolve = async (resolucion) => {
-    if (nota.trim().length < 10) {
-      setError('La nota debe tener al menos 10 caracteres');
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      await resolveClose(tripId, { resolucion, nota: nota.trim() });
-      setNota('');
-      onResolved();
-    } catch (err) {
-      setError(errorMessage(err, 'No se pudo resolver el cierre'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <section className="trip-detail__section">
-      <h4 className="section-title"><Gavel size={14} /> Cierre pendiente de confirmación</h4>
-      <p className="text-sm text-muted">
-        El cliente no confirmó ni rechazó el cierre a tiempo. Explica qué pasó y decide si el viaje se finaliza
-        o pasa a disputa.
-      </p>
-      <Textarea
-        label="Nota (mínimo 10 caracteres)"
-        value={nota}
-        onChange={(e) => setNota(e.target.value)}
-        placeholder="Ej.: el conductor entregó la carga según las fotos y el chat, se finaliza a su favor."
-        disabled={busy}
-      />
-      {error && <div className="page-error" role="alert">{error}</div>}
-      <div className="row" style={{ gap: 'var(--space-2)' }}>
-        <Button size="sm" variant="success" icon={<CheckCheck size={14} />} loading={busy} onClick={() => resolve('finalizar')}>
-          Finalizar viaje
-        </Button>
-        <Button size="sm" variant="danger" icon={<Gavel size={14} />} loading={busy} onClick={() => resolve('disputa')}>
-          Abrir disputa
-        </Button>
-      </div>
-    </section>
-  );
-}
-
 function EmergencyItem({ alerta, onChanged }) {
   const [busy, setBusy] = useState(false);
+  const [observacion, setObservacion] = useState('');
   const [error, setError] = useState(null);
 
   const run = async (fn) => {
@@ -141,16 +91,32 @@ function EmergencyItem({ alerta, onChanged }) {
       {alerta.estado === 'pendiente' && (
         <div>
           <Button size="sm" variant="danger" icon={<Siren size={14} />} loading={busy} onClick={() => run(acknowledgeEmergency)}>
-            Atender emergencia
+            Atender
           </Button>
         </div>
       )}
       {alerta.estado === 'atendida' && (
-        <div>
-          <Button size="sm" variant="success" icon={<CheckCheck size={14} />} loading={busy} onClick={() => run(resolveEmergency)}>
-            Marcar como resuelta
-          </Button>
-        </div>
+        <>
+          {/* Misma regla que Emergencias: resolver exige dejar constancia de la gestión. */}
+          <Textarea
+            label="Observación / gestión realizada"
+            value={observacion}
+            onChange={(e) => setObservacion(e.target.value)}
+            disabled={busy}
+          />
+          <div>
+            <Button
+              size="sm"
+              variant="success"
+              icon={<CheckCheck size={14} />}
+              loading={busy}
+              disabled={!observacion.trim()}
+              onClick={() => run((id) => resolveEmergency(id, { observacion: observacion.trim() }))}
+            >
+              Resolver
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );

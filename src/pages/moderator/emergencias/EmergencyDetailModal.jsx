@@ -1,4 +1,4 @@
-import { CheckCheck, ExternalLink, FolderOpen, Phone, Siren, Star } from 'lucide-react';
+import { CheckCheck, ExternalLink, Phone, Siren, Star } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '../../../utils/format';
 import {
   Modal, Badge, Button, StatusBadge, Textarea,
@@ -45,14 +45,14 @@ export default function EmergencyDetailModal({
   let footer = null;
   if (selected.estado === 'pendiente') {
     footer = (
-      <Button variant="danger" icon={<FolderOpen size={15} />} loading={busy} onClick={onAcknowledge}>
-        Abrir caso
+      <Button variant="danger" icon={<Siren size={15} />} loading={busy} onClick={onAcknowledge}>
+        Atender
       </Button>
     );
   } else if (selected.estado === 'atendida') {
     footer = (
       <Button variant="success" icon={<CheckCheck size={15} />} loading={busy} disabled={!observacion.trim()} onClick={onResolve}>
-        Marcar resuelta
+        Resolver
       </Button>
     );
   }

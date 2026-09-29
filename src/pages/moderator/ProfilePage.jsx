@@ -3,6 +3,7 @@ import { Camera, MapPin, Save } from 'lucide-react';
 import { getModeratorProfile } from '../../api/moderator';
 import api from '../../api/axios';
 import { errorMessage } from '../../utils/format';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   PageHeader, Card, Avatar, Badge, Button, Input, LoadingState, Toast, ToastContainer,
 } from '../../components/ui';
@@ -18,6 +19,9 @@ export default function ModeratorProfilePage() {
   const [toast, setToast] = useState(null);
   const fileRef = useRef(null);
   const closeToast = useCallback(() => setToast(null), []);
+  const { refreshProfile } = useAuth();
+  // Refresca el usuario del AuthContext para que el sidebar muestre el nombre/avatar nuevo.
+  const syncAuthUser = () => { refreshProfile?.().catch(() => {}); };
 
   useEffect(() => {
     let cancelled = false;
@@ -45,12 +49,13 @@ export default function ModeratorProfilePage() {
     const payload = {};
     if (form.nombre.trim()) payload.nombre = form.nombre.trim();
     if (form.apellido.trim()) payload.apellido = form.apellido.trim();
-    if (form.email.trim()) payload.email = form.email.trim();
+    // El correo no se envía: /api/users/profile lo ignora (no se puede cambiar desde aquí).
     if (form.telefono.trim()) payload.telefono = form.telefono.trim();
     setSaving(true);
     try {
       await api.put('/api/users/profile', payload);
       showToast('Perfil actualizado');
+      syncAuthUser();
     } catch (err) {
       showToast(errorMessage(err, 'Error al guardar'), false);
     } finally {
@@ -68,6 +73,7 @@ export default function ModeratorProfilePage() {
       const res = await api.post('/api/users/avatar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setProfile((p) => ({ ...p, avatar: res.data?.url || res.data?.avatar || URL.createObjectURL(f) }));
       showToast('Avatar actualizado');
+      syncAuthUser();
     } catch (err) {
       showToast(errorMessage(err, 'Error al subir avatar'), false);
     } finally {
@@ -117,7 +123,14 @@ export default function ModeratorProfilePage() {
           <div className="form-grid">
             <Input label="Nombre" value={form.nombre} onChange={setField('nombre')} autoComplete="given-name" />
             <Input label="Apellido" value={form.apellido} onChange={setField('apellido')} autoComplete="family-name" />
-            <Input label="Correo" type="email" value={form.email} onChange={setField('email')} autoComplete="email" />
+            <Input
+              label="Correo"
+              type="email"
+              value={form.email}
+              disabled
+              readOnly
+              helperText="El correo no se puede cambiar desde aquí"
+            />
             <Input label="Teléfono" value={form.telefono} onChange={setField('telefono')} autoComplete="tel" />
           </div>
           <div className="row row--end">

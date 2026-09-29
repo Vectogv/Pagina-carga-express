@@ -1,14 +1,26 @@
 import {
-  LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, Wallet, TrendingUp, BadgeCheck,
+  LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, TrendingUp, BadgeCheck,
   Flag, Scale, Siren, CircleX, CreditCard, Megaphone, ChartColumn, Pin, MessagesSquare,
-  ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, Bell, LifeBuoy,
-  CalendarClock,
+  ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, LifeBuoy,
+  CalendarClock, Gavel, ChartLine,
 } from 'lucide-react';
 
 // Navegación agrupada. Cada item: { icon, label, to, end? }
+// Admin: ordenado por tarea, primero lo que espera una decisión. Las etiquetas son las
+// mismas que el título de cada página (el Header muestra la etiqueta del menú).
 export const adminNav = [
   {
-    items: [{ icon: LayoutDashboard, label: 'Dashboard', to: '/admin', end: true }],
+    items: [{ icon: LayoutDashboard, label: 'Inicio', to: '/admin', end: true }],
+  },
+  {
+    title: 'Requiere atención',
+    items: [
+      { icon: Siren, label: 'Emergencias', to: '/admin/emergencies' },
+      { icon: Scale, label: 'Disputas', to: '/admin/disputes' },
+      { icon: CircleX, label: 'Solicitudes de cancelación', to: '/admin/cancellation-requests' },
+      { icon: LifeBuoy, label: 'Tickets de soporte', to: '/admin/tickets' },
+      { icon: Flag, label: 'Reportes entre usuarios', to: '/admin/reports' },
+    ],
   },
   {
     title: 'Personas',
@@ -16,37 +28,32 @@ export const adminNav = [
       { icon: Users, label: 'Usuarios', to: '/admin/users' },
       { icon: Handshake, label: 'Clientes', to: '/admin/clients' },
       { icon: Truck, label: 'Conductores', to: '/admin/drivers' },
-      { icon: ShieldCheck, label: 'Moderadores', to: '/admin/moderators' },
       { icon: BadgeCheck, label: 'Verificaciones', to: '/admin/verifications' },
+      { icon: ShieldCheck, label: 'Moderadores', to: '/admin/moderators' },
+      { icon: ClipboardList, label: 'Reportes de moderadores', to: '/admin/moderator-reports' },
     ],
   },
   {
     title: 'Operación',
     items: [
       { icon: Route, label: 'Viajes', to: '/admin/trips' },
-      { icon: Siren, label: 'Emergencias', to: '/admin/emergencies' },
-      { icon: Scale, label: 'Disputas', to: '/admin/disputes' },
-      { icon: CircleX, label: 'Cancelaciones', to: '/admin/cancellation-requests' },
-      { icon: Flag, label: 'Reportes', to: '/admin/reports' },
-      { icon: LifeBuoy, label: 'Tickets de soporte', to: '/admin/tickets' },
     ],
   },
   {
     title: 'Finanzas',
     items: [
-      { icon: Wallet, label: 'Ganancias', to: '/admin/earnings' },
+      { icon: ChartLine, label: 'Estadísticas', to: '/admin/earnings' },
       { icon: TrendingUp, label: 'Comisiones', to: '/admin/commissions' },
-      { icon: CreditCard, label: 'Pagos', to: '/admin/payments' },
+      { icon: CreditCard, label: 'Pagos pendientes', to: '/admin/payments' },
     ],
   },
   {
     title: 'Comunicación',
     items: [
+      { icon: MessagesSquare, label: 'Conversatorio', to: '/admin/conversations' },
+      { icon: Pin, label: 'Avisos', to: '/admin/avisos' },
       { icon: Megaphone, label: 'Comunicados', to: '/admin/comunicados' },
       { icon: ChartColumn, label: 'Encuestas', to: '/admin/encuestas' },
-      { icon: Pin, label: 'Avisos', to: '/admin/avisos' },
-      { icon: MessagesSquare, label: 'Conversatorio', to: '/admin/conversations' },
-      { icon: ClipboardList, label: 'Reportes de moderación', to: '/admin/moderator-reports' },
     ],
   },
   {
@@ -59,35 +66,42 @@ export const adminNav = [
   },
 ];
 
+// Ordenado por urgencia, igual que la app: primero lo que requiere acción del moderador.
 export const moderatorNav = [
   {
     items: [{ icon: LayoutDashboard, label: 'Centro de control', to: '/moderator', end: true }],
+  },
+  {
+    title: 'Requiere atención',
+    items: [
+      { icon: Siren, label: 'Emergencias', to: '/moderator/emergencies' },
+      { icon: Gavel, label: 'Cierres por resolver', to: '/moderator/cierres' },
+      { icon: LifeBuoy, label: 'Tickets de soporte', to: '/moderator/tickets' },
+    ],
   },
   {
     title: 'Operación',
     items: [
       { icon: Route, label: 'Viajes', to: '/moderator/trips' },
       { icon: CalendarClock, label: 'Reservas', to: '/moderator/reservations' },
-      { icon: Siren, label: 'Emergencias', to: '/moderator/emergencies' },
-      { icon: LifeBuoy, label: 'Tickets de soporte', to: '/moderator/tickets' },
     ],
   },
   {
     title: 'Conductores',
     items: [
-      { icon: Truck, label: 'Conductores', to: '/moderator/drivers', end: true },
-      { icon: BedDouble, label: 'Inactivos', to: '/moderator/drivers/inactive' },
+      { icon: Truck, label: 'Verificación de conductores', to: '/moderator/drivers', end: true },
+      { icon: BedDouble, label: 'Conductores inactivos', to: '/moderator/drivers/inactive' },
+      { icon: Flag, label: 'Mis reportes', to: '/moderator/reports' },
     ],
   },
   {
     title: 'Comunicación',
     items: [
       { icon: MessagesSquare, label: 'Conversatorio', to: '/moderator/conversations' },
-      { icon: UsersRound, label: 'Compañeros', to: '/moderator/companeros' },
+      { icon: UsersRound, label: 'Directorio', to: '/moderator/companeros' },
       { icon: Pin, label: 'Avisos', to: '/moderator/avisos' },
       { icon: Megaphone, label: 'Comunicados', to: '/moderator/comunicados' },
       { icon: ChartColumn, label: 'Encuestas', to: '/moderator/encuestas' },
-      { icon: Bell, label: 'Mis reportes', to: '/moderator/reports' },
     ],
   },
   {

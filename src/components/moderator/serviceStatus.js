@@ -31,5 +31,8 @@ export const special = {
   cancelado: { label: 'Viaje cancelado', tone: 'danger' },
   rechazado: { label: 'Viaje rechazado', tone: 'danger' },
   disputa: { label: 'Disputa abierta', tone: 'warning' },
+  // H1: el cliente no confirmó el cierre a tiempo; lo resuelve el moderador.
+  pendiente_confirmacion: { label: 'Cierre por resolver — el cliente no confirmó a tiempo', tone: 'warning' },
+  reservado: { label: 'Reserva programada — aún no inicia', tone: 'warning' },
   sos: { label: 'Emergencia — Atender con urgencia', tone: 'danger' },
 };
