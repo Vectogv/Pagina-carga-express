@@ -20,7 +20,7 @@ export default function ConfigPage() {
     <div className="page">
       <PageHeader
         title="Configuración"
-        description="Ajustes de pagos, zonas de cobertura y banner promocional de la plataforma."
+        description="Ajustes que afectan a toda la plataforma: la cuenta Nequi donde se paga, las ciudades donde se opera (cobertura) y el banner que ve la app."
       />
 
       <Tabs defaultValue="general" className="config__tabs">

@@ -393,23 +393,100 @@ export default function CoverageConfig({ notify }) {
     }
   };
 
+  // Resumen de lo que está guardado en el servidor (no de lo que se está editando).
+  const guardadas = useMemo(() => JSON.parse(initial), [initial]);
+  const operando = guardadas.filter((r) => r.activa).length;
+  const pausadas = guardadas.length - operando;
+  const resumenEstado = guardadas.length === 0
+    ? { variant: 'neutral', label: 'Sin zonas' }
+    : operando === 0
+      ? { variant: 'warning', label: 'Todas pausadas' }
+      : { variant: 'success', label: 'Configurado' };
+
   if (loading) return <LoadingState message="Cargando zonas…" />;
 
+  const saveActions = (
+    <>
+      {dirty && (
+        <Button variant="ghost" icon={<RotateCcw size={15} />} onClick={() => setRows(JSON.parse(initial))} disabled={saving}>
+          Descartar
+        </Button>
+      )}
+      <Button icon={<Save size={15} />} onClick={handleSave} loading={saving} disabled={!dirty || backendDesactualizado}>
+        Guardar zonas
+      </Button>
+    </>
+  );
+
   return (
-    <div className="stack">
+    <div className="config__section">
+      <div className="config__intro">
+        <h2 className="config__intro-title">Cobertura</h2>
+        <p className="config__intro-text">
+          Ciudades donde opera la plataforma. Solo se aceptan viajes que empiecen dentro de una zona activa; sin zonas,
+          se aceptan viajes en cualquier lugar.
+        </p>
+      </div>
+
+      {!loadError && !backendDesactualizado && (
+        <Card
+          title="Configuración actual"
+          description="Zonas guardadas y publicadas en la app."
+          actions={(
+            <Badge variant={resumenEstado.variant}>
+              <span className="badge__dot" aria-hidden="true" />
+              {resumenEstado.label}
+            </Badge>
+          )}
+        >
+          <div className="config__values">
+            <div className="config__value-box">
+              <span className="config__value-label">Zonas</span>
+              <span className="config__value">{guardadas.length}</span>
+            </div>
+            <div className="config__value-box">
+              <span className="config__value-label">Operando</span>
+              <span className="config__value">{operando}</span>
+            </div>
+            <div className="config__value-box">
+              <span className="config__value-label">Pausadas</span>
+              <span className="config__value">{pausadas}</span>
+            </div>
+          </div>
+          {guardadas.length === 0 ? (
+            <div className="config__placeholder">
+              <MapPin size={16} aria-hidden="true" />
+              <span>No hay zonas guardadas: hoy se aceptan viajes en cualquier lugar.</span>
+            </div>
+          ) : (
+            <ul className="config__zone-list">
+              {guardadas.map((r) => {
+                const shape = shapeOf(r);
+                return (
+                  <li key={r.key} className="config__zone">
+                    <div className="config__zone-text">
+                      <span className="config__zone-name">{r.nombre || 'Sin nombre'}</span>
+                      {shape && <span className="config__zone-meta">{describeShape(shape)}</span>}
+                    </div>
+                    <div className="config__zone-badges">
+                      <Badge variant={r.tipo === 'circulo' ? 'info' : 'neutral'}>{r.tipo === 'circulo' ? 'Radio' : 'Rectángulo'}</Badge>
+                      <Badge variant={r.activa ? 'success' : 'neutral'}>{r.activa ? 'Operando' : 'Pausada'}</Badge>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      )}
+
       <Card
-        title="Zonas de operación"
-        description="Cada ciudad se define con un radio (centro y kilómetros) o con un rectángulo (esquina noroeste y sureste). Solo se aceptan viajes que empiecen dentro de una zona activa. Sin zonas, la plataforma acepta viajes en cualquier lugar."
+        title="Editar zonas"
+        description="Cada ciudad se define con un radio (centro y kilómetros) o con un rectángulo (esquina noroeste y sureste)."
         actions={(
           <>
-            {dirty && (
-              <Button variant="ghost" icon={<RotateCcw size={15} />} onClick={() => setRows(JSON.parse(initial))} disabled={saving}>
-                Descartar
-              </Button>
-            )}
-            <Button icon={<Save size={15} />} onClick={handleSave} loading={saving} disabled={!dirty || backendDesactualizado}>
-              Guardar zonas
-            </Button>
+            {dirty && <Badge variant="warning">Cambios sin guardar</Badge>}
+            {saveActions}
           </>
         )}
       >
@@ -456,10 +533,16 @@ export default function CoverageConfig({ notify }) {
         />
       ))}
 
-      <div className="row">
-        <Button variant="secondary" icon={<Plus size={15} />} onClick={() => setRows((prev) => [...prev, emptyRow()])}>
+      <div className="config__footer">
+        <Button
+          variant="secondary"
+          icon={<Plus size={15} />}
+          className="config__footer-add"
+          onClick={() => setRows((prev) => [...prev, emptyRow()])}
+        >
           Agregar zona
         </Button>
+        {saveActions}
       </div>
 
       <OperationsMapOverlay
