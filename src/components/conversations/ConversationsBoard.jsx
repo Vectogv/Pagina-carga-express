@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { errorMessage, toList } from '../../utils/format';
 import useConversationSocket from '../../hooks/useConversationSocket';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import ConversationList from './ConversationList';
 import ConversationThread from './ConversationThread';
 import NewConversationModal from './NewConversationModal';
@@ -62,6 +63,9 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
   } = api;
   const { user } = useAuth();
   const myId = user?.id;
+  const zonas = useZonas();
+  // Nombre visible de una ciudad (con tildes, según Configuración → Cobertura).
+  const ciudadLabel = useCallback((clave) => (clave ? zonaLabelFrom(zonas, clave) : ''), [zonas]);
   // Sin zona definida no se inventa una: el backend usa la zonaModerador del usuario.
   const myCity = user?.zonaModerador || defaultCity || undefined;
 
@@ -488,6 +492,12 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
   const filteredInternal = contacts.filter((u) => isStaff(u.usuario || u)).slice(0, 20);
   const filteredPlatform = contacts.filter((u) => !isStaff(u.usuario || u)).slice(0, 20);
   const contacto = selected ? other(selected) : null;
+  // El admin (o un moderador de la misma ciudad) puede abrir chats de otro moderador:
+  // se indica quién lo atiende cuando no es uno mismo ni el contacto mostrado.
+  const atendidoPor = selected?.moderador
+    && normalizarNombre(selected.moderador) !== miNombre
+    && normalizarNombre(selected.moderador) !== normalizarNombre(contacto?.nombre)
+    ? selected.moderador : '';
 
   return (
     <div className={`chat ${mobileOpen && selected ? 'chat--thread-open' : ''}`}>
@@ -498,6 +508,7 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
         unreadTotal={totalNoLeidas}
         canCreate={canCreate}
         other={other}
+        ciudadLabel={ciudadLabel}
         onSelect={openConversation}
         onNew={openNewModal}
       />
@@ -518,6 +529,10 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
         sendError={sendError}
         estadoConexion={estadoConexion}
         onBack={() => setMobileOpen(false)}
+        canCreate={canCreate}
+        onNew={openNewModal}
+        ciudadLabel={ciudadLabel}
+        atendidoPor={atendidoPor}
       />
 
       <NewConversationModal

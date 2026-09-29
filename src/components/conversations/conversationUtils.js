@@ -1,4 +1,4 @@
-import { formatTime, toList } from '../../utils/format';
+import { toList } from '../../utils/format';
 
 /** Compara identificadores que pueden llegar como número o string. */
 export const sameId = (a, b) => a != null && b != null && String(a) === String(b);
@@ -9,7 +9,8 @@ export const isStaff = (u) => Boolean(u?.esModerador) || u?.rol === 'admin';
 /** Rol visible de un participante: ADMIN | MODERADOR | CONDUCTOR | CLIENTE. */
 export const getRolEtiqueta = (u) => {
   if (!u) return 'CLIENTE';
-  if (u.esModerador) return 'MODERADOR';
+  if (u.etiqueta && ['ADMIN', 'MODERADOR', 'CONDUCTOR', 'CLIENTE'].includes(u.etiqueta)) return u.etiqueta;
+  if (u.esModerador || u.rol === 'moderador') return 'MODERADOR';
   if (u.rol === 'admin' || u.role === 'admin') return 'ADMIN';
   if (u.rol === 'conductor') return 'CONDUCTOR';
   return 'CLIENTE';
@@ -22,28 +23,76 @@ export const ROL_BADGE = {
   CLIENTE: { label: 'Cliente', variant: 'primary' },
 };
 
+/**
+ * Grupos de la lista según el rol real del otro participante
+ * (admin y moderadores forman el equipo interno).
+ */
+export const GRUPOS = [
+  { key: 'equipo', label: 'Equipo' },
+  { key: 'conductores', label: 'Conductores' },
+  { key: 'clientes', label: 'Clientes' },
+];
+
+export const grupoDe = (u) => {
+  const rol = getRolEtiqueta(u);
+  if (rol === 'ADMIN' || rol === 'MODERADOR') return 'equipo';
+  if (rol === 'CONDUCTOR') return 'conductores';
+  return 'clientes';
+};
+
+/** Clave de ciudad de una conversación (la de la conversación o la del contacto). */
+export const ciudadDe = (c, u) => String(c?.ciudad || u?.zonaModerador || u?.ciudad || '').trim().toLowerCase();
+
 export const isSameDay = (a, b) => {
   const da = new Date(a);
   const db = new Date(b);
   return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
 };
 
-const dayFormat = new Intl.DateTimeFormat('es-CO', { weekday: 'short', day: 'numeric', month: 'short' });
-const shortDayFormat = new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short' });
-const salidaFormat = new Intl.DateTimeFormat('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+const DIA_MS = 24 * 60 * 60 * 1000;
+const inicioDelDia = (v) => { const d = new Date(v); d.setHours(0, 0, 0, 0); return d.getTime(); };
+/** Días de calendario entre la fecha y hoy (0 = hoy, 1 = ayer…). */
+const diasDesde = (v) => Math.round((inicioDelDia(new Date()) - inicioDelDia(v)) / DIA_MS);
+const capitalizar = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+const esValida = (v) => v && !Number.isNaN(new Date(v).getTime());
 
-export const formatDia = (v) => {
-  if (!v) return '';
-  const s = dayFormat.format(new Date(v));
-  return s.charAt(0).toUpperCase() + s.slice(1);
+const horaFormat = new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const weekdayFormat = new Intl.DateTimeFormat('es-CO', { weekday: 'long' });
+const dos = (n) => String(n).padStart(2, '0');
+const diaLargoFormat = new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+const diaLargoAnioFormat = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/** Hora en 24 h (HH:mm). */
+export const formatHora = (v) => (esValida(v) ? horaFormat.format(new Date(v)) : '');
+
+/** Hora de la lista: HH:mm hoy, "Ayer", día de la semana (7 días) o dd/MM. */
+export const formatHoraLista = (v) => {
+  if (!esValida(v)) return '';
+  const d = new Date(v);
+  const dias = diasDesde(d);
+  if (dias <= 0) return formatHora(d);
+  if (dias === 1) return 'Ayer';
+  if (dias < 7) return capitalizar(weekdayFormat.format(d));
+  const ddmm = `${dos(d.getDate())}/${dos(d.getMonth() + 1)}`;
+  return d.getFullYear() === new Date().getFullYear() ? ddmm : `${ddmm}/${String(d.getFullYear()).slice(-2)}`;
 };
 
-export const formatDiaCorto = (v) => (v ? shortDayFormat.format(new Date(v)) : '');
+/** Separador de día en el hilo: "Hoy", "Ayer" o la fecha completa. */
+export const formatDia = (v) => {
+  if (!esValida(v)) return '';
+  const d = new Date(v);
+  const dias = diasDesde(d);
+  if (dias <= 0) return 'Hoy';
+  if (dias === 1) return 'Ayer';
+  if (d.getFullYear() !== new Date().getFullYear()) return diaLargoAnioFormat.format(d);
+  return capitalizar(diaLargoFormat.format(d));
+};
 
-export const formatFechaSalida = (v) => (v ? salidaFormat.format(new Date(v)) : '—');
+/** Fecha y hora completas (para el title al pasar el cursor). */
+export const formatFechaCompleta = (v) => (esValida(v) ? `${formatDia(v)}, ${formatHora(v)}` : '');
 
-/** Fecha de salida del viaje asociado (o creación de la conversación). */
-export const fechaSalidaDe = (c) => c?.fechaSalida || c?.viaje?.fechaSalida || c?.createdAt;
+/** Identificador corto del viaje (los ids pueden ser UUID). */
+export const viajeCorto = (id) => (id == null ? '' : String(id).slice(0, 8));
 
 export const toContactList = (d) => toList(d, 'drivers', 'users');
 
@@ -55,12 +104,6 @@ export const fullNameOf = (u) => `${u?.nombre || ''} ${u?.apellido || ''}`.trim(
 
 /** Nombre comparable (sin mayúsculas ni espacios de más) para emparejar participantes. */
 export const normalizarNombre = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
-
-/** Hora del último mensaje: la hora si es de hoy, el día si es anterior. */
-export const formatHoraLista = (v) => {
-  if (!v) return '';
-  return isSameDay(v, new Date()) ? formatTime(v) : formatDiaCorto(v);
-};
 
 /* ── Mensajes: identidad, orden y conciliación ────────────────────────
  * El id real del backend es la única clave: un mensaje propio se pinta

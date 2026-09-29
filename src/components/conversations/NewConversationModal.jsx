@@ -58,7 +58,7 @@ export default function NewConversationModal({
 
         {internal.length > 0 && (
           <div className="stack">
-            <p className="section-title">Internos</p>
+            <p className="section-title chat-contact__section">Equipo <span className="chat__section-count">{internal.length}</span></p>
             {internal.map((c, i) => {
               // Igual que en la lista de usuarios: el contacto puede llegar envuelto
               // en { usuario, viajeId } según el endpoint que lo devuelva.
@@ -82,7 +82,7 @@ export default function NewConversationModal({
 
         {platform.length > 0 && (
           <div className="stack">
-            <p className="section-title">Usuarios</p>
+            <p className="section-title chat-contact__section">Conductores y clientes <span className="chat__section-count">{platform.length}</span></p>
             {platform.map((u, i) => {
               const uo = u.usuario || u;
               return (
