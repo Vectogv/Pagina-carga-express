@@ -112,7 +112,10 @@ export default function CancellationRequestsPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Solicitudes de cancelación" description="Revisa y decide sobre las solicitudes de cancelación de viajes." />
+      <PageHeader
+        title="Solicitudes de cancelación"
+        description="Cuando el viaje ya empezó, cliente o conductor no pueden cancelarlo solos: piden permiso aquí. Aprobar cancela el viaje; rechazar lo deja seguir. En ambos casos se avisa a las dos partes."
+      />
 
       <div className="toolbar">
         <SegmentedFilter options={filterOptions} value={filter} onChange={setFilter} ariaLabel="Filtrar por estado" />
@@ -137,7 +140,9 @@ export default function CancellationRequestsPage() {
         onClose={() => setConfirmAction(null)}
         onConfirm={handleConfirm}
         title={isApprove ? 'Aprobar cancelación' : 'Rechazar cancelación'}
-        message={`¿Deseas ${isApprove ? 'aprobar' : 'rechazar'} la solicitud de cancelación #${confirmAction ? shortId(confirmAction.row.id) : ''}?`}
+        message={isApprove
+          ? `¿Aprobar la solicitud #${confirmAction ? shortId(confirmAction.row.id) : ''}? El viaje quedará cancelado y se avisará al cliente y al conductor.`
+          : `¿Rechazar la solicitud #${confirmAction ? shortId(confirmAction.row.id) : ''}? El viaje sigue en curso y se avisará al cliente y al conductor.`}
         confirmText={isApprove ? 'Aprobar' : 'Rechazar'}
         danger={!isApprove}
       />

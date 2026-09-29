@@ -2,6 +2,22 @@ import api from './axios'
 
 const BASE = '/api/admin'
 
+/**
+ * Varios listados de admin (drivers, trips, earnings…) devuelven un array plano de
+ * máximo 100 filas por página y sin total. Pide páginas seguidas hasta que una venga
+ * incompleta o hasta `maxPages`. Devuelve { rows, truncated } (truncated = quedaron más).
+ */
+export async function getAllPages(fetcher, params = {}, { limit = 100, maxPages = 10 } = {}) {
+  const rows = []
+  for (let page = 1; page <= maxPages; page += 1) {
+    const res = await fetcher({ ...params, page, limit })
+    const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : [])
+    rows.push(...list)
+    if (list.length < limit) return { rows, truncated: false }
+  }
+  return { rows, truncated: true }
+}
+
 // Dashboard
 export const getDashboard = () => api.get(`${BASE}/dashboard`)
 
@@ -17,7 +33,8 @@ export const updateUserAvatar = (id, formData) =>
 export const clearDebt = (id) => api.put(`${BASE}/users/${id}/clear-debt`)
 export const setUserRole = (id, data) => api.put(`${BASE}/users/${id}/role`, data)
 export const setModerator = (id, data) => api.put(`${BASE}/users/${id}/moderator`, data)
-export const setLeader = (id, data = {}) => api.put(`${BASE}/users/${id}/leader`, data)
+// Body obligatorio {esLider: boolean}: sin él el backend no cambia nada (admin_controller.ts#assignLeader).
+export const setLeader = (id, data) => api.put(`${BASE}/users/${id}/leader`, data)
 export const updateDriverCity = (conductorId, data) => api.put(`${BASE}/drivers/${conductorId}/city`, data)
 export const resetPassword = (userId, data) => api.put(`${BASE}/users/${userId}/password`, data)
 
@@ -38,17 +55,18 @@ export const uploadAvatar = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 
-// Emergencies - doc: page/limit, PUT resolve sin body
+// Emergencies - page/limit; PUT resolve acepta {observacion?} (el backend viejo lo ignora)
 export const getEmergencies = (params) => api.get(`${BASE}/emergencies`, { params })
-export const resolveEmergency = (id) => api.put(`${BASE}/emergencies/${id}/resolve`)
+export const resolveEmergency = (id, data = {}) => api.put(`${BASE}/emergencies/${id}/resolve`, data)
 
 // Detalle de viaje y chat SOS — endpoints generales accesibles con rol admin
 export const getTripById = (id) => api.get(`/api/trips/${id}`)
 export const getEmergencyChat = (alertaId) => api.get(`/api/emergency/${alertaId}/messages`)
 export const sendEmergencyMessage = (alertaId, mensaje) => api.post(`/api/emergency/${alertaId}/messages`, { mensaje })
 
-// Conversaciones generales (admin ↔ moderadores) — mismo chat del chatapp.
-// El backend NO permite crear conversaciones como admin (solo listar/leer/responder).
+// Conversaciones generales (/api/conversations). SIN USO: la página Conversatorio del admin
+// usa ConversationsBoard con /api/moderator/conversations (el middleware moderator deja
+// pasar al admin y ahí sí se pueden crear conversaciones). Se dejan por compatibilidad.
 export const getConversations = () => api.get('/api/conversations')
 export const getConversationsUnreadCount = () => api.get('/api/conversations/unread-count')
 export const getConversationMessages = (id) => api.get(`/api/conversations/${id}/messages`)

@@ -114,18 +114,15 @@ function ComunicadosPage() {
       key: 'acciones',
       label: '',
       align: 'right',
-      render: (_, row) => (
+      // El backend solo acepta aprobar/rechazar comunicados 'pendiente' (si no, 422).
+      render: (_, row) => statusOf(row) === 'pending' && (
         <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
-          {statusOf(row) !== 'approved' && (
-            <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={() => setConfirmAction({ ...row, type: 'approve' })}>
-              Aprobar
-            </Button>
-          )}
-          {statusOf(row) !== 'rejected' && (
-            <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={() => setConfirmAction({ ...row, type: 'reject' })}>
-              Rechazar
-            </Button>
-          )}
+          <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={() => setConfirmAction({ ...row, type: 'approve' })}>
+            Aprobar
+          </Button>
+          <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={() => setConfirmAction({ ...row, type: 'reject' })}>
+            Rechazar
+          </Button>
         </div>
       ),
     },
@@ -133,7 +130,10 @@ function ComunicadosPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Comunicados" description="Revisa y modera los comunicados publicados por los moderadores." />
+      <PageHeader
+        title="Comunicados"
+        description="Mensajes que moderadores y líderes escriben para todos los usuarios de la app. No se publican hasta que los apruebes; al aprobar se envía una notificación a todos."
+      />
 
       <div className="toolbar">
         <SegmentedFilter
@@ -175,7 +175,7 @@ function ComunicadosPage() {
         title={isApprove ? 'Aprobar comunicado' : 'Rechazar comunicado'}
         message={
           isApprove
-            ? `¿Deseas aprobar el comunicado “${titleOf(confirmAction)}”?`
+            ? `¿Aprobar el comunicado “${titleOf(confirmAction)}”? Se publicará y se enviará una notificación a todos los usuarios de la app.`
             : `¿Deseas rechazar el comunicado “${titleOf(confirmAction)}”? Esta acción no se puede deshacer.`
         }
         confirmText={isApprove ? 'Aprobar' : 'Rechazar'}

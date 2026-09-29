@@ -38,7 +38,7 @@ export default function DriverActionDialogs({ action, onClose, onDone, onError }
       'Error al rechazar',
     ),
     notify: () => run(() => notifyDriver(driver.id), 'Notificación enviada', 'Requiere FCM', false),
-    report: () => run(() => reportDriver(driver.id, { descripcion: nota.trim() }), 'Reporte enviado a administración', 'Error al reportar', false),
+    report: () => run(() => reportDriver(driver.id, { descripcion: nota.trim() }), 'Reporte guardado en Reportes de moderadores', 'Error al reportar', false),
     delete: () => run(() => deleteUser(driverUserId(driver)), 'Conductor eliminado', 'Error al eliminar'),
     suspend: () => run(
       () => suspendUser(driverUserId(driver)),

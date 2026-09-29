@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Eye, Gavel, X } from 'lucide-react';
 import { getDisputes, resolveDispute } from '../../api/admin';
 import { errorMessage, formatDate, formatCurrency, toList } from '../../utils/format';
-import { PageHeader, SegmentedFilter, DataTable, Button, StatusBadge } from '../../components/ui';
+import { PageHeader, SegmentedFilter, DataTable, Button, StatusBadge, statusLabel } from '../../components/ui';
 import DisputeDetailModal from './disputes/DisputeDetailModal';
 import ResolveDisputeModal from './disputes/ResolveDisputeModal';
 import { reasonText, tripRef, money, ESTADO_LABELS } from './disputes/disputeUtils';
@@ -107,7 +107,10 @@ export default function DisputesPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Disputas" description="Conflictos entre conductores y clientes pendientes de decisión." />
+      <PageHeader
+        title="Disputas"
+        description="Viajes donde cliente y conductor no están de acuerdo con el cierre. Lee las dos versiones y decide a favor de quién: a favor del conductor el viaje se finaliza; a favor del cliente se cancela."
+      />
 
       <div className="toolbar">
         <SegmentedFilter options={filterOptions} value={filter} onChange={setFilter} ariaLabel="Filtrar por estado" />
@@ -117,7 +120,7 @@ export default function DisputesPage() {
         <div className="page-notice" role="status">
           <span>
             Disputa #{notice.id} resuelta {notice.resultado === 'favor_conductor' ? 'a favor del conductor' : 'a favor del cliente'}.
-            {notice.viajeEstado && ` El viaje quedó en estado "${notice.viajeEstado}".`}
+            {notice.viajeEstado && ` El viaje quedó en estado "${statusLabel(notice.viajeEstado)}".`}
           </span>
           <Button size="icon" variant="ghost" onClick={() => setNotice(null)} aria-label="Cerrar aviso">
             <X size={15} />

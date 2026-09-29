@@ -3,7 +3,7 @@ import { Clock, DatabaseBackup, Plus, RefreshCw } from 'lucide-react';
 import { getBackups, runBackup } from '../../api/admin';
 import { errorMessage, formatDateTime, toList } from '../../utils/format';
 import {
-  PageHeader, DataTable, Badge, Button, StatCard, Toast, ToastContainer,
+  PageHeader, DataTable, Badge, Button, ConfirmDialog, StatCard, Toast, ToastContainer,
 } from '../../components/ui';
 
 const STATUS_VARIANT = {
@@ -53,6 +53,7 @@ export default function BackupsPage() {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -97,13 +98,13 @@ export default function BackupsPage() {
     <div className="page">
       <PageHeader
         title="Backups"
-        description="Copias de seguridad de la base de datos del sistema."
+        description="Copias de seguridad de la base de datos (se guardan en Google Drive). Aquí ves las últimas 30 y puedes crear una a mano, por ejemplo antes de un cambio grande."
         actions={(
           <>
             <Button variant="secondary" size="icon" onClick={fetchBackups} disabled={loading} aria-label="Actualizar lista">
               <RefreshCw size={15} />
             </Button>
-            <Button icon={<Plus size={15} />} onClick={handleCreateBackup} loading={creating}>
+            <Button icon={<Plus size={15} />} onClick={() => setConfirmOpen(true)} loading={creating}>
               {creating ? 'Creando...' : 'Crear backup'}
             </Button>
           </>
@@ -129,6 +130,15 @@ export default function BackupsPage() {
         rowKey={(b, i) => b.id || b._id || i}
         emptyMessage="No hay backups registrados"
         emptyDescription="Crea el primer backup con el botón superior."
+      />
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleCreateBackup}
+        title="Crear backup"
+        message="¿Crear un respaldo manual de la base de datos ahora? Puede tardar unos minutos."
+        confirmText="Crear backup"
       />
 
       {toast && (

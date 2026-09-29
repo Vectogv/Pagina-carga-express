@@ -49,7 +49,8 @@ export default function ReportsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await getReports();
+      // Sin limit el backend devuelve solo los 20 más recientes.
+      const res = await getReports({ page: 1, limit: 100 });
       setReports(toList(res.data));
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar los reportes'));
@@ -151,7 +152,10 @@ export default function ReportsPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Reportes" description="Reportes enviados por usuarios sobre otros usuarios de la plataforma." />
+      <PageHeader
+        title="Reportes entre usuarios"
+        description="Quejas que un cliente hace de su conductor, o un conductor de su cliente, al terminar un viaje. Desde el 2.º reporte contra la misma cuenta se avisa aquí para que revises el caso; márcalo como resuelto al terminar."
+      />
 
       <div className="toolbar">
         <SegmentedFilter options={filterOptions} value={filter} onChange={setFilter} ariaLabel="Filtrar por estado" />
@@ -169,6 +173,7 @@ export default function ReportsPage() {
         data={filtered}
         loading={loading}
         emptyMessage="No hay reportes para mostrar"
+        emptyDescription="Los nuevos reportes aparecen aquí en vivo."
       />
 
       <Modal

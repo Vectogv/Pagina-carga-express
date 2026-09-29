@@ -39,8 +39,14 @@ export default function ResolveDisputeModal({ dispute, onClose, onSubmit }) {
   const handleSubmit = async () => {
     const payload = { resultado };
     if (resultado === 'favor_conductor' && acuerdoDePago) {
+      // Igual que la app: el acuerdo de pago necesita un monto real (si no, la deuda queda en null).
+      const monto = Number(montoDeuda);
+      if (montoDeuda === '' || !Number.isFinite(monto) || monto <= 0) {
+        setError('Ingresa un monto de deuda válido');
+        return;
+      }
       payload.acuerdoDePago = true;
-      if (montoDeuda !== '' && !Number.isNaN(Number(montoDeuda))) payload.montoDeuda = Number(montoDeuda);
+      payload.montoDeuda = monto;
     }
     setSubmitting(true);
     setError(null);

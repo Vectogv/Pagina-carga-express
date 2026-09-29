@@ -97,7 +97,10 @@ function EncuestasPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Encuestas" description="Revisa y aprueba las encuestas creadas por los moderadores." />
+      <PageHeader
+        title="Encuestas"
+        description="Preguntas que los moderadores quieren hacer a los usuarios de la app. Quedan pendientes hasta que las apruebes; al aprobar se activan y se notifica a todos."
+      />
 
       <div className="toolbar">
         <SegmentedFilter
@@ -136,7 +139,7 @@ function EncuestasPage() {
         onClose={() => setConfirmAction(null)}
         onConfirm={handleApprove}
         title="Aprobar encuesta"
-        message={`¿Deseas aprobar la encuesta “${titleOf(confirmAction)}”?`}
+        message={`¿Aprobar la encuesta “${titleOf(confirmAction)}”? Quedará activa y se enviará una notificación a todos los usuarios de la app.`}
         confirmText="Aprobar"
       />
     </div>

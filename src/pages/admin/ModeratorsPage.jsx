@@ -3,7 +3,7 @@ import { Pencil, Search, UserMinus, UserPlus } from 'lucide-react';
 import { getUsers, setModerator } from '../../api/admin';
 import { errorMessage, fullName, toList } from '../../utils/format';
 import {
-  Alert, Avatar, Badge, Button, Card, DataTable, Input, Modal, PageHeader, SegmentedFilter, Select,
+  Alert, Avatar, Badge, Button, Card, ConfirmDialog, DataTable, Input, Modal, PageHeader, SegmentedFilter, Select,
 } from '../../components/ui';
 import { getZonaModerador, userId } from './users/constants';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
@@ -19,6 +19,7 @@ export default function ModeratorsPage() {
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [zonaFilter, setZonaFilter] = useState('all');
+  const [removeTarget, setRemoveTarget] = useState(null);
 
   // Buscador para agregar moderadores
   const [search, setSearch] = useState('');
@@ -56,7 +57,9 @@ export default function ModeratorsPage() {
     return () => clearTimeout(t);
   }, [notice]);
 
-  const handleRemove = async (u) => {
+  const handleRemove = async () => {
+    const u = removeTarget;
+    if (!u) return;
     try {
       await setModerator(userId(u), { esModerador: false });
       setNotice(`${fullName(u)} ya no es moderador`);
@@ -146,7 +149,7 @@ export default function ModeratorsPage() {
       render: (_, u) => (
         <div className="row row--end">
           <Button size="sm" variant="secondary" icon={<Pencil size={14} />} onClick={() => openEdit(u)}>Modificar</Button>
-          <Button size="sm" variant="soft-danger" icon={<UserMinus size={14} />} onClick={() => handleRemove(u)}>Quitar</Button>
+          <Button size="sm" variant="soft-danger" icon={<UserMinus size={14} />} onClick={() => setRemoveTarget(u)}>Quitar</Button>
         </div>
       ),
     },
@@ -154,7 +157,10 @@ export default function ModeratorsPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Moderadores" description="Usuarios con permisos de moderación por zona." />
+      <PageHeader
+        title="Moderadores"
+        description="Personas que atienden emergencias, verifican conductores y publican avisos en una ciudad. Cada moderador tiene una sola zona."
+      />
 
       <Card title="Agregar moderador" description="Busca un usuario existente y asígnale una zona.">
         <div className="stack">
@@ -210,6 +216,16 @@ export default function ModeratorsPage() {
         data={filteredMods}
         loading={loading}
         emptyMessage={zonaFilter !== 'all' ? `No hay moderadores en ${zonaLabel(zonaFilter)}` : 'No hay moderadores'}
+      />
+
+      <ConfirmDialog
+        isOpen={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={handleRemove}
+        title="Quitar moderador"
+        message={`¿Quitar a ${fullName(removeTarget)} como moderador de ${zonaLabel(getZonaModerador(removeTarget))}? Su cuenta sigue activa, solo pierde el acceso al panel de moderación.`}
+        confirmText="Quitar"
+        danger
       />
 
       <Modal

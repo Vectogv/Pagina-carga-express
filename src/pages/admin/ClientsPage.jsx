@@ -4,8 +4,10 @@ import { getUsers, suspendUser, deleteUser } from '../../api/admin';
 import { getRolUsuario } from '../../utils/roles';
 import { errorMessage, fullName, toList } from '../../utils/format';
 import {
-  PageHeader, SearchInput, DataTable, ConfirmDialog, Avatar, StatusBadge, Button,
+  PageHeader, SearchInput, DataTable, ConfirmDialog, Avatar, StatusBadge, Button, Pagination,
 } from '../../components/ui';
+
+const LIMIT = 20;
 
 export default function ClientsPage() {
   const [clients, setClients] = useState([]);
@@ -13,26 +15,41 @@ export default function ClientsPage() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [confirm, setConfirm] = useState(null);
+  const [suspendTarget, setSuspendTarget] = useState(null);
+  const [page, setPage] = useState(1);
+  // GET /api/admin/users pagina en el servidor y manda X-Total-Count / X-Last-Page.
+  const [pagination, setPagination] = useState({ total: undefined, totalPages: 1 });
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getUsers({ page: 1, limit: 100, search: search.trim() || undefined, rol: 'cliente' });
-      setClients(toList(res.data, 'users').filter((u) => getRolUsuario(u) === 'cliente'));
+      const res = await getUsers({ page, limit: LIMIT, search: search.trim() || undefined, rol: 'cliente' });
+      const list = toList(res.data, 'users');
+      setClients(list.filter((u) => getRolUsuario(u) === 'cliente'));
+      const total = Number(res.headers?.['x-total-count']);
+      const lastPage = Number(res.headers?.['x-last-page']);
+      setPagination({
+        total: Number.isFinite(total) && res.headers?.['x-total-count'] != null ? total : undefined,
+        totalPages: Number.isFinite(lastPage) && lastPage > 0 ? lastPage : (list.length >= LIMIT ? page + 1 : page),
+      });
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar clientes'));
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, page]);
 
   useEffect(() => {
     const t = setTimeout(fetchClients, 300);
     return () => clearTimeout(t);
   }, [fetchClients]);
 
-  const handleSuspend = async (u) => {
+  const handleSearch = (val) => { setSearch(val); setPage(1); };
+
+  const handleSuspend = async () => {
+    const u = suspendTarget;
+    if (!u) return;
     try {
       await suspendUser(u.id);
       fetchClients();
@@ -76,7 +93,7 @@ export default function ClientsPage() {
             size="sm"
             variant={u.suspendido ? 'soft-success' : 'soft-warning'}
             icon={u.suspendido ? <CircleCheck size={14} /> : <Ban size={14} />}
-            onClick={() => handleSuspend(u)}
+            onClick={() => setSuspendTarget(u)}
           >
             {u.suspendido ? 'Activar' : 'Suspender'}
           </Button>
@@ -90,10 +107,13 @@ export default function ClientsPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Clientes" description="Personas que solicitan servicios de carga desde la app." />
+      <PageHeader
+        title="Clientes"
+        description="Personas que piden servicios de carga desde la app. Para editar datos, cambiar contraseña o liberar una deuda, usa Usuarios."
+      />
 
       <div className="toolbar">
-        <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nombre, correo o teléfono" />
+        <SearchInput value={search} onChange={handleSearch} placeholder="Buscar por nombre, correo o teléfono" />
       </div>
 
       {error && <div className="page-error" role="alert">{error}</div>}
@@ -103,6 +123,19 @@ export default function ClientsPage() {
         data={clients}
         loading={loading}
         emptyMessage={search ? `Sin resultados para “${search}”` : 'Aún no hay clientes'}
+        footer={<Pagination page={page} totalPages={pagination.totalPages} total={pagination.total} onChange={setPage} />}
+      />
+
+      <ConfirmDialog
+        isOpen={!!suspendTarget}
+        onClose={() => setSuspendTarget(null)}
+        onConfirm={handleSuspend}
+        title={suspendTarget?.suspendido ? 'Activar cliente' : 'Suspender cliente'}
+        message={suspendTarget?.suspendido
+          ? `¿Activar la cuenta de ${fullName(suspendTarget)} para que pueda volver a usar la app?`
+          : `¿Suspender la cuenta de ${fullName(suspendTarget)}? Se cerrarán sus sesiones y no podrá usar la app.`}
+        confirmText={suspendTarget?.suspendido ? 'Activar' : 'Suspender'}
+        danger={!suspendTarget?.suspendido}
       />
 
       <ConfirmDialog

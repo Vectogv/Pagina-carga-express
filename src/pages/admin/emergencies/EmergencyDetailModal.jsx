@@ -4,7 +4,7 @@ import RouteMap from '../../../components/maps/RouteMap';
 import { sosRouteProps, hasRoutePoints } from '../../../components/maps/sosRoute';
 import { formatCurrency, formatDateTime } from '../../../utils/format';
 import EmergencyChat from './EmergencyChat';
-import { shortId, userName, ruta, coords, mapsUrl } from './emergencyUtils';
+import { shortId, userName, ruta, coords, mapsUrl, emergencyBadge, attendedBy } from './emergencyUtils';
 
 function Detail({ label, children }) {
   return (
@@ -101,11 +101,17 @@ export default function EmergencyDetailModal({ emergency, trip, chat, onClose })
               <Detail label="ID emergencia"><span className="text-mono">#{shortId(emergency.id)}</span></Detail>
               <Detail label="Usuario">{userName(emergency)}</Detail>
               <Detail label="Tipo">SOS</Detail>
+              {emergency.motivo && <Detail label="Motivo">{emergency.motivo}</Detail>}
               <Detail label="Ruta del viaje">{ruta(emergency) || emergency.viaje?.estado || '—'}</Detail>
               <Detail label="Ubicación">{coords(emergency) || emergency.ubicacion || '—'}</Detail>
               <Detail label="Estado">
-                <StatusBadge status={emergency.atendida ? 'resuelta' : 'abierta'} label={emergency.atendida ? 'Resuelta' : 'Pendiente'} />
+                <StatusBadge {...emergencyBadge(emergency)} />
               </Detail>
+              {attendedBy(emergency) && (
+                <Detail label="Atendida por">
+                  {attendedBy(emergency)}{emergency.atendidaAt ? ` · ${formatDateTime(emergency.atendidaAt)}` : ''}
+                </Detail>
+              )}
               <Detail label="Fecha">{formatDateTime(emergency.createdAt)}</Detail>
             </div>
           </section>

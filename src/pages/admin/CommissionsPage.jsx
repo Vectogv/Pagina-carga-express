@@ -63,7 +63,7 @@ export default function CommissionsPage() {
     setHistoryError(null);
     setHistoryData([]);
     try {
-      const res = await getCommissionHistory(keyOf(commission));
+      const res = await getCommissionHistory(keyOf(commission), { page: 1, limit: 100 });
       setHistoryData(toList(res.data, 'history', 'historial'));
     } catch (err) {
       setHistoryError(errorMessage(err, 'No se pudo cargar el historial'));
@@ -79,7 +79,6 @@ export default function CommissionsPage() {
 
   const pending = commissions.filter((c) => !isPaid(c));
   const pendingTotal = pending.reduce((s, c) => s + Number(amountOf(c) || 0), 0);
-  const paidTotal = commissions.filter(isPaid).reduce((s, c) => s + Number(amountOf(c) || 0), 0);
 
   const columns = [
     {
@@ -92,7 +91,7 @@ export default function CommissionsPage() {
         </div>
       ),
     },
-    { key: 'totalBruto', label: 'Monto total', align: 'right', render: (v) => formatCurrency(v) },
+    { key: 'totalBruto', label: 'Total cobrado en viajes', align: 'right', render: (v) => formatCurrency(v) },
     {
       key: 'commission',
       label: 'Comisión pendiente',
@@ -127,7 +126,7 @@ export default function CommissionsPage() {
     <div className="page">
       <PageHeader
         title="Comisiones"
-        description="Seguimiento de las comisiones que cada conductor debe a la plataforma."
+        description="Lo que cada conductor le debe a la plataforma: el 10 % de cada viaje finalizado. Marca como pagado cuando recibas el dinero."
         actions={(
           <Button variant="secondary" icon={<RefreshCw size={14} />} onClick={fetchCommissions} loading={loading}>
             Actualizar
@@ -137,7 +136,6 @@ export default function CommissionsPage() {
 
       <div className="stats-grid">
         <StatCard title="Pendiente por cobrar" value={loading ? '—' : formatCurrency(pendingTotal)} icon={<Clock size={16} />} color="var(--warning)" />
-        <StatCard title="Cobrado" value={loading ? '—' : formatCurrency(paidTotal)} icon={<CircleCheck size={16} />} color="var(--success)" />
         <StatCard title="Conductores con deuda" value={loading ? '—' : pending.length} icon={<Users size={16} />} color="var(--primary)" />
       </div>
 
@@ -154,7 +152,8 @@ export default function CommissionsPage() {
         data={commissions}
         loading={loading}
         rowKey={(row, i) => keyOf(row) ?? i}
-        emptyMessage="No hay comisiones registradas"
+        emptyMessage="Sin comisiones pendientes"
+        emptyDescription="Cuando un conductor finalice viajes, aquí aparecerá lo que debe de comisión."
       />
 
       <ConfirmDialog

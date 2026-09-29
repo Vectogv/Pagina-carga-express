@@ -6,10 +6,10 @@ import {
   Wifi, Moon, Pin, ChevronRight, PackageCheck,
 } from 'lucide-react';
 import {
-  getDashboard, getUsers, getDrivers, getEmergencies, getVerifications, getDisputes, getPendingPayments,
+  getDashboard, getUsers, getEmergencies, getVerifications, getDisputes, getPendingPayments,
 } from '../../api/admin';
 import { getModeratorDashboard } from '../../api/moderator';
-import { getRolUsuario } from '../../utils/roles';
+import { useZonas } from '../../hooks/useZonas';
 import { errorMessage, formatCurrency, toList } from '../../utils/format';
 import { PageHeader, StatCard, Card, Select, SkeletonCard } from '../../components/ui';
 import './DashboardPage.css';
@@ -18,8 +18,8 @@ const ICON = 18;
 
 const SHORTCUTS = [
   { title: 'Comisiones', icon: <Percent size={16} />, to: '/admin/commissions' },
-  { title: 'Reportes', icon: <TriangleAlert size={16} />, to: '/admin/reports' },
-  { title: 'Cancelaciones', icon: <Ban size={16} />, to: '/admin/cancellation-requests' },
+  { title: 'Reportes entre usuarios', icon: <TriangleAlert size={16} />, to: '/admin/reports' },
+  { title: 'Solicitudes de cancelación', icon: <Ban size={16} />, to: '/admin/cancellation-requests' },
   { title: 'Comunicados', icon: <Megaphone size={16} />, to: '/admin/comunicados' },
   { title: 'Encuestas', icon: <ClipboardList size={16} />, to: '/admin/encuestas' },
   { title: 'Configuración', icon: <Settings size={16} />, to: '/admin/config' },
@@ -27,7 +27,22 @@ const SHORTCUTS = [
   { title: 'Mi perfil', icon: <UserRound size={16} />, to: '/admin/profile' },
 ];
 
+// Los listados de pendientes se piden con limit=100 (tope del backend): si llegan
+// 100 exactos puede haber más, así que se muestra "100+" en vez de un número recortado.
+const LIMIT = 100;
+const countOf = (res) => {
+  const n = toList(res.data).length;
+  return n >= LIMIT ? `${LIMIT}+` : n;
+};
+// GET /api/admin/users manda el total real en la cabecera X-Total-Count.
+const totalOf = (res) => {
+  const raw = res?.headers?.['x-total-count'];
+  const total = Number(raw);
+  return raw != null && Number.isFinite(total) ? total : toList(res?.data, 'users').length;
+};
+
 function DashboardPage() {
+  const ZONAS = useZonas();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -73,18 +88,14 @@ function DashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [uRes, dRes] = await Promise.all([getUsers({ page: 1, limit: 100 }), getDrivers({ page: 1, limit: 100 })]);
+        // Antes se contaban a mano los primeros 100 usuarios, así que con más de 100
+        // cuentas los números salían recortados. Se usa el total del backend por rol.
+        const [cRes, mRes] = await Promise.all([
+          getUsers({ page: 1, limit: 1, rol: 'cliente' }),
+          getUsers({ page: 1, limit: 1, rol: 'moderador' }),
+        ]);
         if (cancelled) return;
-        const users = toList(uRes.data, 'users');
-        const byRol = { admin: 0, conductor: 0, cliente: 0, moderador: 0, lider: 0, otro: 0 };
-        let moderadores = 0;
-        users.forEach((u) => {
-          const r = getRolUsuario(u);
-          if (byRol[r] !== undefined) byRol[r] += 1; else byRol.otro += 1;
-          if (u.esModerador) moderadores += 1;
-        });
-        const drivers = toList(dRes.data, 'drivers');
-        setUserStats({ byRol, moderadores, driversTotal: drivers.length });
+        setUserStats({ clientes: totalOf(cRes), moderadores: totalOf(mRes) });
       } catch {
         // Las métricas por rol son complementarias: si fallan, las tarjetas muestran "—".
       }
@@ -100,16 +111,16 @@ function DashboardPage() {
     (async () => {
       try {
         const [emRes, verRes, dispRes, payRes] = await Promise.all([
-          getEmergencies({ page: 1, limit: 100 }),
-          getVerifications({ page: 1, limit: 100 }),
-          getDisputes({ page: 1, limit: 100 }),
+          getEmergencies({ page: 1, limit: LIMIT }),
+          getVerifications({ page: 1, limit: LIMIT }),
+          getDisputes({ page: 1, limit: LIMIT }),
           getPendingPayments(),
         ]);
         if (cancelled) return;
         setPending({
-          emergencies: toList(emRes.data).length,
-          verifications: toList(verRes.data).length,
-          disputes: toList(dispRes.data).length,
+          emergencies: countOf(emRes),
+          verifications: countOf(verRes),
+          disputes: countOf(dispRes),
           payments: toList(payRes.data).length,
         });
       } catch {
@@ -122,13 +133,11 @@ function DashboardPage() {
   const header = (
     <PageHeader
       title="Resumen general"
-      description="Indicadores clave de la operación y accesos a cada sección."
+      description="Cifras clave de la plataforma y lo que está esperando una acción tuya. Toca una tarjeta para ir a esa sección."
       actions={(
         <Select value={ciudad} onChange={(e) => setCiudad(e.target.value)} aria-label="Ciudad" className="dashboard__city">
           <option value="todas">Todas las ciudades</option>
-          <option value="cali">Cali</option>
-          <option value="popayan">Popayán</option>
-          <option value="pasto">Pasto</option>
+          {ZONAS.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
         </Select>
       )}
     />
@@ -155,12 +164,15 @@ function DashboardPage() {
   }
 
   const stats = [
-    { title: 'Clientes', value: userStats?.byRol.cliente ?? '—', icon: <Users size={ICON} />, color: 'var(--success)', to: '/admin/clients' },
-    { title: 'Conductores', value: userStats?.byRol.conductor ?? data?.totalDrivers ?? '—', icon: <Truck size={ICON} />, color: 'var(--accent-violet)', to: '/admin/drivers' },
-    { title: 'Moderación', value: userStats?.moderadores ?? '—', icon: <ShieldCheck size={ICON} />, color: 'var(--warning)', to: '/admin/moderators' },
-    { title: 'Vehículos activos', value: data?.activeVehicles ?? '—', icon: <Route size={ICON} />, color: 'var(--primary)', to: '/admin/drivers' },
-    { title: 'Envíos hoy', value: data?.todayShipments ?? '—', icon: <PackageCheck size={ICON} />, color: 'var(--info)', to: '/admin/trips' },
-    { title: 'Ingresos totales', value: formatCurrency(data?.totalEarnings ?? 0), icon: <Wallet size={ICON} />, color: 'var(--success)', to: '/admin/earnings' },
+    { title: 'Clientes', value: userStats?.clientes ?? '—', icon: <Users size={ICON} />, color: 'var(--success)', to: '/admin/clients' },
+    { title: 'Conductores', value: data?.totalDrivers ?? '—', icon: <Truck size={ICON} />, color: 'var(--accent-violet)', to: '/admin/drivers' },
+    { title: 'Moderadores', value: userStats?.moderadores ?? '—', icon: <ShieldCheck size={ICON} />, color: 'var(--warning)', to: '/admin/moderators' },
+    // activeVehicles = conductores con online=true (admin_controller.ts#dashboard).
+    { title: 'Conductores en línea', value: data?.activeVehicles ?? '—', icon: <Route size={ICON} />, color: 'var(--primary)', to: '/admin/drivers' },
+    // todayShipments = viajes creados hoy que ya están en estado 'finalizado'.
+    { title: 'Viajes finalizados hoy', value: data?.todayShipments ?? '—', icon: <PackageCheck size={ICON} />, color: 'var(--info)', to: '/admin/trips' },
+    // totalEarnings suma ganancias.monto = neto del conductor (90 %), no el ingreso de la plataforma.
+    { title: 'Ganancias netas de conductores', value: formatCurrency(data?.totalEarnings ?? 0), icon: <Wallet size={ICON} />, color: 'var(--success)', to: '/admin/earnings' },
     { title: 'Emergencias pendientes', value: pending?.emergencies ?? '—', icon: <Siren size={ICON} />, color: 'var(--danger)', to: '/admin/emergencies' },
     { title: 'Verificaciones pendientes', value: pending?.verifications ?? '—', icon: <FileCheck size={ICON} />, color: 'var(--info)', to: '/admin/verifications' },
     { title: 'Disputas abiertas', value: pending?.disputes ?? '—', icon: <Scale size={ICON} />, color: 'var(--warning)', to: '/admin/disputes' },
@@ -168,13 +180,13 @@ function DashboardPage() {
   ];
 
   const cityReady = ciudadStats && ciudadStats.ciudad === ciudad;
+  // moderator_controller.ts#dashboard: totalComunicados y totalReports cuentan los del
+  // usuario que consulta (el admin), no los de la ciudad, así que no se muestran aquí.
   const cityStats = cityReady ? [
     { title: 'Conductores', value: ciudadStats.totalDrivers ?? '—', icon: <Truck size={ICON} />, color: 'var(--accent-violet)', to: '/admin/drivers' },
-    { title: 'En línea', value: ciudadStats.onlineDrivers ?? '—', icon: <Wifi size={ICON} />, color: 'var(--success)', to: '/admin/drivers' },
-    { title: 'Inactivos', value: ciudadStats.inactiveDrivers ?? '—', icon: <Moon size={ICON} />, color: 'var(--danger)', to: '/admin/drivers' },
-    { title: 'Comunicados', value: ciudadStats.totalComunicados ?? '—', icon: <Megaphone size={ICON} />, color: 'var(--info)', to: '/admin/comunicados' },
-    { title: 'Avisos', value: ciudadStats.totalAvisos ?? '—', icon: <Pin size={ICON} />, color: 'var(--warning)', to: '/admin/avisos' },
-    { title: 'Reportes', value: ciudadStats.totalReports ?? '—', icon: <TriangleAlert size={ICON} />, color: 'var(--warning)', to: '/admin/reports' },
+    { title: 'Conductores en línea', value: ciudadStats.onlineDrivers ?? '—', icon: <Wifi size={ICON} />, color: 'var(--success)', to: '/admin/drivers' },
+    { title: 'Sin viajes en 7 días', value: ciudadStats.inactiveDrivers ?? '—', icon: <Moon size={ICON} />, color: 'var(--danger)', to: '/admin/drivers' },
+    { title: 'Avisos de la ciudad', value: ciudadStats.totalAvisos ?? '—', icon: <Pin size={ICON} />, color: 'var(--warning)', to: '/admin/avisos' },
   ] : [];
 
   const showCityError = ciudad !== 'todas' && ciudadError?.ciudad === ciudad;
@@ -189,14 +201,14 @@ function DashboardPage() {
         </div>
       ) : (
         <>
-          <p className="text-sm text-muted">Métricas de moderación para esta ciudad.</p>
+          <p className="text-sm text-muted">Conductores y avisos de esta ciudad.</p>
           {showCityError ? (
             <div className="page-error" role="alert">{ciudadError.msg}</div>
           ) : (
             <div className="stats-grid">
               {cityReady
                 ? cityStats.map((s) => <StatCard key={s.title} {...s} />)
-                : Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+                : Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
           )}
         </>

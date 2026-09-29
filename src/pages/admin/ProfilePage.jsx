@@ -89,7 +89,7 @@ export default function ProfilePage() {
 
   return (
     <div className="page">
-      <PageHeader title="Mi perfil" description="Administra tu información personal y tu foto de perfil." />
+      <PageHeader title="Mi perfil" description="Tu nombre, correo de acceso, teléfono y foto dentro del panel." />
 
       {loading && <LoadingState message="Cargando perfil..." />}
       {!loading && error && <div className="page-error" role="alert">{error}</div>}
@@ -122,7 +122,8 @@ export default function ProfilePage() {
               <div className="profile__info">
                 <h3 className="profile__name">{displayName}</h3>
                 <span className="text-muted truncate">{form.email || '—'}</span>
-                <Badge variant="primary">{profile?.role || profile?.rol || 'Administrador'}</Badge>
+                {/* GET /api/admin/profile no manda rol (y esta ruta solo la ve un admin). */}
+                <Badge variant="primary">Administrador</Badge>
               </div>
             </div>
           </Card>
@@ -132,7 +133,7 @@ export default function ProfilePage() {
               <div className="form-grid">
                 <Input label="Nombre" name="nombre" value={form.nombre} onChange={handleFormChange} placeholder="Nombre" autoComplete="given-name" />
                 <Input label="Apellido" name="apellido" value={form.apellido} onChange={handleFormChange} placeholder="Apellido" autoComplete="family-name" />
-                <Input label="Correo electrónico" type="email" name="email" value={form.email} onChange={handleFormChange} placeholder="admin@plataforma.com" autoComplete="email" />
+                <Input label="Correo electrónico" type="email" name="email" value={form.email} onChange={handleFormChange} placeholder="admin@plataforma.com" autoComplete="email" helperText="Es el correo con el que inicias sesión en el panel." />
                 <Input label="Teléfono" type="tel" name="telefono" value={form.telefono} onChange={handleFormChange} placeholder="+57 300 123 4567" autoComplete="tel" />
               </div>
               <div className="row row--end">

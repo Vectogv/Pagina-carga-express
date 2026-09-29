@@ -90,6 +90,7 @@ export default function UsersPage() {
   const [pwUser, setPwUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [debtTarget, setDebtTarget] = useState(null);
+  const [suspendTarget, setSuspendTarget] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const fetchUsers = useCallback(async () => {
@@ -127,9 +128,12 @@ export default function UsersPage() {
   const handleSearch = (val) => { setSearch(val); setPage(1); };
   const handleRole = (val) => { setRolFilter(val); setPage(1); };
 
-  const handleSuspend = async (u) => {
+  const handleSuspend = async () => {
+    const u = suspendTarget;
+    if (!u) return;
     try {
       await suspendUser(userId(u));
+      setNotice({ variant: 'success', msg: u.suspendido ? `Cuenta de ${fullName(u)} activada` : `Cuenta de ${fullName(u)} suspendida` });
       fetchUsers();
     } catch (err) {
       setError(errorMessage(err, 'Error al suspender usuario'));
@@ -138,7 +142,8 @@ export default function UsersPage() {
 
   const handleLeader = async (u) => {
     try {
-      await setLeader(userId(u));
+      // Sin {esLider} el backend no cambia nada (admin_controller.ts#assignLeader).
+      await setLeader(userId(u), { esLider: !u.esLider });
       fetchUsers();
     } catch (err) {
       setError(errorMessage(err, 'Error al asignar líder'));
@@ -225,6 +230,8 @@ export default function UsersPage() {
       render: (_, u) => {
         const name = fullName(u);
         const suspended = userStatus(u) === 'suspendido';
+        // El backend responde 403 al suspender o eliminar a un admin: no se ofrece.
+        const isAdmin = u.rol === 'admin';
         return (
           <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
             <Button size="icon" variant="ghost" onClick={() => setEditUser(u)} aria-label={`Editar a ${name}`} title="Editar">
@@ -252,14 +259,16 @@ export default function UsersPage() {
             >
               <Star size={15} />
             </Button>
-            <Button
-              size="sm"
-              variant={suspended ? 'soft-success' : 'soft-warning'}
-              icon={suspended ? <CircleCheck size={14} /> : <Ban size={14} />}
-              onClick={() => handleSuspend(u)}
-            >
-              {suspended ? 'Activar' : 'Suspender'}
-            </Button>
+            {!isAdmin && (
+              <Button
+                size="sm"
+                variant={suspended ? 'soft-success' : 'soft-warning'}
+                icon={suspended ? <CircleCheck size={14} /> : <Ban size={14} />}
+                onClick={() => setSuspendTarget(u)}
+              >
+                {suspended ? 'Activar' : 'Suspender'}
+              </Button>
+            )}
             {canClearDebt(u) && (
               <Button
                 size="icon"
@@ -271,9 +280,11 @@ export default function UsersPage() {
                 <Unlock size={15} />
               </Button>
             )}
-            <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(u)} aria-label={`Eliminar a ${name}`} title="Eliminar">
-              <Trash2 size={15} />
-            </Button>
+            {!isAdmin && (
+              <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(u)} aria-label={`Eliminar a ${name}`} title="Eliminar">
+                <Trash2 size={15} />
+              </Button>
+            )}
           </div>
         );
       },
@@ -284,7 +295,7 @@ export default function UsersPage() {
     <div className="page">
       <PageHeader
         title="Usuarios"
-        description="Todas las cuentas de la plataforma: clientes, conductores, moderadores y administradores."
+        description="Todas las cuentas de la plataforma (clientes, conductores, moderadores y administradores). Desde aquí se crean cuentas, se editan datos, se cambia la contraseña, se asigna moderador o líder y se suspende o elimina."
         actions={<Button icon={<UserPlus size={16} />} onClick={() => setAddOpen(true)}>Agregar usuario</Button>}
       />
 
@@ -334,6 +345,18 @@ export default function UsersPage() {
         message={`Se eliminará la cuenta de ${fullName(deleteTarget)}. Esta acción no se puede deshacer.`}
         confirmText="Eliminar"
         danger
+      />
+
+      <ConfirmDialog
+        isOpen={!!suspendTarget}
+        onClose={() => setSuspendTarget(null)}
+        onConfirm={handleSuspend}
+        title={suspendTarget?.suspendido ? 'Activar cuenta' : 'Suspender cuenta'}
+        message={suspendTarget?.suspendido
+          ? `¿Activar la cuenta de ${fullName(suspendTarget)} para que pueda volver a usar la app?`
+          : `¿Suspender la cuenta de ${fullName(suspendTarget)}? Se cerrarán sus sesiones y no podrá usar la app.`}
+        confirmText={suspendTarget?.suspendido ? 'Activar' : 'Suspender'}
+        danger={!suspendTarget?.suspendido}
       />
 
       <ConfirmDialog

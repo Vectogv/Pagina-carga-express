@@ -13,15 +13,15 @@ export const driverName = (d) => {
   return u && (u.nombre || u.apellido) ? fullName(u) : (d?.nombre || 'Sin nombre');
 };
 
-/** Estado de conexión: conectado | en_ruta | desconectado */
-export const connectionKey = (d) => {
-  if (!d.online) return 'desconectado';
-  return d.estadoVerificacion === 'aprobado' ? 'conectado' : 'en_ruta';
-};
+/**
+ * Estado de conexión: conectado | desconectado. GET /api/admin/drivers solo manda
+ * `online`; antes un conductor en línea sin verificar salía como "En ruta", que no
+ * tiene nada que ver con estar en un viaje.
+ */
+export const connectionKey = (d) => (d?.online ? 'conectado' : 'desconectado');
 
 export const CONNECTION = {
   conectado: ['Conectado', 'success'],
-  en_ruta: ['En ruta', 'info'],
   desconectado: ['Desconectado', 'neutral'],
 };
 

@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Ban, Bell, Check, CircleCheck, Download, Eye, Flag, KeyRound, Pencil, Star, Trash2, UserPlus, X,
 } from 'lucide-react';
-import { getDrivers, resetPassword } from '../../api/admin';
-import { errorMessage, toList } from '../../utils/format';
+import { getDrivers, getAllPages, resetPassword } from '../../api/admin';
+import { errorMessage } from '../../utils/format';
 import {
   Alert, Avatar, Badge, Button, DataTable, PageHeader, Pagination, SearchInput, Select,
 } from '../../components/ui';
@@ -23,9 +23,9 @@ const STATUS_FILTERS = [
   { value: 'all', label: 'Todos los estados' },
   { value: 'conectado', label: 'Conectado' },
   { value: 'desconectado', label: 'Desconectado' },
-  { value: 'en_ruta', label: 'En ruta' },
   { value: 'pendiente', label: 'Verificación pendiente' },
   { value: 'aprobado', label: 'Verificado' },
+  { value: 'rechazado', label: 'Verificación rechazada' },
 ];
 
 const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -37,6 +37,7 @@ export default function DriversPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [truncated, setTruncated] = useState(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCity, setFilterCity] = useState('');
@@ -52,18 +53,20 @@ export default function DriversPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getDrivers({ page: 1, limit: 100, search });
-      setDrivers(toList(res.data, 'drivers'));
+      // GET /api/admin/drivers solo pagina (máx. 100 por página) y no busca ni filtra:
+      // se traen todas las páginas una vez y la búsqueda/filtros se hacen aquí.
+      const { rows, truncated: more } = await getAllPages(getDrivers);
+      setDrivers(rows);
+      setTruncated(more);
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar conductores'));
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, []);
 
   useEffect(() => {
-    const t = setTimeout(fetchDrivers, 300);
-    return () => clearTimeout(t);
+    fetchDrivers();
   }, [fetchDrivers]);
 
   useEffect(() => {
@@ -221,7 +224,7 @@ export default function DriversPage() {
     <div className="page">
       <PageHeader
         title="Conductores"
-        description="Gestión de conductores, su verificación, estado y cuenta."
+        description="Conductores registrados: si están conectados, si sus documentos fueron verificados y acciones sobre su cuenta. Los documentos por revisar también aparecen en Verificaciones."
         actions={(
           <>
             <Button variant="secondary" icon={<Download size={16} />} onClick={handleExport} disabled={!filtered.length}>
@@ -247,6 +250,9 @@ export default function DriversPage() {
 
       {notice && <Alert variant={notice.variant} onClose={() => setNotice(null)}>{notice.msg}</Alert>}
       {error && <div className="page-error" role="alert">{error}</div>}
+      {truncated && !loading && (
+        <Alert variant="info">Se cargaron los {drivers.length} conductores más recientes; la búsqueda no incluye a los más antiguos.</Alert>
+      )}
 
       <DataTable
         columns={columns}

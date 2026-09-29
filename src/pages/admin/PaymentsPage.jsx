@@ -64,10 +64,11 @@ export default function PaymentsPage() {
     const userId = userIdOf(payment);
     setNotice(null);
     try {
-      if (action === 'confirm') await confirmPayment(userId);
-      else await rejectPayment(userId);
+      const res = action === 'confirm' ? await confirmPayment(userId) : await rejectPayment(userId);
       setPayments((prev) => prev.filter((p) => userIdOf(p) !== userId));
-      setNotice(`Pago de ${userNameOf(payment)} ${action === 'confirm' ? 'confirmado' : 'rechazado'}.`);
+      // El backend explica el resultado (p. ej. cuánto queda debiendo o el nuevo plazo).
+      const detalle = res?.data?.message ? ` ${res.data.message}` : '';
+      setNotice(`Pago de ${userNameOf(payment)} ${action === 'confirm' ? 'confirmado' : 'rechazado'}.${detalle}`);
       if (proofPayment && userIdOf(proofPayment) === userId) setProofPayment(null);
     } catch (err) {
       setError(errorMessage(err, 'Error al procesar el pago'));
@@ -139,7 +140,7 @@ export default function PaymentsPage() {
     <div className="page">
       <PageHeader
         title="Pagos pendientes"
-        description="Revisa los comprobantes enviados por los usuarios y confirma o rechaza cada pago."
+        description="Comprobantes de pago que clientes y conductores enviaron para saldar su deuda. Confirma si el dinero llegó o rechaza si no corresponde."
         actions={(
           <Button variant="secondary" icon={<RefreshCw size={14} />} onClick={fetchPayments} loading={loading}>
             Actualizar
@@ -210,7 +211,7 @@ export default function PaymentsPage() {
                 <dd className="detail-list__value text-success text-strong">{formatCurrency(amountOf(proofPayment))}</dd>
               </div>
               <div className="detail-list__item">
-                <dt className="detail-list__label">Método de pago</dt>
+                <dt className="detail-list__label">Concepto</dt>
                 <dd className="detail-list__value">{methodOf(proofPayment)}</dd>
               </div>
               <div className="detail-list__item">

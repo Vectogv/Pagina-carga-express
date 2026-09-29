@@ -16,7 +16,8 @@ function ModeratorReportsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await getModeratorReports();
+      // Sin limit el backend devuelve solo 20.
+      const res = await getModeratorReports({ page: 1, limit: 100 });
       setReports(toList(res.data, 'reports'));
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar los reportes del moderador'));
@@ -76,7 +77,10 @@ function ModeratorReportsPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Reportes de moderadores" description="Reportes enviados por los moderadores sobre conductores de su zona." />
+      <PageHeader
+        title="Reportes de moderadores"
+        description="Lo que los moderadores reportan sobre conductores de su ciudad (por ejemplo, mal comportamiento o documentos dudosos). Es solo informativo: las acciones sobre el conductor se hacen en Conductores."
+      />
 
       {error && (
         <div className="page-error" role="alert">

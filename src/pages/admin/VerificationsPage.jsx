@@ -122,7 +122,7 @@ export default function VerificationsPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Verificaciones" description="Conductores a la espera de que se revise su documentación." />
+      <PageHeader title="Verificaciones" description="Conductores nuevos esperando que revises su cédula, licencia y vehículo. Mientras no los apruebes no pueden recibir viajes." />
 
       {error && (
         <div className="page-error" role="alert">

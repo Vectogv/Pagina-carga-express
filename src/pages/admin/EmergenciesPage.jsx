@@ -10,7 +10,7 @@ import {
 import RouteMap from '../../components/maps/RouteMap';
 import { sosRouteProps, hasRoutePoints } from '../../components/maps/sosRoute';
 import EmergencyDetailModal from './emergencies/EmergencyDetailModal';
-import { shortId, userName, ruta, coords } from './emergencies/emergencyUtils';
+import { shortId, userName, ruta, coords, emergencyBadge } from './emergencies/emergencyUtils';
 import './emergencies/EmergenciesPage.css';
 
 const POLL_MS = 20000;
@@ -94,13 +94,14 @@ export default function EmergenciesPage() {
     if (!confirm) return;
     try {
       const nota = notes.trim();
-      await resolveEmergency(confirm.id);
+      // `observacion` queda guardada en la alerta (si el backend la admite; si no, se ignora).
+      await resolveEmergency(confirm.id, nota ? { observacion: nota } : {});
       try {
         await sendEmergencyMessage(confirm.id, `Emergencia resuelta por Admin CargaExpress${nota ? ` - ${nota}` : ''}`);
       } catch {
         // La constancia en el chat es opcional.
       }
-      setResolvedHere((prev) => [{ ...confirm, status: 'resolved', atendida: true }, ...prev]);
+      setResolvedHere((prev) => [{ ...confirm, status: 'resolved', estado: 'resuelta', atendida: true, notes: nota || undefined }, ...prev]);
       closeConfirm();
       await fetchEmergencies();
     } catch (err) {
@@ -110,18 +111,22 @@ export default function EmergenciesPage() {
 
   const columns = [
     { key: 'id', label: 'ID', render: (val) => <span className="text-mono text-muted">#{shortId(val)}</span> },
-    { key: 'usuario', label: 'Usuario', render: (_, row) => <span className="text-strong">{userName(row)}</span> },
+    {
+      key: 'usuario',
+      label: 'Quién pidió ayuda',
+      render: (_, row) => (
+        <div className="cell-user__text">
+          <span className="text-strong">{userName(row)}</span>
+          {row.motivo && <span className="cell-user__meta">{row.motivo}</span>}
+        </div>
+      ),
+    },
     { key: 'viaje', label: 'Ruta', render: (_, row) => ruta(row) || '—' },
     { key: 'ubicacion', label: 'Ubicación', render: (_, row) => <span className="nowrap">{coords(row) || row.ubicacion || '—'}</span> },
     {
       key: 'status',
       label: 'Estado',
-      render: (_, row) => (
-        <StatusBadge
-          status={row.status === 'resolved' ? 'resuelta' : 'abierta'}
-          label={row.status === 'resolved' ? 'Resuelta' : 'Pendiente'}
-        />
-      ),
+      render: (_, row) => <StatusBadge {...emergencyBadge(row)} />,
     },
     { key: 'createdAt', label: 'Fecha', render: (val) => <span className="text-muted nowrap">{formatDate(val)}</span> },
     {
@@ -155,7 +160,10 @@ export default function EmergenciesPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Emergencias" description="Alertas SOS activas y su historial de atención." />
+      <PageHeader
+        title="Emergencias"
+        description="Botones SOS que clientes o conductores activaron durante un viaje. Revisa el caso, habla por el chat y márcalo como resuelto cuando termine. Se actualiza cada 20 s."
+      />
 
       {error && (
         <div className="page-error" role="alert">
@@ -192,7 +200,7 @@ export default function EmergenciesPage() {
 
       <section className="emergency-section">
         <div className="emergency-section__head">
-          <h3 className="emergency-section__title">Resueltas</h3>
+          <h3 className="emergency-section__title">Resueltas en esta sesión</h3>
           <Badge variant="success">{resolved.length} resueltas</Badge>
         </div>
         <DataTable
@@ -200,7 +208,8 @@ export default function EmergenciesPage() {
           data={resolved}
           loading={loading}
           onRowClick={openDetail}
-          emptyMessage="Aún no hay emergencias resueltas"
+          emptyMessage="Aún no has resuelto emergencias en esta sesión"
+          emptyDescription="Las alertas cerradas dejan de listarse arriba; aquí quedan las que resuelvas mientras esta página siga abierta."
         />
       </section>
 

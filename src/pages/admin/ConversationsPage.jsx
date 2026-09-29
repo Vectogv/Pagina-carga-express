@@ -14,7 +14,7 @@ const createCity = (contact, myCity) =>
 export default function AdminConversationsPage() {
   return (
     <div className="page">
-      <PageHeader title="Conversatorio" description="Mensajes con moderadores, conductores y clientes." />
+      <PageHeader title="Conversatorio" description="Chat en tiempo real con moderadores, conductores y clientes. Para casos formales de los usuarios usa Tickets de soporte." />
       <ConversationsBoard getContacts={loadContacts} createCity={createCity} />
     </div>
   );
