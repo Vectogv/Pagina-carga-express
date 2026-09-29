@@ -56,17 +56,31 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* El SearchInput compartido trae `flex: 1 1 260px` pensado para barras en fila;
+   en esta columna esa base se volvía ALTURA (260px) y la lupa quedaba flotando. */
+.chat__list-tools .search-input {
+  flex: 0 0 auto;
+  max-width: none;
+}
+
 .chat__list-filters {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-2);
   min-width: 0;
 }
 
+/* Dos opciones: caben sin scroll horizontal. */
+.chat__list-filters .segmented {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
 .chat__city-select {
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 150px;
+  max-width: none;
+  text-overflow: ellipsis;
   height: 34px;
   padding: 0 var(--space-2);
   border-radius: var(--radius-md);

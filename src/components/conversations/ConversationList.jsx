@@ -109,7 +109,7 @@ export default function ConversationList({
 
       {conversations.length > 0 && (
         <div className="chat__list-tools">
-          <SearchInput value={filtro} onChange={setFiltro} placeholder="Buscar por nombre, ciudad o mensaje…" />
+          <SearchInput value={filtro} onChange={setFiltro} placeholder="Buscar conversación…" />
           <div className="chat__list-filters">
             <SegmentedFilter
               ariaLabel="Filtrar conversaciones"
@@ -127,7 +127,7 @@ export default function ConversationList({
                 onChange={(e) => setCiudadSel(e.target.value)}
                 aria-label="Filtrar por ciudad"
               >
-                <option value={TODAS_CIUDADES}>Todas las ciudades</option>
+                <option value={TODAS_CIUDADES}>Todas</option>
                 {ciudades.map((k) => <option key={k} value={k}>{ciudadLabel(k)}</option>)}
               </select>
             )}

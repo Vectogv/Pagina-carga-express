@@ -84,5 +84,7 @@ export function useZonas() {
 export const zonaLabelFrom = (zonas, z) => {
   if (!z) return '—';
   const key = String(z).toLowerCase();
-  return zonas.find((o) => o.value === key)?.label || key.charAt(0).toUpperCase() + key.slice(1);
+  const label = zonas.find((o) => o.value === key)?.label || key.replace(/_/g, ' ');
+  // Zonas guardadas en minúscula en Cobertura ("popayan"): mayúscula inicial por palabra.
+  return label === label.toLowerCase() ? label.replace(/(^|\s)\S/g, (c) => c.toUpperCase()) : label;
 };
