@@ -154,7 +154,7 @@ export default function ReportsPage() {
     <div className="page">
       <PageHeader
         title="Reportes entre usuarios"
-        description="Quejas que un cliente hace de su conductor, o un conductor de su cliente, al terminar un viaje. Desde el 2.º reporte contra la misma cuenta se avisa aquí para que revises el caso; márcalo como resuelto al terminar."
+        description="Hoy solo el conductor reporta a su cliente, dentro de los 30 minutos después de terminar el viaje. Los reportes de un cliente contra su conductor que veas aquí son de antes de ese cambio. Desde el 2.º reporte contra la misma cuenta se avisa aquí para que revises el caso; márcalo como resuelto al terminar."
       />
 
       <div className="toolbar">

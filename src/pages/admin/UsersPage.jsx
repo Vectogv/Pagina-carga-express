@@ -11,7 +11,8 @@ import EditUserModal from './users/EditUserModal';
 import AddUserModal from './users/AddUserModal';
 import ModeratorModal from './users/ModeratorModal';
 import ResetPasswordModal from './users/ResetPasswordModal';
-import { userId } from './users/constants';
+import { userId, getZonaModerador } from './users/constants';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 
 const LIMIT = 15;
 
@@ -76,6 +77,7 @@ function readPagination(headers, listLength, page) {
 }
 
 export default function UsersPage() {
+  const zonas = useZonas();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -213,6 +215,8 @@ export default function UsersPage() {
     },
     { key: 'telefono', label: 'Teléfono', render: (_, u) => u.telefono || u.phone || '—' },
     { key: 'rol', label: 'Rol', render: (_, u) => <RoleBadge user={u} /> },
+    // Moderador: su zona asignada. Conductor/líder: la ciudad de su perfil (zona del líder).
+    { key: 'zona', label: 'Zona', render: (_, u) => zonaLabelFrom(zonas, getZonaModerador(u) || u.ciudad) },
     {
       key: 'estado',
       label: 'Estado',

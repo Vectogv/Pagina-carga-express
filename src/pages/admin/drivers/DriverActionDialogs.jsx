@@ -67,7 +67,11 @@ export default function DriverActionDialogs({ action, onClose, onDone, onError }
       : { title: 'Suspender conductor', message: '¿Suspender la cuenta de este conductor? No podrá usar la app.', confirmText: 'Suspender', danger: true },
     leader: u.esLider
       ? { title: 'Quitar líder', message: '¿Quitar el rol de líder a este conductor?', confirmText: 'Quitar' }
-      : { title: 'Marcar como líder', message: '¿Marcar a este conductor como líder?', confirmText: 'Marcar' },
+      : {
+          title: 'Marcar como líder',
+          message: `¿Marcar a ${name} como líder? Podrá publicar avisos y comunicados para los conductores de su ciudad (los comunicados igual quedan pendientes de tu aprobación). No sanciona conductores ni reemplaza al moderador de la zona.`,
+          confirmText: 'Marcar',
+        },
   };
 
   const current = type ? config[type] : null;
