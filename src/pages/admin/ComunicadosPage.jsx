@@ -135,7 +135,7 @@ function ComunicadosPage() {
     <div className="page">
       <PageHeader
         title="Comunicados"
-        description="Mensajes que moderadores y líderes escriben para todos los usuarios de la app. No se publican hasta que los apruebes; al aprobar se envía una notificación a todos."
+        description="Mensajes que moderadores y líderes escriben para los conductores de su zona. No se publican hasta que los apruebes; al aprobar, se muestran en el Grupo de conductores de esa zona y se les envía una notificación."
       />
 
       <div className="toolbar">
@@ -178,7 +178,7 @@ function ComunicadosPage() {
         title={isApprove ? 'Aprobar comunicado' : 'Rechazar comunicado'}
         message={
           isApprove
-            ? `¿Aprobar el comunicado “${titleOf(confirmAction)}”? Se publicará y se enviará una notificación a todos los usuarios de la app.`
+            ? `¿Aprobar el comunicado “${titleOf(confirmAction)}”? Se publicará y se enviará una notificación a los conductores de la zona ${zonaLabelFrom(zonas, confirmAction?.zona)}.`
             : `¿Deseas rechazar el comunicado “${titleOf(confirmAction)}”? Esta acción no se puede deshacer.`
         }
         confirmText={isApprove ? 'Aprobar' : 'Rechazar'}
