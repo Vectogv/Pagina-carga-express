@@ -93,6 +93,9 @@ export const approveVerification = (conductorId) =>
   api.put(`${BASE}/verifications/${conductorId}/approve`)
 export const rejectVerification = (conductorId, data) =>
   api.put(`${BASE}/verifications/${conductorId}/reject`, data)
+// Excepción del SOAT: PUT { aprobar: boolean, nota? }
+export const resolveSoatException = (conductorId, data) =>
+  api.put(`${BASE}/verifications/${conductorId}/soat-exception`, data)
 
 // Drivers - notificar/reportar (moderator, admin con token puede intentar)
 export const notifyDriver = (id) => api.post(`/api/moderator/drivers/${id}/notify`)

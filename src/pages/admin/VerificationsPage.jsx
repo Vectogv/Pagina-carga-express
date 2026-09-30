@@ -1,13 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Check, Eye, X } from 'lucide-react';
-import { getVerifications, approveVerification, rejectVerification } from '../../api/admin';
+import {
+  getVerifications, approveVerification, rejectVerification, resolveSoatException,
+} from '../../api/admin';
 import { resolveStorageUrl } from '../../utils/storage';
 import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
 import {
-  Avatar, Button, ConfirmDialog, DataTable, Modal, PageHeader, Textarea,
+  Avatar, Badge, Button, ConfirmDialog, DataTable, Modal, PageHeader, Textarea,
 } from '../../components/ui';
 
-function Photo({ label, path }) {
+const hoy = () => new Date().toISOString().slice(0, 10);
+const vencido = (fecha) => !!fecha && String(fecha).slice(0, 10) < hoy();
+
+function Photo({ label, path, vence }) {
   if (!path) return null;
   const url = resolveStorageUrl(path);
   return (
@@ -16,9 +21,20 @@ function Photo({ label, path }) {
       <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${label} en una pestaña nueva`}>
         <img src={url} alt={label} className="thumb thumb--link" loading="lazy" />
       </a>
+      {vence !== undefined && (
+        <span className={vencido(vence) ? 'text-danger' : 'cell-user__meta'}>
+          {vence ? `Vence ${formatDate(vence)}${vencido(vence) ? ' (vencido)' : ''}` : 'Sin fecha de vencimiento'}
+        </span>
+      )}
     </div>
   );
 }
+
+const ESTADO_EXCEPCION = {
+  pendiente: { label: 'En revisión', variant: 'warning' },
+  aprobada: { label: 'Aprobada', variant: 'success' },
+  rechazada: { label: 'Rechazada', variant: 'danger' },
+};
 
 // GET /api/admin/verifications (admin_controller.ts#pendingVerifications) solo
 // trae conductores con estadoVerificacion 'pendiente' y no incluye estado por
@@ -74,6 +90,19 @@ export default function VerificationsPage() {
     setConfirmAction({ ...row, type });
   };
 
+  const handleSoat = async () => {
+    try {
+      const payload = { aprobar: confirmAction.type === 'soat-approve' };
+      if (nota.trim()) payload.nota = nota.trim();
+      await resolveSoatException(confirmAction.id, payload);
+      closeConfirm();
+      setSelected(null);
+      await fetchVerifications();
+    } catch (err) {
+      setError(errorMessage(err, 'Error al resolver la excepción del SOAT'));
+    }
+  };
+
   const columns = [
     {
       key: 'usuario',
@@ -100,6 +129,18 @@ export default function VerificationsPage() {
       ),
     },
     { key: 'telefono', label: 'Teléfono', render: (_, row) => row.usuario?.telefono || '—' },
+    {
+      key: 'soat',
+      label: 'SOAT',
+      render: (_, row) => {
+        if (row.excepcionSoatEstado) {
+          const e = ESTADO_EXCEPCION[row.excepcionSoatEstado];
+          return <Badge variant={e.variant}>Excepción: {e.label.toLowerCase()}</Badge>;
+        }
+        if (!row.fotoSoat) return <span className="cell-user__meta">Sin SOAT</span>;
+        return <span className={vencido(row.soatVence) ? 'text-danger' : ''}>{formatDate(row.soatVence)}</span>;
+      },
+    },
     { key: 'createdAt', label: 'Solicitado', render: (v) => <span className="nowrap">{formatDate(v)}</span> },
     {
       key: 'acciones',
@@ -118,11 +159,14 @@ export default function VerificationsPage() {
   ];
 
   const isApprove = confirmAction?.type === 'approve';
+  const isSoat = confirmAction?.type === 'soat-approve' || confirmAction?.type === 'soat-reject';
+  const isSoatApprove = confirmAction?.type === 'soat-approve';
   const confirmName = fullName(confirmAction?.usuario) || 'este conductor';
+  const soatSel = selected ? ESTADO_EXCEPCION[selected.excepcionSoatEstado] : null;
 
   return (
     <div className="page">
-      <PageHeader title="Verificaciones" description="Conductores nuevos esperando que revises su cédula, licencia y vehículo. Mientras no los apruebes no pueden recibir viajes." />
+      <PageHeader title="Verificaciones" description="Conductores nuevos esperando que revises su cédula, licencia, vehículo, tarjeta de propiedad, técnico-mecánica y SOAT. Para aprobarlos necesitan SOAT vigente o una excepción de SOAT aprobada. Mientras no los apruebes no pueden recibir viajes." />
 
       {error && (
         <div className="page-error" role="alert">
@@ -178,10 +222,37 @@ export default function VerificationsPage() {
             <hr className="divider" />
             <h3 className="section-title">Documentos cargados</h3>
             <div className="form-grid">
-              <Photo label="Cédula" path={selected.fotoCedula} />
+              <Photo label="Cédula (frente)" path={selected.fotoCedula} />
+              <Photo label="Cédula (reverso)" path={selected.fotoCedulaReverso} />
               <Photo label="Licencia" path={selected.fotoLicencia} />
               <Photo label="Vehículo" path={selected.fotoVehiculo} />
+              <Photo label="Tarjeta de propiedad" path={selected.fotoTarjetaPropiedad} />
+              <Photo label="Técnico-mecánica" path={selected.fotoTecnomecanica} vence={selected.tecnomecanicaVence} />
+              <Photo label="SOAT" path={selected.fotoSoat} vence={selected.soatVence} />
             </div>
+
+            {selected.excepcionSoatEstado && (
+              <>
+                <hr className="divider" />
+                <h3 className="section-title">Excepción del SOAT</h3>
+                <div className="detail-list">
+                  <div className="detail-list__item">
+                    <span className="detail-list__label">Estado</span>
+                    <span className="detail-list__value"><Badge variant={soatSel.variant}>{soatSel.label}</Badge></span>
+                  </div>
+                  <div className="detail-list__item">
+                    <span className="detail-list__label">{selected.excepcionSoatEstado === 'pendiente' ? 'Comentario del conductor' : 'Nota'}</span>
+                    <span className="detail-list__value">{selected.excepcionSoatNota || '—'}</span>
+                  </div>
+                </div>
+                {selected.excepcionSoatEstado === 'pendiente' && (
+                  <div className="row row--end">
+                    <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={ask(selected, 'soat-approve')}>Aprobar excepción</Button>
+                    <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={ask(selected, 'soat-reject')}>Rechazar excepción</Button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </Modal>
@@ -189,15 +260,21 @@ export default function VerificationsPage() {
       <ConfirmDialog
         isOpen={!!confirmAction}
         onClose={closeConfirm}
-        onConfirm={isApprove ? handleApprove : handleReject}
-        title={isApprove ? 'Aprobar verificación' : 'Rechazar verificación'}
-        message={isApprove
-          ? `¿Aprobar la verificación de ${confirmName}?`
-          : `¿Rechazar la verificación de ${confirmName}? Esta acción no se puede deshacer.`}
-        confirmText={isApprove ? 'Aprobar' : 'Rechazar'}
-        danger={!isApprove}
+        onConfirm={isSoat ? handleSoat : isApprove ? handleApprove : handleReject}
+        title={isSoat
+          ? (isSoatApprove ? 'Aprobar excepción del SOAT' : 'Rechazar excepción del SOAT')
+          : isApprove ? 'Aprobar verificación' : 'Rechazar verificación'}
+        message={isSoat
+          ? (isSoatApprove
+            ? `¿Aprobar la excepción del SOAT de ${confirmName}? Podrá ser verificado sin SOAT.`
+            : `¿Rechazar la excepción del SOAT de ${confirmName}? Tendrá que subir el SOAT.`)
+          : isApprove
+            ? `¿Aprobar la verificación de ${confirmName}?`
+            : `¿Rechazar la verificación de ${confirmName}? Esta acción no se puede deshacer.`}
+        confirmText={isApprove || isSoatApprove ? 'Aprobar' : 'Rechazar'}
+        danger={!(isApprove || isSoatApprove)}
       >
-        {!isApprove && (
+        {(!isApprove || isSoat) && (
           <Textarea
             label="Nota (opcional)"
             value={nota}
