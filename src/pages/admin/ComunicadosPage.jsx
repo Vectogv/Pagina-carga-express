@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Check, X } from 'lucide-react';
 import { getAdminComunicados, approveComunicado, rejectComunicado } from '../../api/admin';
 import { errorMessage, formatDate, toList } from '../../utils/format';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import {
   PageHeader, SegmentedFilter, DataTable, ConfirmDialog, StatusBadge, Button, Textarea, Pagination,
 } from '../../components/ui';
@@ -14,6 +15,7 @@ const statusOf = (c) => c.status || 'pending';
 const titleOf = (row) => row?.title || row?.titulo || '';
 
 function ComunicadosPage() {
+  const zonas = useZonas();
   const [comunicados, setComunicados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -88,6 +90,7 @@ function ComunicadosPage() {
       label: 'Autor',
       render: (val, row) => val || row.autor || row.reporter?.name || '—',
     },
+    { key: 'zona', label: 'Zona', render: (val) => zonaLabelFrom(zonas, val) },
     {
       key: 'body',
       label: 'Contenido',
