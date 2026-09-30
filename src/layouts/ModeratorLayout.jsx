@@ -35,7 +35,12 @@ function ModeratorShell() {
     emergencyBadge, closuresBadge, unreadBadge, ticketBadge, clearUnread,
   } = useModeratorBadges();
   const { isAdmin, ciudadLabel } = useModeratorCity();
+  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  // Un moderador sin zona asignada recibe 403 en casi todos los endpoints
+  // (el backend lo exige). Se avisa una sola vez aquí, en el layout, en vez
+  // de repetir el manejo del 403 en cada página.
+  const sinZona = !isAdmin && Boolean(user?.esModerador) && !user?.zonaModerador;
 
   // Al entrar al Conversatorio su badge se pone en 0 (los hilos leídos se marcan en el backend).
   // Emergencias, Cierres y Tickets NO se limpian al entrar: cuentan casos abiertos y bajan
@@ -71,6 +76,12 @@ function ModeratorShell() {
             <div className="app-emergency">
               <EmergencyBanner />
             </div>
+            {sinZona && (
+              <div className="page-error" role="alert">
+                Tu cuenta de moderador no tiene una ciudad asignada. La mayoría de las secciones no van a
+                cargar datos hasta que un administrador te asigne una zona.
+              </div>
+            )}
             <Outlet />
           </div>
         </main>

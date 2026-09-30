@@ -103,10 +103,11 @@ export const getPendingPayments = () => api.get(`${BASE}/payments/pending`)
 export const confirmPayment = (userId) => api.put(`${BASE}/payments/${userId}/confirm`)
 export const rejectPayment = (userId) => api.put(`${BASE}/payments/${userId}/reject`)
 
-// Config - doc: PUT {nequiNumero?,nequiNombre?}, PUT coverage {zonasCobertura:[]}, PUT banner multipart banner_imagen
+// Config - doc: PUT {nequiNumero?,nequiNombre?,soporteTelefono?,soporteEmail?}, PUT coverage {zonasCobertura:[]}, PUT banner multipart banner_imagen
 export const updateConfig = (data) => api.put(`${BASE}/config`, data)
-// No hay GET /api/admin/config; el valor actual de Nequi (global, no por usuario)
-// se lee de payment_controller.ts#info, el mismo que usa la app cliente.
+export const getConfig = () => api.get(`${BASE}/config`)
+// El valor de Nequi que ve la app (mismo dato que GET /api/admin/config) se puede
+// leer también de payment_controller.ts#info; se deja por si algo más lo usa.
 export const getPaymentConfig = () => api.get('/api/payment/debt')
 export const getCoverage = () => api.get(`${BASE}/config/coverage`)
 export const updateCoverage = (data) => api.put(`${BASE}/config/coverage`, data)
