@@ -3,15 +3,21 @@ import { ExternalLink, ImageOff, ImageUp, Upload } from 'lucide-react';
 import api from '../../../api/axios';
 import { updateBanner } from '../../../api/admin';
 import { resolveStorageUrl } from '../../../utils/storage';
-import { errorMessage } from '../../../utils/format';
+import { errorMessage, formatDateTime } from '../../../utils/format';
 import { Card, Input, Button, Badge } from '../../../components/ui';
 import BannerPhonePreview from './BannerPhonePreview';
 
-/** Doc §18: PUT multipart {banner_imagen, bannerActivo, bannerLink, bannerTexto} */
+/** Doc §18: PUT multipart {banner_imagen, bannerActivo, bannerLink, bannerTexto, bannerDias} */
 
 // Mismas reglas que el backend (admin_controller.updateBanner): máx. 2 MB y estas extensiones.
 const MAX_BYTES = 2 * 1024 * 1024;
 const EXTENSIONES = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+// Días que faltan hasta `hasta` (vacío = sin límite), para prellenar el campo.
+const diasRestantes = (hasta) => {
+  if (!hasta) return '';
+  const dias = Math.ceil((new Date(hasta) - Date.now()) / 86400000);
+  return dias > 0 ? String(dias) : '';
+};
 const ACCEPT = EXTENSIONES.map((e) => `.${e}`).join(',');
 export default function BannerConfig({ notify }) {
   // Banner publicado actualmente: GET /api/config/banner → { activo, imagenUrl, link, texto }
@@ -25,6 +31,8 @@ export default function BannerConfig({ notify }) {
   const [bannerActivo, setBannerActivo] = useState(true);
   const [bannerLink, setBannerLink] = useState('');
   const [bannerTexto, setBannerTexto] = useState('');
+  const [bannerDias, setBannerDias] = useState('');
+  const [diasIniciales, setDiasIniciales] = useState('');
   const [saving, setSaving] = useState(false);
 
   const fetchCurrent = useCallback(async ({ prefill = false } = {}) => {
@@ -40,6 +48,8 @@ export default function BannerConfig({ notify }) {
         setBannerLink(data.link || '');
         setBannerTexto(data.texto || '');
       }
+      setBannerDias(diasRestantes(data.hasta));
+      setDiasIniciales(diasRestantes(data.hasta));
     } catch (err) {
       setCurrentError(errorMessage(err, 'No se pudo cargar el banner actual'));
     } finally {
@@ -81,6 +91,8 @@ export default function BannerConfig({ notify }) {
       // Se envían siempre (aunque estén vacíos) para poder borrar el enlace o el texto.
       fd.append('bannerLink', bannerLink.trim());
       fd.append('bannerTexto', bannerTexto.trim());
+      // Solo si cambió: reenviarlo reiniciaría la cuenta desde hoy. Vacío = sin límite.
+      if (bannerDias.trim() !== diasIniciales) fd.append('bannerDias', bannerDias.trim() || '0');
       await updateBanner(fd);
       notify('Banner actualizado correctamente');
       setFile(null);
@@ -107,7 +119,7 @@ export default function BannerConfig({ notify }) {
       <div className="config__intro">
         <h2 className="config__intro-title">Banner</h2>
         <p className="config__intro-text">
-          Imagen promocional que aparece en la pantalla principal de la app. Puedes cambiarla, añadir un texto y un enlace, u ocultarla.
+          Anuncio que sale como ventana al abrir la app (una vez al día por cliente). Puedes cambiar la imagen, añadir texto y enlace, fijar cuántos días se muestra u ocultarlo.
         </p>
       </div>
 
@@ -159,6 +171,12 @@ export default function BannerConfig({ notify }) {
                   <span className="config__value config__value--empty">Sin enlace</span>
                 )}
               </div>
+              <div className="config__value-box">
+                <span className="config__value-label">Se oculta</span>
+                {current?.hasta
+                  ? <span className="config__value">{formatDateTime(current.hasta)}</span>
+                  : <span className="config__value config__value--empty">Sin límite</span>}
+              </div>
             </div>
           </>
         )}
@@ -200,6 +218,17 @@ export default function BannerConfig({ notify }) {
               onChange={(e) => setBannerLink(e.target.value)}
               placeholder="Ej: https://tupromo.com"
               helperText="Se abre al tocar el banner; vacío para quitarlo"
+            />
+            <Input
+              label="Días visible"
+              name="bannerDias"
+              type="number"
+              min="1"
+              max="365"
+              value={bannerDias}
+              onChange={(e) => setBannerDias(e.target.value)}
+              placeholder="Sin límite"
+              helperText="Cuenta desde que guardas; al terminar se oculta solo. Vacío = sin límite"
             />
             <label className="config__check form-grid__full">
               <input type="checkbox" checked={bannerActivo} onChange={(e) => setBannerActivo(e.target.checked)} />
