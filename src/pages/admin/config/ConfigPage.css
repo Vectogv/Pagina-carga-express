@@ -171,3 +171,7 @@
 .config__check input { width: 16px; height: 16px; accent-color: var(--primary); }
 
 .config__footer-add { margin-right: auto; }
+
+/* Banner: formulario junto a la vista previa del celular */
+.banner-edit { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-4, 16px); align-items: start; }
+@media (max-width: 900px) { .banner-edit { grid-template-columns: 1fr; } }

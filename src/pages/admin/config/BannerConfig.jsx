@@ -5,6 +5,7 @@ import { updateBanner } from '../../../api/admin';
 import { resolveStorageUrl } from '../../../utils/storage';
 import { errorMessage } from '../../../utils/format';
 import { Card, Input, Button, Badge } from '../../../components/ui';
+import BannerPhonePreview from './BannerPhonePreview';
 
 /** Doc §18: PUT multipart {banner_imagen, bannerActivo, bannerLink, bannerTexto} */
 
@@ -163,7 +164,7 @@ export default function BannerConfig({ notify }) {
         )}
       </Card>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="banner-edit">
         <Card
           title="Editar banner"
           description="Usa una imagen horizontal, nítida y con poco texto. Si no eliges una imagen nueva se conserva la actual."
@@ -211,6 +212,14 @@ export default function BannerConfig({ notify }) {
               {saving ? 'Guardando...' : 'Guardar banner'}
             </Button>
           </div>
+        </Card>
+        <Card title="Vista previa" description="Se actualiza mientras editas; los clientes solo lo ven al guardar.">
+          <BannerPhonePreview
+            imageUrl={preview || (imageFailed ? '' : currentUrl)}
+            texto={bannerTexto}
+            link={bannerLink}
+            activo={bannerActivo}
+          />
         </Card>
       </form>
     </div>
