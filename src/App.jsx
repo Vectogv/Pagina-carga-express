@@ -6,6 +6,7 @@ import LoadingState from './components/ui/LoadingState/LoadingState';
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const ModeratorLayout = lazy(() => import('./layouts/ModeratorLayout'));
 const LoginPage = lazy(() => import('./pages/admin/LoginPage'));
+const Legal = lazy(() => import('./pages/Legal'));
 
 const admin = {
   index: lazy(() => import('./pages/admin/DashboardPage')),
@@ -83,6 +84,8 @@ export default function App() {
       <AuthProvider>
         <Suspense fallback={<FullScreenLoader />}>
           <Routes>
+            <Route path="/privacidad" element={<Legal tipo="privacidad" />} />
+            <Route path="/terminos" element={<Legal tipo="terminos" />} />
             <Route path="/admin/login" element={<LoginPage />} />
             <Route path="/moderator/login" element={<LoginPage />} />
 

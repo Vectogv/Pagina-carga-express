@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Link } from 'react-router-dom';
 import { Eye, EyeOff, Truck, ShieldCheck, Route, Siren } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input } from '../../components/ui';
@@ -7,19 +7,6 @@ import { errorMessage } from '../../utils/format';
 import './LoginPage.css';
 
 const homeFor = (u) => (u?.rol === 'admin' ? '/admin' : u?.esModerador ? '/moderator' : null);
-
-/**
- * Cuentas de prueba, visibles a propósito para poder probar la plataforma.
- * Solo el admin y el moderador entran a este panel; el cliente y el conductor
- * son para la app móvil (aquí el panel los rechaza, por eso se marcan).
- */
-const CUENTAS_PRUEBA = [
-  { rol: 'Admin', email: 'admin.demo@cargaexpress.co', zona: 'Nacional', panel: true },
-  { rol: 'Moderador', email: 'moderador.demo@cargaexpress.co', zona: 'Popayán', panel: true },
-  { rol: 'Conductor', email: 'conductor.demo@cargaexpress.co', zona: 'Popayán', panel: false },
-  { rol: 'Cliente', email: 'cliente.demo@cargaexpress.co', zona: 'Popayán', panel: false },
-];
-const CLAVE_PRUEBA = 'Demo1234';
 
 export default function LoginPage() {
   const { login, logout, user, loading: authLoading } = useAuth();
@@ -30,9 +17,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  // Aviso de las cuentas de prueba: va aparte del error porque rellenar el
-  // formulario cambia email/password y el efecto de abajo limpia `error`.
-  const [nota, setNota] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { setError(''); }, [email, password]);
@@ -64,18 +48,6 @@ export default function LoginPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     entrar(email, password);
-  };
-
-  /** Cuenta de prueba: entra directo si es del panel; si es de la app, solo rellena. */
-  const usarCuenta = (c) => {
-    setEmail(c.email);
-    setPassword(CLAVE_PRUEBA);
-    if (c.panel) {
-      setNota('');
-      entrar(c.email, CLAVE_PRUEBA);
-    } else {
-      setNota(`${c.rol}: esta cuenta es para la app móvil. El panel solo admite admin y moderador; te dejo los datos copiados en el formulario.`);
-    }
   };
 
   return (
@@ -141,35 +113,8 @@ export default function LoginPage() {
 
           <p className="login__hint">¿Olvidaste tu contraseña? Pide a un administrador que la restablezca.</p>
 
-          <div className="login__demo">
-            <div className="login__demo-head">
-              <span className="login__demo-title">Cuentas de prueba</span>
-              <span className="login__demo-pass">
-                Contraseña: <span className="text-mono">{CLAVE_PRUEBA}</span>
-              </span>
-            </div>
-            <ul className="login__demo-list">
-              {CUENTAS_PRUEBA.map((c) => (
-                <li key={c.email} className="login__demo-item">
-                  <span className="login__demo-rol">{c.rol}</span>
-                  <span className="login__demo-zona">{c.zona}</span>
-                  <span className="login__demo-email text-mono truncate" title={c.email}>{c.email}</span>
-                  <button
-                    type="button"
-                    className="login__demo-btn"
-                    onClick={() => usarCuenta(c)}
-                    disabled={submitting}
-                  >
-                    {c.panel ? 'Entrar' : 'Usar'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {nota && <p className="login__demo-aviso" role="status">{nota}</p>}
-            <p className="login__demo-note">
-              Conductor y cliente son para la app móvil; este panel solo admite admin y moderador.
-            </p>
-          </div>
+          <p className="login__hint"><Link to="/privacidad">Privacidad</Link> · <Link to="/terminos">Términos</Link></p>
+
         </form>
       </main>
     </div>
