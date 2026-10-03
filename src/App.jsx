@@ -86,6 +86,7 @@ export default function App() {
           <Routes>
             <Route path="/privacidad" element={<Legal tipo="privacidad" />} />
             <Route path="/terminos" element={<Legal tipo="terminos" />} />
+            <Route path="/eliminar-cuenta" element={<Legal tipo="eliminar" />} />
             <Route path="/admin/login" element={<LoginPage />} />
             <Route path="/moderator/login" element={<LoginPage />} />
 
