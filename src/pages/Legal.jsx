@@ -69,11 +69,12 @@ const PRIVACIDAD = {
     ]],
     ['conservacion', 'Cuánto tiempo los guardamos', Clock, [
       '- Mientras la cuenta esté activa.',
-      '- Las cuentas no se borran, se archivan: cuando el usuario elimina su cuenta, o tras 6 meses sin uso, la información queda guardada y no se usa para ningún fin.',
-      '- Solo se archiva si no hay viajes activos ni dinero pendiente. Si hay algo pendiente, soporte revisa el caso.',
+      '- Cuando el usuario elimina su cuenta, borramos sus datos personales (nombre, correo, teléfono, cédula, fotos, documentos y ubicaciones) en un plazo máximo de 30 días.',
+      '- Solo conservamos, sin usarlos para otro fin, los registros de viajes y pagos que exige la ley (hasta 10 años, por las obligaciones contables y tributarias) y los necesarios para atender fraudes o disputas abiertas.',
+      '- Una cuenta con 6 meses sin uso se desactiva; el usuario puede pedir su eliminación en cualquier momento.',
     ]],
     ['derechos', 'Sus derechos', UserCheck, [
-      'Puede conocer, actualizar y rectificar sus datos, o pedir que se archive su cuenta:',
+      'Puede conocer, actualizar y rectificar sus datos, o pedir que se elimine su cuenta:',
       '- Desde la app: Ajustes → Eliminar mi cuenta.',
       '- Desde la web: en la página "Eliminar mi cuenta".',
       '- Por correo a ' + CONTACTO + '.',
@@ -131,7 +132,7 @@ const TERMINOS = {
       '- El conductor puede cancelar con una justificación, pero cada cancelación baja su calificación.',
     ]],
     ['cuentas', 'Cuentas', Users, [
-      'Las cuentas no se borran: se archivan cuando el usuario elimina la suya o tras 6 meses sin uso, solo sin viajes activos ni dinero pendiente.',
+      'El usuario puede eliminar su cuenta en cualquier momento, siempre que no tenga viajes activos ni dinero pendiente. Sus datos personales se borran en máximo 30 días (ver la política de privacidad). Una cuenta con 6 meses sin uso se desactiva.',
       'CargaExpress puede suspender cuentas por fraude, por mal uso o por no cumplir estos términos.',
     ]],
     ['ley', 'Ley aplicable', Scale, [
@@ -143,7 +144,7 @@ const TERMINOS = {
 const ELIMINAR = {
   titulo: 'Eliminar mi cuenta',
   intro: 'Cómo pedir que se elimine su cuenta de CargaExpress (app del cliente y app del conductor) y qué pasa con su información.',
-  claves: [[Smartphone, 'Desde la app, en 1 minuto'], [Archive, 'La información no se usa más'], [Mail, 'También por correo']],
+  claves: [[Smartphone, 'Desde la app, en 1 minuto'], [Archive, 'Datos borrados en 30 días'], [Mail, 'También por correo']],
   secciones: [
     ['app', 'Desde la app', Smartphone, [
       '- Abra la app e inicie sesión.',
@@ -155,13 +156,15 @@ const ELIMINAR = {
       'Escriba a ' + CONTACTO + ' desde el correo con el que se registró, con el asunto "Eliminar mi cuenta". Respondemos en un máximo de 15 días hábiles.',
     ]],
     ['informacion', 'Qué pasa con su información', Archive, [
-      'La cuenta se archiva: ya no puede iniciar sesión y la información queda guardada sin usarse para ningún fin.',
+      'Su cuenta se cierra de inmediato: ya no puede iniciar sesión.',
+      'En un plazo máximo de 30 días borramos sus datos personales: nombre, correo, teléfono, cédula, foto de perfil, documentos, fotos del vehículo, contacto de emergencia y ubicaciones.',
+      'Solo conservamos los registros de viajes y pagos que exige la ley, hasta por 10 años (obligaciones contables y tributarias), y lo necesario para atender fraudes o disputas abiertas. No los usamos para ningún otro fin.',
     ]],
     ['condiciones', 'Condiciones', ListChecks, [
       'Solo se puede si no hay viajes activos ni dinero pendiente (sea cliente o conductor). Si hay algo pendiente, soporte revisa el caso.',
     ]],
     ['sin-uso', 'Cuentas sin uso', Moon, [
-      'Una cuenta con 6 meses sin uso también se archiva, con las mismas condiciones.',
+      'Una cuenta con 6 meses sin uso se desactiva. Para que se borren sus datos, pida la eliminación como se explica arriba.',
     ]],
   ],
 };
