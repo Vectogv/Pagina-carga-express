@@ -37,16 +37,7 @@
   text-decoration: none;
 }
 
-.legal__logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--primary), #6366F1);
-  color: #fff;
-}
+.legal__logo { width: 40px; height: 40px; flex-shrink: 0; border-radius: 9px; }
 
 .legal__tabs {
   display: flex;

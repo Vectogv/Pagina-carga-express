@@ -254,7 +254,7 @@ function Mockup({ paso }) {
   return (
     <div className="mock" aria-hidden="true">
       <div className="mock__telefono">
-        <div className="mock__app"><span className="mock__logo" />CargaExpress</div>
+        <div className="mock__app"><img src="/logo.png" alt="" width="18" height="18" className="mock__logo" />CargaExpress</div>
         <div key={paso} className="mock__cambio"><Pantalla paso={paso} /></div>
       </div>
     </div>
@@ -341,7 +341,7 @@ export default function Inicio() {
   return (
     <div className="inicio" onPointerMove={inclinar} onPointerOut={soltar}>
       <header className="inicio__top">
-        <a href="#inicio" className="inicio__brand"><span className="inicio__logo"><Truck size={18} /></span>Carga Express</a>
+        <a href="#inicio" className="inicio__brand"><img src="/logo.png" alt="" width="44" height="44" className="inicio__logo" />Carga Express</a>
         <nav className="inicio__nav">{MENU.map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}</nav>
         <details className="inicio__menu">
           <summary aria-label="Menú"><Menu size={22} /></summary>
@@ -517,7 +517,7 @@ export default function Inicio() {
       <footer className="inicio__pie">
         <div className="inicio__pie-in">
           <div className="inicio__pie-marca">
-            <span className="inicio__brand"><span className="inicio__logo"><Truck size={18} /></span>Carga Express</span>
+            <span className="inicio__brand"><img src="/logo.png" alt="" width="44" height="44" className="inicio__logo" />Carga Express</span>
             <p>Transporte que conecta.</p>
             <small><MapPin size={14} />Popayán, Cauca</small>
           </div>

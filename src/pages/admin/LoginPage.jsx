@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate, useLocation, Link } from 'react-router-dom';
-import { Eye, EyeOff, Truck, ShieldCheck, Route, Siren, History, LifeBuoy } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Route, Siren, History, LifeBuoy } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input } from '../../components/ui';
 import { errorMessage } from '../../utils/format';
@@ -59,7 +59,7 @@ export default function LoginPage() {
     <div className="login">
       <aside className="login__aside">
         <div className="login__brand">
-          <div className="login__logo"><Truck size={20} /></div>
+          <img src="/logo.png" alt="" width="44" height="44" className="login__logo" />
           <span>Carga Express</span>
         </div>
         {isStaffLogin ? (

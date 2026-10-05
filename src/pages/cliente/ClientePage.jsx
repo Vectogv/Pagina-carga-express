@@ -27,7 +27,7 @@ function Marco() {
   return (
     <div className="cli">
       <header className="cli__top">
-        <Link to="/" className="cli__marca"><span className="cli__logo"><Truck size={18} /></span>Carga Express</Link>
+        <Link to="/" className="cli__marca"><img src="/logo.png" alt="" width="44" height="44" className="cli__logo" />Carga Express</Link>
         <nav className="cli__nav">
           <NavLink to="/cliente" end>Mi viaje</NavLink>
           <NavLink to="/cliente/viajes">Mis viajes</NavLink>

@@ -1,6 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import {
-  Truck, Building2, Database, Target, Share2, MapPin, Lock, Clock, UserCheck, ShieldAlert, RefreshCw,
+  Building2, Database, Target, Share2, MapPin, Lock, Clock, UserCheck, ShieldAlert, RefreshCw,
   Info, Route, Percent, Package, IdCard, User, XCircle, Users, Scale, Smartphone, Mail, Archive, ListChecks, Moon,
   BadgeCheck, EyeOff, ShieldCheck,
 } from 'lucide-react';
@@ -196,7 +196,7 @@ export default function Legal({ tipo }) {
     <div className="legal">
       <header className="legal__top">
         <Link to="/" className="legal__brand">
-          <span className="legal__logo"><Truck size={18} /></span>
+          <img src="/logo.png" alt="" width="44" height="44" className="legal__logo" />
           Carga Express
         </Link>
         <nav className="legal__tabs">

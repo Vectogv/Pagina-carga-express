@@ -63,16 +63,8 @@
   white-space: nowrap;
 }
 
-.inicio__logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  background: var(--azul);
-  color: var(--blanco);
-  box-shadow: inset 0 -4px 0 var(--naranja);
-}
+/* Logo oficial (public/logo.png, esquinas ya transparentes) */
+.inicio__logo { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; box-shadow: 0 4px 12px -4px rgba(10, 34, 89, 0.35); }
 
 .inicio__nav { display: flex; align-items: center; gap: 22px; margin-left: auto; }
 .inicio__nav a { font-size: 14px; font-weight: 500; color: var(--texto-2); text-decoration: none; white-space: nowrap; }
@@ -629,7 +621,7 @@
   background: var(--blanco);
   border-bottom: 1px solid var(--linea);
 }
-.mock__logo { width: 18px; height: 18px; border-radius: 5px; background: var(--azul); box-shadow: inset 0 -3px 0 var(--naranja); }
+.mock__logo { width: 20px; height: 20px; border-radius: 5px; }
 .mock__cambio { position: absolute; inset: 47px 0 0; animation: pantalla 0.45s ease both; }
 .mock__pantalla { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; }
 .mock__pantalla small {
