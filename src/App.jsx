@@ -8,6 +8,12 @@ const ModeratorLayout = lazy(() => import('./layouts/ModeratorLayout'));
 const LoginPage = lazy(() => import('./pages/admin/LoginPage'));
 const Legal = lazy(() => import('./pages/Legal'));
 const Inicio = lazy(() => import('./pages/Inicio'));
+const ClienteLayout = lazy(() => import('./pages/cliente/ClientePage'));
+const cliente = {
+  index: lazy(() => import('./pages/cliente/ClientePage').then((m) => ({ default: m.ViajeActivo }))),
+  viajes: lazy(() => import('./pages/cliente/ClientePage').then((m) => ({ default: m.MisViajes }))),
+  soporte: lazy(() => import('./pages/cliente/Soporte')),
+};
 
 const admin = {
   index: lazy(() => import('./pages/admin/DashboardPage')),
@@ -62,13 +68,19 @@ const FullScreenLoader = () => (
 function ProtectedRoute({ children, area }) {
   const { isAuthenticated, loading, user } = useAuth();
   if (loading) return <FullScreenLoader />;
-  if (!isAuthenticated) return <Navigate to={area === 'moderator' ? '/moderator/login' : '/admin/login'} replace />;
+  if (!isAuthenticated) {
+    const login = { moderator: '/moderator/login', cliente: '/ingresar' }[area] || '/admin/login';
+    return <Navigate to={login} replace />;
+  }
 
   const isAdmin = user?.rol === 'admin';
   const isMod = Boolean(user?.esModerador);
+  // A dónde va cada quien si entra a un área que no es la suya.
+  const casa = isAdmin ? '/admin' : isMod ? '/moderator' : user?.rol === 'cliente' ? '/cliente' : '/ingresar';
 
-  if (area === 'admin' && !isAdmin) return <Navigate to={isMod ? '/moderator' : '/admin/login'} replace />;
-  if (area === 'moderator' && !isMod && !isAdmin) return <Navigate to="/admin/login" replace />;
+  if (area === 'admin' && !isAdmin) return <Navigate to={casa} replace />;
+  if (area === 'moderator' && !isMod && !isAdmin) return <Navigate to={casa} replace />;
+  if (area === 'cliente' && user?.rol !== 'cliente') return <Navigate to={casa} replace />;
   return children;
 }
 
@@ -89,6 +101,7 @@ export default function App() {
             <Route path="/privacidad" element={<Legal tipo="privacidad" />} />
             <Route path="/terminos" element={<Legal tipo="terminos" />} />
             <Route path="/eliminar-cuenta" element={<Legal tipo="eliminar" />} />
+            <Route path="/ingresar" element={<LoginPage />} />
             <Route path="/admin/login" element={<LoginPage />} />
             <Route path="/moderator/login" element={<LoginPage />} />
 
@@ -100,7 +113,11 @@ export default function App() {
               {renderRoutes(moderator)}
             </Route>
 
-            <Route path="*" element={<Navigate to="/admin" replace />} />
+            <Route path="/cliente" element={<ProtectedRoute area="cliente"><ClienteLayout /></ProtectedRoute>}>
+              {renderRoutes(cliente)}
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
       </AuthProvider>

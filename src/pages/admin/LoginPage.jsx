@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Navigate, useLocation, Link } from 'react-router-dom';
-import { Eye, EyeOff, Truck, ShieldCheck, Route, Siren } from 'lucide-react';
+import { Eye, EyeOff, Truck, ShieldCheck, Route, Siren, History, LifeBuoy } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input } from '../../components/ui';
 import { errorMessage } from '../../utils/format';
 import './LoginPage.css';
 
-const homeFor = (u) => (u?.rol === 'admin' ? '/admin' : u?.esModerador ? '/moderator' : null);
+// Un solo login: cada quien va a su sección. El conductor usa solo la app.
+const homeFor = (u) =>
+  u?.rol === 'admin' ? '/admin' : u?.esModerador ? '/moderator' : u?.rol === 'cliente' ? '/cliente' : null;
 
 export default function LoginPage() {
   const { login, logout, user, loading: authLoading } = useAuth();
   const { pathname } = useLocation();
   const isModeratorLogin = pathname.startsWith('/moderator');
+  const isStaffLogin = isModeratorLogin || pathname.startsWith('/admin');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +36,9 @@ export default function LoginPage() {
       const u = await login(correo.trim(), clave);
       if (!homeFor(u)) {
         await logout();
-        setError('Tu cuenta no tiene acceso al panel. Usa la app móvil.');
+        setError(u?.rol === 'conductor'
+          ? 'Las cuentas de conductor se usan desde la app CargaExpress Conductor.'
+          : 'Tu cuenta no tiene acceso a la web. Usa la app móvil.');
       }
     } catch (err) {
       const status = err?.response?.status;
@@ -57,15 +62,27 @@ export default function LoginPage() {
           <div className="login__logo"><Truck size={20} /></div>
           <span>Carga Express</span>
         </div>
-        <div className="login__pitch">
-          <h1>Operación de carga, en tiempo real.</h1>
-          <p>Supervisa viajes, conductores y emergencias desde un solo panel.</p>
-          <ul className="login__features">
-            <li><Route size={16} /> Seguimiento de viajes en vivo</li>
-            <li><Siren size={16} /> Alertas SOS y atención inmediata</li>
-            <li><ShieldCheck size={16} /> Verificación de conductores</li>
-          </ul>
-        </div>
+        {isStaffLogin ? (
+          <div className="login__pitch">
+            <h1>Operación de carga, en tiempo real.</h1>
+            <p>Supervisa viajes, conductores y emergencias desde un solo panel.</p>
+            <ul className="login__features">
+              <li><Route size={16} /> Seguimiento de viajes en vivo</li>
+              <li><Siren size={16} /> Alertas SOS y atención inmediata</li>
+              <li><ShieldCheck size={16} /> Verificación de conductores</li>
+            </ul>
+          </div>
+        ) : (
+          <div className="login__pitch">
+            <h1>Tus envíos, también desde la web.</h1>
+            <p>Entra con la misma cuenta de la app Carga Express.</p>
+            <ul className="login__features">
+              <li><Route size={16} /> Sigue tu viaje activo y tu PIN de entrega</li>
+              <li><History size={16} /> Revisa el historial de tus viajes</li>
+              <li><LifeBuoy size={16} /> Habla con soporte por ticket</li>
+            </ul>
+          </div>
+        )}
         <span className="login__legal">© {new Date().getFullYear()} Carga Express</span>
       </aside>
 
@@ -73,7 +90,7 @@ export default function LoginPage() {
         <form className="login__card" onSubmit={handleSubmit} noValidate>
           <div className="login__header">
             <h2>{isModeratorLogin ? 'Acceso de moderación' : 'Iniciar sesión'}</h2>
-            <p>Ingresa con tu cuenta de administrador o moderador.</p>
+            <p>{isStaffLogin ? 'Ingresa con tu cuenta de administrador o moderador.' : 'Ingresa con tu correo y contraseña de Carga Express.'}</p>
           </div>
 
           {error && <div className="page-error" role="alert">{error}</div>}
@@ -82,7 +99,7 @@ export default function LoginPage() {
             label="Correo electrónico"
             type="email"
             autoComplete="username"
-            placeholder="nombre@empresa.com"
+            placeholder={isStaffLogin ? 'nombre@empresa.com' : 'tucorreo@gmail.com'}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoFocus
@@ -111,9 +128,13 @@ export default function LoginPage() {
             Entrar
           </Button>
 
-          <p className="login__hint">¿Olvidaste tu contraseña? Pide a un administrador que la restablezca.</p>
+          <p className="login__hint">
+            {isStaffLogin
+              ? '¿Olvidaste tu contraseña? Pide a un administrador que la restablezca.'
+              : '¿Olvidaste tu contraseña? Escríbenos a cargaexpressgv@gmail.com.'}
+          </p>
 
-          <p className="login__hint"><Link to="/privacidad">Privacidad</Link> · <Link to="/terminos">Términos</Link></p>
+          <p className="login__hint"><Link to="/">Inicio</Link> · <Link to="/privacidad">Privacidad</Link> · <Link to="/terminos">Términos</Link></p>
 
         </form>
       </main>

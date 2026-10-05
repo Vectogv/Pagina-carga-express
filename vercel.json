@@ -15,7 +15,7 @@
       ]
     },
     {
-      "source": "/(admin|moderator)(.*)",
+      "source": "/(admin|moderator|cliente)(.*)",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     }
   ]

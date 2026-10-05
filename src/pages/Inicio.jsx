@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
   Truck, MapPin, Tag, Navigation, BadgeCheck, Headset, Package, CalendarClock, Search, Handshake,
-  KeyRound, Mail, ChevronDown, Menu, ArrowRight,
+  KeyRound, Mail, ChevronDown, Menu, ArrowRight, User,
 } from 'lucide-react';
 import './Inicio.css';
 
@@ -166,8 +166,10 @@ export default function Inicio() {
           <summary aria-label="Menú"><Menu size={22} /></summary>
           <nav onClick={(e) => e.target.closest('a') && e.currentTarget.parentElement.removeAttribute('open')}>
             {MENU.map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            <Link to="/ingresar">Ingresar</Link>
           </nav>
         </details>
+        <Link to="/ingresar" className="inicio__ingresar"><User size={16} />Ingresar</Link>
         <a href="#solicitar" className="inicio__btn inicio__btn--sm">Solicitar servicio</a>
         <div className="inicio__progreso" aria-hidden="true"><span><Truck size={14} /></span></div>
       </header>
