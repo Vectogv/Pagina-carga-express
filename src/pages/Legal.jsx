@@ -195,7 +195,7 @@ export default function Legal({ tipo }) {
   return (
     <div className="legal">
       <header className="legal__top">
-        <Link to="/privacidad" className="legal__brand">
+        <Link to="/" className="legal__brand">
           <span className="legal__logo"><Truck size={18} /></span>
           Carga Express
         </Link>

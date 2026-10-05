@@ -7,6 +7,7 @@ const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const ModeratorLayout = lazy(() => import('./layouts/ModeratorLayout'));
 const LoginPage = lazy(() => import('./pages/admin/LoginPage'));
 const Legal = lazy(() => import('./pages/Legal'));
+const Inicio = lazy(() => import('./pages/Inicio'));
 
 const admin = {
   index: lazy(() => import('./pages/admin/DashboardPage')),
@@ -84,6 +85,7 @@ export default function App() {
       <AuthProvider>
         <Suspense fallback={<FullScreenLoader />}>
           <Routes>
+            <Route path="/" element={<Inicio />} />
             <Route path="/privacidad" element={<Legal tipo="privacidad" />} />
             <Route path="/terminos" element={<Legal tipo="terminos" />} />
             <Route path="/eliminar-cuenta" element={<Legal tipo="eliminar" />} />
