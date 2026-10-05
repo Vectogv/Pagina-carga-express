@@ -54,6 +54,13 @@ const PREGUNTAS = [
   ['¿Cómo descargo la app?', 'Estamos en beta cerrada: únete al grupo de Google y luego abre el enlace de prueba de la app que necesitas.'],
 ];
 
+// Lo que la plataforma garantiza, cada frase respaldada por una función real de la app.
+const PROMESAS = [
+  [KeyRound, 'Tu viaje sale bien, de principio a fin', 'El conductor no puede cerrar el viaje sin tu PIN de entrega: la carga solo se da por entregada cuando tú lo confirmas.'],
+  [Navigation, 'Un viaje monitoreado en todo momento', 'Sigues al conductor en vivo en el mapa, desde la app o la web, y los moderadores de tu zona están atentos.'],
+  [Handshake, 'Una experiencia simple', 'Publicas tu envío, eliges la oferta que te sirve y listo. Si algo pasa, soporte te responde por ticket.'],
+];
+
 // Solo opiniones REALES, con permiso de la persona. Vacío = se muestra la invitación.
 // Forma: { nombre: 'Laura G.', rol: 'Cliente', ciudad: 'Popayán', estrellas: 5, texto: '…' }
 const TESTIMONIOS = [];
@@ -447,8 +454,19 @@ export default function Inicio() {
       </section>
 
       <section id="opiniones" className="inicio__seccion">
-        <span className="inicio__ceja">Opiniones</span>
-        <h2>Lo que dicen quienes ya la usan</h2>
+        <span className="inicio__ceja">La experiencia</span>
+        <h2>Así se vive un viaje con Carga Express</h2>
+        <ul className="inicio__promesas">
+          {PROMESAS.map(([Icono, frase, porque]) => (
+            <li key={frase} className="inicio__card inclina revela">
+              <span className="inicio__icono inicio__icono--grande"><Icono size={24} /></span>
+              <strong>{frase}</strong>
+              <p>{porque}</p>
+            </li>
+          ))}
+        </ul>
+
+        <h3 className="inicio__opiniones-titulo">Opiniones de usuarios</h3>
         {TESTIMONIOS.length > 0 ? (
           <ul className="inicio__opiniones">
             {TESTIMONIOS.map((t) => (
