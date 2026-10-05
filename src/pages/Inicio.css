@@ -1,7 +1,6 @@
 /* Dinámico 3D en blanco, azul y naranja: portada azul a pantalla completa con el camión 3D,
-   tarjetas que se inclinan con el mouse y contadores que suben al hacer scroll.
+   tarjetas que se inclinan con el mouse y apariciones al hacer scroll.
    Solo transform/opacity animados (corre en celulares básicos); sin librerías 3D. */
-@property --n { syntax: '<integer>'; inherits: false; initial-value: 0; }
 
 .inicio {
   --blanco: #ffffff;
@@ -825,48 +824,41 @@
 .inicio__banda h2 { color: var(--blanco); margin-bottom: 14px; }
 .inicio__banda p { margin: 0 0 26px; font-size: 17px; line-height: 1.6; color: var(--azul-claro); max-width: 32em; }
 
-.inicio__cifras {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
 
-/* Cada tarjeta: número grande, título y una línea que lo explica */
-.inicio__cifras > div {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 22px 18px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.inicio__cifras dd { margin: 0; }
-.inicio__cifra {
-  order: -1;
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  font-family: var(--f-display);
-  font-weight: 800;
-  font-size: clamp(40px, 5vw, 56px);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.inicio__cifra small { font-size: 0.4em; color: var(--naranja); }
-.inicio__cifras dt { margin-top: 4px; font-size: 16px; font-weight: 700; color: var(--blanco); }
-.inicio__cifra-detalle { font-size: 13.5px; line-height: 1.5; color: var(--azul-claro); }
-
-/* Contador: CSS puro con @property; sin soporte se ve el valor final */
-.contador { display: inline-block; counter-reset: n var(--n); }
-.contador::before { content: counter(n); }
 
 .inicio__nota { display: block; margin-top: 14px; font-size: 13px; line-height: 1.5; color: var(--texto-2); }
 .inicio__nota a { color: var(--azul); font-weight: 700; }
 .inicio__banda .inicio__nota { color: var(--azul-claro); }
 .inicio__banda .inicio__nota a { color: var(--naranja); }
+
+/* Tarjeta de WhatsApp para conductores */
+.inicio__wa {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+  padding: 28px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.inicio__wa-icono {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #25d366;
+  color: var(--blanco);
+  box-shadow: 0 12px 24px -12px rgba(37, 211, 102, 0.8);
+}
+.inicio__wa h3 { margin: 0; font-size: 22px; color: var(--blanco); }
+.inicio__wa p { margin: 0 !important; font-size: 15.5px !important; }
+.inicio__wa ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.inicio__wa li { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; color: var(--blanco); }
+.inicio__wa li svg { flex-shrink: 0; color: var(--naranja); }
+.inicio__wa small { font-size: 13px; color: var(--azul-claro); }
+.inicio__btn--wa { margin-top: 4px; background: #25d366; border-color: #25d366; color: #06301a !important; box-shadow: 0 10px 24px -10px rgba(37, 211, 102, 0.7); }
+.inicio__btn--wa:hover { background: #1ebe5b; border-color: #1ebe5b; box-shadow: 0 16px 30px -12px rgba(37, 211, 102, 0.8); }
 
 .inicio__cinta {
   height: 10px;
@@ -1032,7 +1024,6 @@
 @keyframes viaja { to { translate: calc(100vw - 48px) 0; } }
 /* Usa translate/scale (no transform) para no chocar con la inclinación */
 @keyframes revela { from { opacity: 0; translate: 0 32px; scale: 0.96; } }
-@keyframes cuenta { from { --n: 0; } }
 
 /* Al hacer scroll: solo donde el navegador lo hace sin JS; si no, todo se ve quieto y completo */
 @supports (animation-timeline: view()) {
@@ -1040,11 +1031,6 @@
     animation: revela linear both;
     animation-timeline: view();
     animation-range: entry 0% entry 80%;
-  }
-  .contador {
-    animation: cuenta ease-out both;
-    animation-timeline: view();
-    animation-range: entry 30% cover 45%;
   }
 }
 
@@ -1091,8 +1077,6 @@
 }
 
 @media (max-width: 520px) {
-  .inicio__cifras { grid-template-columns: 1fr; }
-  .inicio__cifras > div { padding: 18px; }
 }
 
 @media (max-width: 420px) {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Truck, MapPin, Tag, Navigation, BadgeCheck, Headset, Package, CalendarClock, Search, Handshake,
-  KeyRound, Mail, ChevronDown, Menu, ArrowRight, User, Quote, Star,
+  KeyRound, Mail, ChevronDown, Menu, ArrowRight, User, Quote, Star, MessageCircle,
 } from 'lucide-react';
 import './Inicio.css';
 
@@ -36,12 +36,15 @@ const SERVICIOS = [
   [CalendarClock, 'Servicios programados', 'Programa tus necesidades de transporte.'],
 ];
 
-// [valor, sufijo, título, explicación]: reglas reales del backend
-// (comisión 0.1 del precio final, despacho a 20 km, plazo de deuda de 15 días).
-const CIFRAS = [
-  [10, '%', 'Comisión por viaje', 'Es lo único que cobra Carga Express. En un viaje de $ 45.000 te quedan $ 40.500.'],
-  [20, 'km', 'Viajes cerca de ti', 'Solo te llegan solicitudes que se recogen a menos de 20 km de donde estás.'],
-  [15, 'días', 'Para pagar la comisión', 'El cliente te paga directo a ti. La comisión la pagas después, con 15 días de plazo.'],
+// WhatsApp para conductores: las condiciones (pagos, comisión) se explican por chat.
+const WHATSAPP = '573022953554';
+const WHATSAPP_VISIBLE = '302 295 3554';
+const WHATSAPP_CONDUCTOR = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Hola, quiero ser conductor de Carga Express. ¿Me cuentan cómo funciona?')}`;
+
+const BENEFICIOS_CONDUCTOR = [
+  [MapPin, 'Viajes a menos de 20 km de donde estás'],
+  [Handshake, 'Tú eliges los viajes y ofertas tu precio'],
+  [BadgeCheck, 'Te verificamos y activamos tu cuenta'],
 ];
 
 const PREGUNTAS = [
@@ -49,7 +52,7 @@ const PREGUNTAS = [
   ['¿Cómo sé que mi carga llegó?', 'El conductor no puede cerrar el viaje sin tu PIN de 4 dígitos. Si recibe otra persona, le compartes el PIN.'],
   ['¿Puedo programar un envío?', 'Sí. Puedes reservar un envío para otra fecha y hora.'],
   ['¿Qué pasa si hay un problema?', 'Usa el botón SOS durante el viaje o abre un ticket de soporte. Los moderadores de tu zona median en las disputas.'],
-  ['¿Cuánto cobra CargaExpress al conductor?', 'Solo el 10 % de cada viaje. El cliente te paga directo a ti y la comisión la pagas después, con 15 días de plazo.'],
+  ['¿Cuánto cobra CargaExpress al conductor?', `Escríbenos por WhatsApp al ${WHATSAPP_VISIBLE} y te explicamos cómo funcionan los pagos y todo lo que necesitas para empezar.`],
   ['¿Qué necesito para ser conductor?', 'Ser mayor de 18 años, tener tu vehículo en buen estado y subir tus documentos para que el equipo los verifique.'],
   ['¿Cómo descargo la app?', 'Estamos en beta cerrada: únete al grupo de Google y luego abre el enlace de prueba de la app que necesitas.'],
 ];
@@ -415,19 +418,18 @@ export default function Inicio() {
             <a href={PLAY_CONDUCTOR} target="_blank" rel="noreferrer" className="inicio__btn"><Truck size={18} />Quiero ser conductor</a>
             <small className="inicio__nota">Beta cerrada: primero únete al <a href={GRUPO} target="_blank" rel="noreferrer">grupo de prueba</a> con tu cuenta de Google.</small>
           </div>
-          <dl className="inicio__cifras">
-            {CIFRAS.map(([n, suf, t, detalle]) => (
-              <div key={t} className="inclina">
-                <dt>{t}</dt>
-                <dd className="inicio__cifra">
-                  <span className="contador" style={{ '--n': n }} aria-hidden="true" />
-                  <span className="inicio__sr">{n}</span>
-                  <small>{suf}</small>
-                </dd>
-                <dd className="inicio__cifra-detalle">{detalle}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="inicio__wa inclina">
+            <span className="inicio__wa-icono"><MessageCircle size={26} /></span>
+            <h3>¿Quieres saber cuánto puedes ganar?</h3>
+            <p>Escríbenos por WhatsApp y te explicamos todo: cómo funcionan los pagos, qué documentos necesitas y cómo empezar.</p>
+            <ul>
+              {BENEFICIOS_CONDUCTOR.map(([Icono, t]) => <li key={t}><Icono size={18} />{t}</li>)}
+            </ul>
+            <a href={WHATSAPP_CONDUCTOR} target="_blank" rel="noreferrer" className="inicio__btn inicio__btn--wa">
+              <MessageCircle size={18} />Escribir por WhatsApp
+            </a>
+            <small>WhatsApp {WHATSAPP_VISIBLE}</small>
+          </div>
         </div>
       </section>
       <div className="inicio__cinta" aria-hidden="true" />
