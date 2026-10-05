@@ -6,6 +6,7 @@ import { clienteApi } from '../../api/cliente';
 import { CATEGORIAS_TICKET } from '../../api/tickets';
 import { errorMessage, formatDateTime } from '../../utils/format';
 import useSondeo from '../../hooks/useSondeo';
+import { useEventos } from '../../contexts/ClienteSocketContext';
 import { Estado } from './ClientePage';
 
 // Mismos límites que valida el backend (ticket_controller).
@@ -70,7 +71,14 @@ function Hilo({ id, onVolver, onCambio }) {
       .then(({ data }) => { setTicket(data); setError(''); })
       .catch((err) => setError(errorMessage(err, 'No se pudo cargar la conversación.')));
   }, [id]);
-  useSondeo(cargar, 10000);
+  // Las respuestas de soporte llegan por socket; el sondeo es respaldo.
+  useSondeo(cargar, 30000);
+  const esEste = (p) => String(p?.ticketId ?? p?.id) === String(id);
+  useEventos({
+    connect: cargar,
+    'ticket:mensaje': (p) => { if (esEste(p)) cargar(); },
+    'ticket:estado': (p) => { if (esEste(p)) cargar(); },
+  });
 
   const cantidad = ticket?.mensajes?.length || 0;
   useEffect(() => { fin.current?.scrollIntoView({ block: 'end' }); }, [cantidad]);
@@ -176,7 +184,8 @@ export default function Soporte() {
       .then(({ data }) => { setTickets(data.tickets || []); setError(''); })
       .catch((err) => setError(errorMessage(err, 'No se pudieron cargar tus tickets.')));
   }, []);
-  useSondeo(cargar, 20000);
+  useSondeo(cargar, 60000);
+  useEventos({ connect: cargar, 'ticket:mensaje': cargar, 'ticket:estado': cargar });
 
   const enDetalle = Boolean(abierto || nuevo);
 

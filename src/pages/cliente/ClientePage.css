@@ -166,6 +166,51 @@
 .cli-conductor > div span { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; color: var(--texto-2); }
 .cli-conductor > div svg { color: var(--naranja-2); }
 
+/* ---------- En vivo y mapa ---------- */
+.cli-vivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #eceff4;
+  color: var(--texto-2);
+}
+.cli-vivo::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #9aa3b2; }
+.cli-vivo--on { background: #e3f6ea; color: #17733b; }
+.cli-vivo--on::before { background: #22a55a; animation: cli-latido 1.6s ease-out infinite; }
+@keyframes cli-latido { 0% { box-shadow: 0 0 0 0 rgba(34, 165, 90, 0.55); } 100% { box-shadow: 0 0 0 8px rgba(34, 165, 90, 0); } }
+
+.cli-card--mapa { display: grid; gap: 12px; padding: 12px; }
+.cli-eta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 2px 4px 0; font-size: 15px; color: var(--texto-2); }
+.cli-eta strong { color: var(--azul-noche); font-size: 17px; }
+
+/* isolation: los paneles de Leaflet (z-index 400) no tapan la barra fija */
+.cli-mapa { position: relative; z-index: 0; isolation: isolate; height: clamp(260px, 42vh, 420px); border-radius: 10px; overflow: hidden; background: #e8eef7; }
+
+.cli-pin-mapa {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  font: 800 13px/1 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(10, 34, 89, 0.35);
+}
+.cli-pin-mapa--origen { background: #1656d6; }
+.cli-pin-mapa--destino { background: #ec6400; }
+.cli-pin-mapa--conductor { background: #0a2259; border-radius: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cli-vivo--on::before { animation: none; }
+}
+
 /* ---------- Mis viajes ---------- */
 .cli-viaje { padding: 0; }
 .cli-viaje summary { display: flex; align-items: center; gap: 14px; padding: 16px 18px; cursor: pointer; list-style: none; }
@@ -250,7 +295,7 @@
 
 @media (max-width: 600px) {
   .cli__nav { order: 3; width: 100%; overflow-x: auto; }
-  .cli__usuario > span { display: none; }
+  .cli__usuario > span:not(.cli-vivo) { display: none; }
   .cli__usuario button span { display: none; }
   .cli-pasos { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 14px; }
   .cli-viaje summary { flex-wrap: wrap; }

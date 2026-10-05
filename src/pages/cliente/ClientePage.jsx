@@ -6,6 +6,8 @@ import { clienteApi } from '../../api/cliente';
 import { statusLabel, statusVariant } from '../../components/ui/Badge/status';
 import { errorMessage, formatCurrency, formatDateTime, fullName } from '../../utils/format';
 import useSondeo from '../../hooks/useSondeo';
+import { ClienteSocketProvider, useClienteSocket, useEventos } from '../../contexts/ClienteSocketContext';
+import MapaViaje from './MapaViaje';
 import './ClientePage.css';
 
 export const Estado = ({ estado }) => (
@@ -13,7 +15,12 @@ export const Estado = ({ estado }) => (
 );
 
 export default function ClienteLayout() {
+  return <ClienteSocketProvider><Marco /></ClienteSocketProvider>;
+}
+
+function Marco() {
   const { user, logout } = useAuth();
+  const { conectado } = useClienteSocket();
   const navigate = useNavigate();
   const salir = async () => { await logout(); navigate('/ingresar', { replace: true }); };
 
@@ -27,6 +34,9 @@ export default function ClienteLayout() {
           <NavLink to="/cliente/soporte">Soporte</NavLink>
         </nav>
         <div className="cli__usuario">
+          <em className={`cli-vivo ${conectado ? 'cli-vivo--on' : ''}`} title={conectado ? 'Conectado en tiempo real' : 'Reconectando…'}>
+            {conectado ? 'En vivo' : 'Reconectando'}
+          </em>
           <span>{fullName(user)}</span>
           <button type="button" onClick={salir} aria-label="Cerrar sesión"><LogOut size={18} /><span>Salir</span></button>
         </div>
@@ -85,7 +95,34 @@ export function ViajeActivo() {
         else setError(errorMessage(err, 'No se pudo cargar tu viaje.'));
       });
   }, []);
-  useSondeo(cargar, 15000);
+  // El socket avisa al instante; el sondeo solo cubre si la conexión se cae.
+  useSondeo(cargar, 30000);
+
+  // Ruta + posición del conductor: se pide al cambiar de fase y luego llega por socket.
+  const [ruta, setRuta] = useState(null);
+  const viajeId = viaje?.id;
+  const estado = viaje?.estado;
+  const conConductor = Boolean(viaje?.conductor);
+  useEffect(() => {
+    if (!viajeId || !conConductor) return undefined;
+    let vigente = true;
+    clienteApi.ruta(viajeId)
+      .then(({ data }) => { if (vigente) setRuta(data); })
+      .catch(() => { if (vigente) setRuta(null); });
+    return () => { vigente = false; };
+  }, [viajeId, estado, conConductor]);
+
+  const actualizarRuta = (p) => {
+    if (p?.tripId && String(p.tripId) !== String(viajeId)) return;
+    setRuta((r) => ({ ...r, ...p, coords: p.coords ?? r?.coords }));
+  };
+  useEventos({
+    connect: cargar,
+    'trip:status_changed': cargar,
+    'driver:location': (p) => setRuta((r) => ({ ...r, conductor: { lat: p.lat, lng: p.lng } })),
+    'trip:route_update': actualizarRuta,
+    'trip:eta_update': actualizarRuta,
+  });
 
   if (viaje === undefined && !error) return <p className="cli-cargando">Cargando tu viaje…</p>;
   if (error && !viaje) return <p className="cli-error" role="alert">{error}</p>;
@@ -124,6 +161,18 @@ export function ViajeActivo() {
           ))}
         </ol>
       )}
+
+      <div className="cli-card cli-card--mapa">
+        {conConductor && ruta?.minutos != null && (
+          <p className="cli-eta">
+            <span className="cli-vivo cli-vivo--on">En vivo</span>
+            {viaje.estado === 'en_curso' ? 'Llega al destino en ' : 'El conductor llega a recoger en '}
+            <strong>{Math.max(1, Math.round(ruta.minutos))} min</strong>
+            {ruta.restanteM != null && <> · {(ruta.restanteM / 1000).toFixed(1).replace('.', ',')} km</>}
+          </p>
+        )}
+        <MapaViaje viaje={viaje} conductor={conConductor ? ruta?.conductor : null} ruta={conConductor ? ruta?.coords : null} />
+      </div>
 
       <div className="cli-activo__grid">
         <div className="cli-card">
@@ -165,6 +214,10 @@ export function MisViajes() {
   const [pagina, setPagina] = useState(1);
   const [res, setRes] = useState(null);
   const [error, setError] = useState('');
+  // Sube cuando un viaje cambia de estado, para recargar la página actual.
+  const [cambios, setCambios] = useState(0);
+  const recargar = () => setCambios((n) => n + 1);
+  useEventos({ connect: recargar, 'trip:status_changed': recargar });
 
   useEffect(() => {
     let vigente = true;
@@ -172,7 +225,7 @@ export function MisViajes() {
       .then(({ data }) => { if (vigente) { setRes(data); setError(''); } })
       .catch((err) => { if (vigente) setError(errorMessage(err, 'No se pudieron cargar tus viajes.')); });
     return () => { vigente = false; };
-  }, [pagina]);
+  }, [pagina, cambios]);
 
   if (error) return <p className="cli-error" role="alert">{error}</p>;
   if (!res) return <p className="cli-cargando">Cargando tus viajes…</p>;

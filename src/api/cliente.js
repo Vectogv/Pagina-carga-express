@@ -7,6 +7,8 @@ import api from './axios'
 export const clienteApi = {
   // 404 = no tiene viaje en curso.
   viajeActivo: () => api.get('/api/trips/active'),
+  // Ruta y posición del conductor; 404 si el viaje aún no está en una fase con ruta.
+  ruta: (id) => api.get(`/api/trips/${id}/route`),
   // { data, total, page, limit }
   historial: (page = 1, limit = 10) => api.get('/api/trips/history', { params: { page, limit } }),
   // { tickets, meta }
