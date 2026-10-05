@@ -8,6 +8,7 @@ import { errorMessage, formatCurrency, formatDateTime, fullName } from '../../ut
 import useSondeo from '../../hooks/useSondeo';
 import { ClienteSocketProvider, useClienteSocket, useEventos } from '../../contexts/ClienteSocketContext';
 import MapaViaje from './MapaViaje';
+import Marca from '../../components/Marca/Marca';
 import './ClientePage.css';
 
 export const Estado = ({ estado }) => (
@@ -27,7 +28,7 @@ function Marco() {
   return (
     <div className="cli">
       <header className="cli__top">
-        <Link to="/" className="cli__marca"><img src="/logo.png" alt="" width="44" height="44" className="cli__logo" />Carga Express</Link>
+        <Link to="/" className="cli__marca" aria-label="Carga Express, ir al inicio"><Marca /></Link>
         <nav className="cli__nav">
           <NavLink to="/cliente" end>Mi viaje</NavLink>
           <NavLink to="/cliente/viajes">Mis viajes</NavLink>

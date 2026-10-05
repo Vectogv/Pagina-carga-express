@@ -1,0 +1,33 @@
+/* Logo horizontal: símbolo del logo oficial + nombre en cursiva naranja como en el ícono de la app */
+.marca { display: inline-flex; align-items: center; gap: 10px; line-height: 1; }
+.marca__simbolo { display: block; width: auto; height: 30px; flex-shrink: 0; }
+.marca__nombre { display: grid; gap: 4px; }
+.marca__nombre b {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 19px;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #f4511e;
+  background: linear-gradient(90deg, #ff8a00, #f4511e 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.marca__nombre small {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #3a4256;
+}
+.marca--oscura .marca__nombre small { color: #c7d3ee; }
+
+@media (max-width: 420px) {
+  .marca__simbolo { height: 24px; }
+  .marca__nombre b { font-size: 16px; }
+  .marca__nombre small { font-size: 8.5px; letter-spacing: 0.28em; }
+}

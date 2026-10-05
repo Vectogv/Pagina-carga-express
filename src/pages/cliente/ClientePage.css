@@ -37,7 +37,6 @@
 }
 
 .cli__marca { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; color: var(--azul-noche) !important; text-decoration: none; }
-.cli__logo { width: 40px; height: 40px; flex-shrink: 0; border-radius: 9px; box-shadow: 0 4px 12px -4px rgba(10, 34, 89, 0.35); }
 
 .cli__nav { display: flex; gap: 4px; }
 .cli__nav a {

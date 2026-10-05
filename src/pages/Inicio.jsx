@@ -4,6 +4,7 @@ import {
   Truck, MapPin, Tag, Navigation, BadgeCheck, Headset, Package, CalendarClock, Search, Handshake,
   KeyRound, Mail, ChevronDown, Menu, ArrowRight, User, Quote, Star, MessageCircle,
 } from 'lucide-react';
+import Marca from '../components/Marca/Marca';
 import './Inicio.css';
 
 const CONTACTO = 'cargaexpressgv@gmail.com';
@@ -341,7 +342,7 @@ export default function Inicio() {
   return (
     <div className="inicio" onPointerMove={inclinar} onPointerOut={soltar}>
       <header className="inicio__top">
-        <a href="#inicio" className="inicio__brand"><img src="/logo.png" alt="" width="44" height="44" className="inicio__logo" />Carga Express</a>
+        <a href="#inicio" className="inicio__brand" aria-label="Carga Express, ir al inicio"><Marca /></a>
         <nav className="inicio__nav">{MENU.map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}</nav>
         <details className="inicio__menu">
           <summary aria-label="Menú"><Menu size={22} /></summary>
@@ -350,7 +351,7 @@ export default function Inicio() {
             <Link to="/ingresar">Ingresar</Link>
           </nav>
         </details>
-        <Link to="/ingresar" className="inicio__ingresar"><User size={16} />Ingresar</Link>
+        <Link to="/ingresar" className="inicio__ingresar" aria-label="Ingresar"><User size={16} /><span>Ingresar</span></Link>
         <a href="#solicitar" className="inicio__btn inicio__btn--sm">Solicitar servicio</a>
         <div className="inicio__progreso" aria-hidden="true"><span><Truck size={14} /></span></div>
       </header>
@@ -517,7 +518,7 @@ export default function Inicio() {
       <footer className="inicio__pie">
         <div className="inicio__pie-in">
           <div className="inicio__pie-marca">
-            <span className="inicio__brand"><img src="/logo.png" alt="" width="44" height="44" className="inicio__logo" />Carga Express</span>
+            <span className="inicio__brand"><Marca oscura /></span>
             <p>Transporte que conecta.</p>
             <small><MapPin size={14} />Popayán, Cauca</small>
           </div>
