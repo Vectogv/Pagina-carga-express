@@ -784,6 +784,7 @@
   text-transform: uppercase;
   color: var(--naranja);
 }
+.inicio__pie .inicio__pie-sub { margin-top: 22px; }
 .inicio__pie a { display: flex; align-items: center; gap: 6px; padding: 5px 0; font-size: 14.5px; color: var(--azul-claro); text-decoration: none; overflow-wrap: anywhere; }
 .inicio__pie a:hover { color: var(--blanco); }
 .inicio__pie-marca .inicio__brand { color: var(--blanco); }

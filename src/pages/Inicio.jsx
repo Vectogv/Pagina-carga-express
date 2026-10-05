@@ -329,6 +329,9 @@ export default function Inicio() {
             <Link to="/privacidad">Privacidad</Link>
             <Link to="/terminos">Términos</Link>
             <Link to="/eliminar-cuenta">Eliminar cuenta</Link>
+            <h4 className="inicio__pie-sub">Equipo</h4>
+            <Link to="/admin/login">Panel de administración</Link>
+            <Link to="/moderator/login">Panel de moderadores</Link>
           </nav>
           <div>
             <h4>Contacto</h4>
