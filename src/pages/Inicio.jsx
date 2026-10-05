@@ -139,9 +139,14 @@ function Camion3D() {
       <div className="camion__escena">
         <div className="camion__via"><div className="camion__lineas" /></div>
         <div className="camion__cuerpo">
+          {[22, 128, 204].map((x) => <b key={`l${x}`} className="camion__rueda camion__rueda--lejos" style={{ left: x }} />)}
+          <Caja className="camion__chasis" />
           <Caja className="camion__carga"><span>CARGA EXPRESS</span></Caja>
           <Caja className="camion__cabina" />
-          {[24, 128, 206].map((x) => <b key={x} className="camion__rueda" style={{ left: x }} />)}
+          <Caja className="camion__parachoque" />
+          <Caja className="camion__espejo camion__espejo--cerca" />
+          <Caja className="camion__espejo camion__espejo--lejos" />
+          {[22, 128, 204].map((x) => <b key={x} className="camion__rueda" style={{ left: x }} />)}
         </div>
       </div>
     </div>
@@ -331,9 +336,6 @@ export default function Inicio() {
             <Link to="/privacidad">Privacidad</Link>
             <Link to="/terminos">Términos</Link>
             <Link to="/eliminar-cuenta">Eliminar cuenta</Link>
-            <h4 className="inicio__pie-sub">Equipo</h4>
-            <Link to="/admin/login">Panel de administración</Link>
-            <Link to="/moderator/login">Panel de moderadores</Link>
           </nav>
           <div>
             <h4>Contacto</h4>

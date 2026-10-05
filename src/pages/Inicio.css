@@ -323,13 +323,18 @@
 .caja__x2 { transform: rotateY(-90deg) translateZ(calc(var(--w) / 2)); }
 .caja__y1 { height: var(--d) !important; top: calc((var(--h) - var(--d)) / 2) !important; transform: rotateX(90deg) translateZ(calc(var(--h) / 2)); }
 
-.camion__carga { --w: 190px; --h: 120px; --d: 100px; left: 0; top: 0; }
+/* Furgón: costillas laterales, guardabarros sobre las ruedas y franja de seguridad */
+.camion__carga { --w: 188px; --h: 112px; --d: 100px; left: 0; top: 0; }
 .camion__carga .caja__z1 {
   display: grid;
   place-items: center;
   background:
-    repeating-linear-gradient(-45deg, var(--naranja) 0 9px, var(--blanco) 9px 18px) bottom / 100% 12px no-repeat,
-    linear-gradient(#ffffff, #e4e9f2);
+    radial-gradient(circle at 42px 112px, #1a2130 0 24px, transparent 25px),
+    radial-gradient(circle at 148px 112px, #1a2130 0 24px, transparent 25px),
+    repeating-linear-gradient(-45deg, var(--naranja) 0 9px, var(--blanco) 9px 18px) 0 96px / 100% 10px no-repeat,
+    linear-gradient(#d7dee9, #d7dee9) top / 100% 4px no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 46px, rgba(12, 26, 51, 0.07) 46px 47px),
+    linear-gradient(#ffffff, #e2e8f1);
 }
 .camion__carga .caja__z1 span {
   font-family: var(--f-display);
@@ -347,42 +352,78 @@
 .camion__carga .caja__x1 { background: #ccd4e2; }
 .camion__carga .caja__y1 { background: #f4f7fb; }
 
-.camion__cabina { --w: 62px; --h: 86px; --d: 100px; left: 196px; top: 34px; }
+/* Cabina: ventana y puerta al lado; parabrisas, parrilla y faros al frente; baliza en el techo */
+.camion__cabina { --w: 62px; --h: 94px; --d: 96px; left: 194px; top: 26px; }
 .camion__cabina .caja__z1 {
-  border-radius: 0 14px 0 0;
+  border-radius: 0 12px 0 0;
   background:
-    linear-gradient(160deg, #9cc0ff, #3d6fcf) 12px 10px / 36px 30px no-repeat,
-    linear-gradient(var(--azul), var(--azul-2));
+    radial-gradient(circle at 30px 94px, #1a2130 0 24px, transparent 25px),
+    linear-gradient(160deg, #c3d8ff, #4f7fd9) 24px 10px / 32px 30px no-repeat,
+    linear-gradient(var(--azul-2), var(--azul-2)) 17px 8px / 2px 66px no-repeat,
+    linear-gradient(var(--azul-noche), var(--azul-noche)) 24px 50px / 10px 3px no-repeat,
+    linear-gradient(var(--azul-noche), var(--azul-noche)) bottom / 100% 6px no-repeat,
+    linear-gradient(#2a6af0, var(--azul-2));
 }
 .camion__cabina .caja__z2 { background: var(--azul-2); }
 .camion__cabina .caja__x1 {
   background:
-    radial-gradient(circle, #fff3c4 0 5px, transparent 6px) 10px 58px / 14px 14px no-repeat,
-    radial-gradient(circle, #fff3c4 0 5px, transparent 6px) 76px 58px / 14px 14px no-repeat,
-    linear-gradient(170deg, #a8c6ff, #3462bd) 8px 8px / 84px 34px no-repeat,
-    #1347b4;
+    radial-gradient(ellipse at center, #fff8dc 0 45%, #ffd36b 60%, transparent 70%) 5px 56px / 20px 14px no-repeat,
+    radial-gradient(ellipse at center, #fff8dc 0 45%, #ffd36b 60%, transparent 70%) 71px 56px / 20px 14px no-repeat,
+    repeating-linear-gradient(var(--azul-noche) 0 2px, #2c5fd6 2px 5px) 30px 54px / 36px 20px no-repeat,
+    linear-gradient(170deg, #d2e2ff, #3d6fcf 70%) 6px 8px / 84px 36px no-repeat,
+    linear-gradient(var(--azul-noche), var(--azul-noche)) bottom / 100% 6px no-repeat,
+    linear-gradient(#1f5fe6, #1347b4);
 }
 .camion__cabina .caja__x2 { background: #0d3a94; }
-.camion__cabina .caja__y1 { background: #3d7af0; }
+.camion__cabina .caja__y1 {
+  background:
+    linear-gradient(var(--naranja), var(--naranja)) 48px 32px / 8px 32px no-repeat,
+    linear-gradient(90deg, #3d7af0, #5b90f5);
+}
 
+/* Chasis, parachoques y retrovisores */
+.camion__chasis { --w: 246px; --h: 12px; --d: 76px; left: 8px; top: 110px; }
+.camion__chasis > i { background: #1a2130; }
+.camion__parachoque { --w: 8px; --h: 14px; --d: 100px; left: 254px; top: 104px; }
+.camion__parachoque > i { background: #8a94a6; }
+.camion__parachoque .caja__x1 { background: linear-gradient(#e4e9f1, #a9b3c4); }
+.camion__espejo { --w: 4px; --h: 16px; --d: 4px; left: 250px; top: 40px; }
+.camion__espejo > i { background: var(--azul-noche); }
+.camion__espejo--cerca { transform: translateZ(53px); }
+.camion__espejo--lejos { transform: translateZ(-53px); }
+
+/* Ruedas con grosor: cara con rin + banda trasera */
 .camion__rueda {
   position: absolute;
-  top: 104px;
-  width: 38px;
-  height: 38px;
+  top: 102px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: radial-gradient(circle, #d4d8e0 0 5px, #3a3f4a 6px 11px, #0d0f14 12px);
-  transform: translateZ(51px);
+  transform-style: preserve-3d;
+  background: radial-gradient(circle, #e3e7ee 0 4px, #9aa3b2 5px 9px, #4a505c 10px 12px, #101318 13px);
+  transform: translateZ(50px);
+}
+
+.camion__rueda::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #07090d;
+  transform: translateZ(-8px);
 }
 
 .camion__rueda::after {
   content: '';
   position: absolute;
-  inset: 7px;
+  inset: 8px;
   border-radius: 50%;
-  border: 3px dashed #8d93a0;
+  border: 3px dotted #c9ced8;
   animation: giro 0.5s linear infinite;
 }
+
+.camion__rueda--lejos { transform: translateZ(-50px); background: #101318; }
+.camion__rueda--lejos::before, .camion__rueda--lejos::after { display: none; }
 
 /* ---------- Barra de confianza (flota sobre el borde del hero) ---------- */
 .inicio__confianza {
@@ -799,7 +840,6 @@
   text-transform: uppercase;
   color: var(--naranja);
 }
-.inicio__pie .inicio__pie-sub { margin-top: 22px; }
 .inicio__pie a { display: flex; align-items: center; gap: 6px; padding: 5px 0; font-size: 14.5px; color: var(--azul-claro); text-decoration: none; overflow-wrap: anywhere; }
 .inicio__pie a:hover { color: var(--blanco); }
 .inicio__pie-marca .inicio__brand { color: var(--blanco); }
