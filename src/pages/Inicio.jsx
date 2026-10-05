@@ -466,8 +466,8 @@ export default function Inicio() {
           ))}
         </ul>
 
-        <h3 className="inicio__opiniones-titulo">Opiniones de usuarios</h3>
-        {TESTIMONIOS.length > 0 ? (
+        {TESTIMONIOS.length > 0 && <h3 className="inicio__opiniones-titulo">Opiniones de usuarios</h3>}
+        {TESTIMONIOS.length > 0 && (
           <ul className="inicio__opiniones">
             {TESTIMONIOS.map((t) => (
               <li key={`${t.nombre}-${t.texto.slice(0, 20)}`} className="inicio__card inclina revela">
@@ -482,15 +482,6 @@ export default function Inicio() {
               </li>
             ))}
           </ul>
-        ) : (
-          <div className="inicio__invitacion">
-            <Quote size={30} aria-hidden="true" />
-            <div>
-              <h3>Aquí van a estar las opiniones de nuestros primeros usuarios</h3>
-              <p>Estamos en beta y solo publicamos opiniones reales, con permiso de quien las escribe. ¿Ya enviaste algo o hiciste un viaje con Carga Express? Cuéntanos cómo te fue.</p>
-            </div>
-            <a className="inicio__btn" href={`mailto:${CONTACTO}?subject=${encodeURIComponent('Mi opinión sobre Carga Express')}`}>Enviar mi opinión</a>
-          </div>
         )}
       </section>
 

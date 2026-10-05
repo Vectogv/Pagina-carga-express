@@ -738,20 +738,6 @@
 .inicio__autor { margin: 0; font-size: 14px; color: var(--texto-2); }
 .inicio__autor strong { display: block; color: var(--azul-noche); }
 
-.inicio__invitacion {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-  padding: 28px;
-  border-radius: 20px;
-  background: var(--nube);
-  border: 1px dashed #b7c6df;
-}
-.inicio__invitacion > svg { flex-shrink: 0; color: var(--naranja); }
-.inicio__invitacion > div { flex: 1 1 320px; min-width: 0; }
-.inicio__invitacion h3 { margin: 0 0 6px; font-size: 19px; color: var(--azul-noche); }
-.inicio__invitacion p { margin: 0; line-height: 1.6; color: var(--texto-2); }
 
 .inicio__servicios {
   list-style: none;
