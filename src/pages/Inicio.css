@@ -468,7 +468,7 @@
 
 .inicio__lead { margin: -16px 0 28px; font-size: 17px; line-height: 1.6; color: var(--texto-2); }
 
-.inicio__card, .inicio__parada {
+.inicio__card {
   position: relative;
   padding: 24px;
   background: var(--blanco);
@@ -477,8 +477,8 @@
   transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
-.inicio__card h3, .inicio__parada h3 { margin: 16px 0 6px; font-size: 18px; font-weight: 700; color: var(--azul-noche); }
-.inicio__card p, .inicio__parada p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--texto-2); }
+.inicio__card h3 { margin: 16px 0 6px; font-size: 18px; font-weight: 700; color: var(--azul-noche); }
+.inicio__card p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--texto-2); }
 
 /* Inclinación 3D con el mouse (las variables las pone JS solo con mouse) */
 .inclina {
@@ -516,30 +516,90 @@
 
 .inicio__funciona > * { min-width: 0; }
 
-.inicio__ruta {
-  position: relative;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 14px;
-}
-
-.inicio__ruta::before {
+/* Línea de tiempo: el paso activo se abre, los hechos quedan en azul */
+.inicio__pasos { position: relative; list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.inicio__pasos::before {
   content: '';
   position: absolute;
-  top: 24px;
-  bottom: 24px;
-  left: 43px;
-  width: 4px;
-  background: repeating-linear-gradient(180deg, var(--naranja) 0 16px, transparent 16px 30px);
-  animation: marcha 1s linear infinite;
+  top: 34px;
+  bottom: 34px;
+  left: 37px;
+  width: 2px;
+  background: repeating-linear-gradient(var(--linea) 0 6px, transparent 6px 12px);
 }
 
-.inicio__parada { display: flex; align-items: center; gap: 18px; padding: 20px 22px; }
-.inicio__parada .inicio__icono { position: relative; flex-shrink: 0; }
-.inicio__parada h3 { margin: 0 0 4px; }
-.inicio__parada:hover { border-color: #b7c6df; transform: translateX(6px); }
+.inicio__paso {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.inicio__paso:hover { background: var(--nube); }
+.inicio__paso.is-activo {
+  background: var(--blanco);
+  border-color: var(--linea);
+  box-shadow: 0 22px 44px -26px rgba(10, 34, 89, 0.45);
+}
+
+.inicio__paso-icono {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--blanco);
+  border: 2px solid var(--linea);
+  color: var(--texto-2);
+  transition: background 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s;
+}
+.is-hecho .inicio__paso-icono { background: var(--azul); border-color: var(--azul); color: var(--blanco); }
+.is-activo .inicio__paso-icono {
+  background: var(--naranja);
+  border-color: var(--naranja);
+  color: var(--azul-noche);
+  box-shadow: 0 0 0 6px rgba(255, 122, 26, 0.18);
+}
+
+.inicio__paso-texto { display: grid; min-width: 0; }
+.inicio__paso-texto strong { font-size: 17px; color: var(--azul-noche); }
+.inicio__paso-texto span {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--texto-2);
+  transition: max-height 0.35s ease, opacity 0.35s ease, margin 0.35s ease;
+}
+.is-activo .inicio__paso-texto span { max-height: 80px; margin-top: 4px; opacity: 1; }
+.inicio__paso:not(.is-activo) .inicio__paso-texto strong { color: var(--texto-2); }
+.inicio__paso.is-hecho .inicio__paso-texto strong { color: var(--azul-noche); }
+
+/* Barra de tiempo del paso automático */
+.inicio__paso-barra {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--naranja);
+  transform-origin: left;
+  animation: llenar linear forwards;
+}
 
 /* Mockup de la app hecho en SVG/CSS: nítido a cualquier tamaño */
 .mock { justify-self: center; width: min(100%, 300px); }
@@ -558,30 +618,122 @@
 .mock__mapa { display: block; width: 100%; height: auto; }
 .mock__ruta-viva { animation: flujo 0.8s linear infinite; }
 
-.mock__solicitud {
+/* Pantallas del celular por paso */
+.mock__app {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--azul-noche);
+  background: var(--blanco);
+  border-bottom: 1px solid var(--linea);
+}
+.mock__logo { width: 18px; height: 18px; border-radius: 5px; background: var(--azul); box-shadow: inset 0 -3px 0 var(--naranja); }
+.mock__cambio { position: absolute; inset: 47px 0 0; animation: pantalla 0.45s ease both; }
+.mock__pantalla { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; }
+.mock__pantalla small {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--texto-2);
+}
+
+.mock__form, .mock__ofertas { padding: 16px 14px; background: var(--blanco); }
+.mock__campo { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--linea); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--azul-noche); }
+.mock__campo span { display: grid; }
+.mock__campo em, .mock__etiqueta, .mock__precio em { font-style: normal; font-size: 11px; font-weight: 500; color: var(--texto-2); }
+.mock__dot { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--azul); box-shadow: 0 0 0 4px #e6eefc; }
+.mock__dot--b { background: var(--naranja); box-shadow: 0 0 0 4px #ffeadb; }
+.mock__etiqueta { margin-top: 4px; }
+.mock__chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.mock__chips b { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--linea); font-size: 11.5px; color: var(--texto-2); }
+.mock__chips b.activo { background: var(--azul); border-color: var(--azul); color: var(--blanco); }
+.mock__precio { display: flex; align-items: baseline; justify-content: space-between; margin-top: auto; padding: 12px; border-radius: 12px; background: var(--nube); }
+.mock__precio strong { font-size: 20px; color: var(--azul-noche); font-variant-numeric: tabular-nums; }
+.mock__accion { display: block; padding: 11px; border-radius: 12px; background: var(--naranja); color: var(--azul-noche); font-size: 13px; text-align: center; }
+
+.mock__tarjeta {
   position: absolute;
   left: 10px;
   right: 10px;
   bottom: 10px;
   display: grid;
-  gap: 2px;
+  gap: 4px;
   padding: 12px 14px;
   background: var(--blanco);
   border-radius: 16px;
   box-shadow: 0 10px 24px -12px rgba(10, 34, 89, 0.5);
 }
-.mock__solicitud small { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-2); }
-.mock__solicitud strong { font-size: 16px; color: var(--azul-noche); }
-.mock__solicitud span { font-size: 13px; color: var(--texto-2); font-variant-numeric: tabular-nums; }
-.mock__solicitud b {
-  margin-top: 8px;
-  padding: 9px;
-  border-radius: 10px;
-  background: var(--azul);
-  color: var(--blanco);
-  font-size: 13px;
-  text-align: center;
+.mock__tarjeta strong { font-size: 15px; color: var(--azul-noche); }
+.mock__cargando { display: block; height: 4px; margin-top: 6px; border-radius: 4px; background: linear-gradient(90deg, var(--azul) 0 30%, var(--linea) 30%); background-size: 200% 100%; animation: cargando 1.2s linear infinite; }
+.mock__pin { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--azul-noche); color: var(--azul-claro); font-size: 12px; }
+.mock__pin b { color: var(--blanco); letter-spacing: 0.15em; }
+.mock__bote { transform-box: fill-box; transform-origin: center; animation: bote 1.4s ease-in-out infinite alternate; }
+.mock__bote--2 { animation-delay: -0.5s; }
+.mock__bote--3 { animation-delay: -1s; }
+
+.mock__oferta {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  font-size: 11.5px;
+  color: var(--texto-2);
 }
+.mock__oferta.elegida { border-color: var(--azul); box-shadow: 0 10px 24px -16px rgba(22, 86, 214, 0.7); }
+.mock__oferta .mock__accion { grid-column: 1 / -1; padding: 9px; }
+.mock__avatar { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: #e6eefc; color: var(--azul); font-size: 11px; font-weight: 800; }
+.mock__oferta-info { display: grid; min-width: 0; }
+.mock__oferta-info strong { font-size: 15px; color: var(--azul-noche); font-variant-numeric: tabular-nums; }
+.mock__cal { font-weight: 700; color: var(--naranja-2); }
+
+/* ---------- Cobertura: ciudades en vivo ---------- */
+.inicio__ciudades { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.inicio__ciudades li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--blanco);
+  border: 1px solid var(--linea);
+  font-weight: 700;
+  color: var(--azul-noche);
+}
+.inicio__ciudades small { padding: 2px 8px; border-radius: 999px; background: #e3f6ea; color: #17733b; font-size: 11.5px; font-weight: 700; }
+.inicio__ciudades-pronto { border-style: dashed !important; color: var(--texto-2) !important; }
+.inicio__ciudades-pronto small { background: #fff1e3; color: #b04f00; }
+.inicio__punto { width: 9px; height: 9px; border-radius: 50%; background: #22a55a; box-shadow: 0 0 0 4px rgba(34, 165, 90, 0.18); }
+
+/* ---------- Opiniones ---------- */
+.inicio__opiniones { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.inicio__opiniones .inicio__card { display: grid; gap: 12px; align-content: start; }
+.inicio__comillas { color: var(--naranja); }
+.inicio__estrellas { display: flex; gap: 2px; color: var(--naranja); }
+.inicio__opiniones blockquote { margin: 0; font-size: 16px; line-height: 1.6; color: var(--texto); }
+.inicio__autor { margin: 0; font-size: 14px; color: var(--texto-2); }
+.inicio__autor strong { display: block; color: var(--azul-noche); }
+
+.inicio__invitacion {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 28px;
+  border-radius: 20px;
+  background: var(--nube);
+  border: 1px dashed #b7c6df;
+}
+.inicio__invitacion > svg { flex-shrink: 0; color: var(--naranja); }
+.inicio__invitacion > div { flex: 1 1 320px; min-width: 0; }
+.inicio__invitacion h3 { margin: 0 0 6px; font-size: 19px; color: var(--azul-noche); }
+.inicio__invitacion p { margin: 0; line-height: 1.6; color: var(--texto-2); }
 
 .inicio__servicios {
   list-style: none;
@@ -878,6 +1030,10 @@
 @keyframes flujo { to { stroke-dashoffset: -16; } }
 @keyframes pulso { from { transform: scale(0.4); opacity: 0.7; } to { transform: scale(2.4); opacity: 0; } }
 @keyframes marcha { to { background-position: 0 30px; } }
+@keyframes llenar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes pantalla { from { opacity: 0; transform: translateY(10px); } }
+@keyframes cargando { to { background-position: -100% 0; } }
+@keyframes bote { to { transform: translateY(-4px); } }
 @keyframes piso { to { transform: rotateX(70deg) translateY(90px); } }
 @keyframes avance { to { transform: scaleX(1); } }
 @keyframes viaja { to { translate: calc(100vw - 48px) 0; } }

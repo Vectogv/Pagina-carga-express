@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Truck, MapPin, Tag, Navigation, BadgeCheck, Headset, Package, CalendarClock, Search, Handshake,
-  KeyRound, Mail, ChevronDown, Menu, ArrowRight, User,
+  KeyRound, Mail, ChevronDown, Menu, ArrowRight, User, Quote, Star,
 } from 'lucide-react';
 import './Inicio.css';
 
@@ -52,6 +53,36 @@ const PREGUNTAS = [
   ['¿Cómo descargo la app?', 'Estamos en beta cerrada: únete al grupo de Google y luego abre el enlace de prueba de la app que necesitas.'],
 ];
 
+// Solo opiniones REALES, con permiso de la persona. Vacío = se muestra la invitación.
+// Forma: { nombre: 'Laura G.', rol: 'Cliente', ciudad: 'Popayán', estrellas: 5, texto: '…' }
+const TESTIMONIOS = [];
+
+// Las zonas vienen en minúscula y sin tilde desde la configuración del backend.
+const NOMBRE_CIUDAD = { popayan: 'Popayán' };
+const nombreCiudad = (z) =>
+  NOMBRE_CIUDAD[z.clave] || String(z.nombre || z.clave).replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Ciudades activas, leídas en vivo de la cobertura configurada en el panel. */
+function Ciudades() {
+  const [zonas, setZonas] = useState([{ clave: 'popayan', nombre: 'popayan' }]);
+  useEffect(() => {
+    let vigente = true;
+    fetch('/api/config/coverage')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (vigente && d?.zonas?.length) setZonas(d.zonas); })
+      .catch(() => {});
+    return () => { vigente = false; };
+  }, []);
+  return (
+    <ul className="inicio__ciudades">
+      {zonas.map((z) => (
+        <li key={z.clave}><span className="inicio__punto" />{nombreCiudad(z)}<small>Activa</small></li>
+      ))}
+      <li className="inicio__ciudades-pronto">Más ciudades de Colombia<small>Próximamente</small></li>
+    </ul>
+  );
+}
+
 const MOCKUPS = [
   ['cliente_1', 'Inicio de la app del cliente'],
   ['cliente_3', 'Oferta recibida de un conductor'],
@@ -99,29 +130,140 @@ const Calles = () => (
   </g>
 );
 
-function Mockup() {
+// Camioncito del mapa (SVG), centrado en 0,0.
+const Camioncito = ({ x, y, clase = '' }) => (
+  <g transform={`translate(${x} ${y})`}>
+    <g className={clase}>
+      <rect x="-11" y="-7" width="22" height="14" rx="4" fill="var(--azul-noche)" stroke="#fff" strokeWidth="2" />
+      <rect x="3" y="-4" width="5" height="8" rx="1" fill="var(--naranja)" />
+    </g>
+  </g>
+);
+
+// Ofertas de ejemplo de la interfaz (ilustración de la pantalla, no son opiniones).
+const OFERTAS_DEMO = [['CR', 'Furgón · llega en 6 min', '$ 42.000', 4.9], ['AM', 'Estacas · llega en 9 min', '$ 45.000', 4.7], ['JP', 'Camioneta · llega en 12 min', '$ 48.000', 4.8]];
+
+/** Pantalla de la app que corresponde a cada paso de "Cómo funciona". */
+function Pantalla({ paso }) {
+  if (paso === 0) {
+    return (
+      <div className="mock__pantalla mock__form">
+        <small>Nuevo envío</small>
+        <div className="mock__campo"><i className="mock__dot" /><span><em>Origen</em>Parque Caldas</span></div>
+        <div className="mock__campo"><i className="mock__dot mock__dot--b" /><span><em>Destino</em>C.C. Campanario</span></div>
+        <em className="mock__etiqueta">Vehículo</em>
+        <div className="mock__chips"><b className="activo">Furgón</b><b>Estacas</b><b>Camioneta</b></div>
+        <div className="mock__precio"><em>Tu precio</em><strong>$ 45.000</strong></div>
+        <b className="mock__accion">Publicar envío</b>
+      </div>
+    );
+  }
+  if (paso === 1) {
+    return (
+      <div className="mock__pantalla">
+        <svg className="mock__mapa" viewBox="0 0 260 300">
+          <Calles />
+          <circle cx="130" cy="150" r="78" fill="var(--azul)" fillOpacity="0.1" stroke="var(--azul)" strokeDasharray="5 6" />
+          <circle cx="130" cy="150" r="20" className="inicio__pulso" fill="var(--azul)" />
+          <circle cx="130" cy="150" r="8" fill="var(--azul)" stroke="#fff" strokeWidth="3" />
+          <Camioncito x={74} y={104} clase="mock__bote" />
+          <Camioncito x={196} y={124} clase="mock__bote mock__bote--2" />
+          <Camioncito x={150} y={222} clase="mock__bote mock__bote--3" />
+        </svg>
+        <div className="mock__tarjeta">
+          <small>Buscando conductores</small>
+          <strong>3 conductores a menos de 20 km</strong>
+          <i className="mock__cargando" />
+        </div>
+      </div>
+    );
+  }
+  if (paso === 2) {
+    return (
+      <div className="mock__pantalla mock__ofertas">
+        <small>Ofertas recibidas</small>
+        {OFERTAS_DEMO.map(([ini, det, precio, cal], i) => (
+          <div key={ini} className={`mock__oferta ${i === 0 ? 'elegida' : ''}`}>
+            <span className="mock__avatar">{ini}</span>
+            <span className="mock__oferta-info"><strong>{precio}</strong>{det}</span>
+            <span className="mock__cal">★ {cal}</span>
+            {i === 0 && <b className="mock__accion">Aceptar oferta</b>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="mock__pantalla">
+      <svg className="mock__mapa" viewBox="0 0 260 300">
+        <Calles />
+        <path id="ruta-mock" d={RUTA} stroke="var(--azul)" strokeWidth="5" fill="none" strokeLinecap="round" />
+        <path d={RUTA} className="mock__ruta-viva" stroke="#fff" strokeWidth="2" fill="none" strokeDasharray="6 10" />
+        <circle cx="38" cy="262" r="8" fill="var(--azul)" stroke="#fff" strokeWidth="3" />
+        <path d="M226 44 m-10 -18 a10 10 0 1 1 20 0 c0 8 -10 18 -10 18 s-10 -10 -10 -18z" transform="translate(0 18)" fill="var(--naranja)" />
+        <g>
+          <rect x="-11" y="-7" width="22" height="14" rx="4" fill="var(--azul-noche)" stroke="#fff" strokeWidth="2" />
+          <rect x="3" y="-4" width="5" height="8" rx="1" fill="var(--naranja)" />
+          <animateMotion dur="7s" repeatCount="indefinite" rotate="auto"><mpath href="#ruta-mock" /></animateMotion>
+        </g>
+      </svg>
+      <div className="mock__tarjeta">
+        <small>En camino · en vivo</small>
+        <strong>Tu carga llega en 18 min</strong>
+        <span className="mock__pin">PIN de entrega <b>• • • •</b></span>
+      </div>
+    </div>
+  );
+}
+
+function Mockup({ paso }) {
   return (
     <div className="mock" aria-hidden="true">
       <div className="mock__telefono">
-        <svg className="mock__mapa" viewBox="0 0 260 300">
-          <Calles />
-          <path id="ruta-mock" d={RUTA} stroke="var(--azul)" strokeWidth="5" fill="none" strokeLinecap="round" />
-          <path d={RUTA} className="mock__ruta-viva" stroke="#fff" strokeWidth="2" fill="none" strokeDasharray="6 10" />
-          <circle cx="38" cy="262" r="8" fill="var(--azul)" stroke="#fff" strokeWidth="3" />
-          <path d="M226 44 m-10 -18 a10 10 0 1 1 20 0 c0 8 -10 18 -10 18 s-10 -10 -10 -18z" transform="translate(0 18)" fill="var(--naranja)" />
-          <g>
-            <rect x="-11" y="-7" width="22" height="14" rx="4" fill="var(--azul-noche)" stroke="#fff" strokeWidth="2" />
-            <rect x="3" y="-4" width="5" height="8" rx="1" fill="var(--naranja)" />
-            <animateMotion dur="7s" repeatCount="indefinite" rotate="auto"><mpath href="#ruta-mock" /></animateMotion>
-          </g>
-        </svg>
-        <div className="mock__solicitud">
-          <small>Tu solicitud</small>
-          <strong>Furgón cerrado</strong>
-          <span>12,4 km · 28 min · $ 45.000</span>
-          <b>3 ofertas recibidas</b>
-        </div>
+        <div className="mock__app"><span className="mock__logo" />CargaExpress</div>
+        <div key={paso} className="mock__cambio"><Pantalla paso={paso} /></div>
       </div>
+    </div>
+  );
+}
+
+const DURACION_PASO = 4500;
+
+/** Pasos que avanzan solos y cambian la pantalla del celular; al tocar uno se detiene. */
+function ComoFunciona() {
+  const [paso, setPaso] = useState(0);
+  const [auto, setAuto] = useState(true);
+
+  useEffect(() => {
+    if (!auto || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const id = setInterval(() => setPaso((p) => (p + 1) % PASOS.length), DURACION_PASO);
+    return () => clearInterval(id);
+  }, [auto]);
+
+  return (
+    <div className="inicio__funciona">
+      <div>
+        <span className="inicio__ceja">Cómo funciona</span>
+        <h2>De la solicitud a la entrega</h2>
+        <p className="inicio__lead">Así se ve en la app, paso a paso.</p>
+        <ol className="inicio__pasos">
+          {PASOS.map(([Icono, t, d], i) => (
+            <li key={t}>
+              <button
+                type="button"
+                className={`inicio__paso ${i === paso ? 'is-activo' : ''} ${i < paso ? 'is-hecho' : ''}`}
+                aria-current={i === paso ? 'step' : undefined}
+                onClick={() => { setPaso(i); setAuto(false); }}
+              >
+                <span className="inicio__paso-icono"><Icono size={20} /></span>
+                <span className="inicio__paso-texto"><strong>{t}</strong><span>{d}</span></span>
+                {i === paso && auto && <i key={paso} className="inicio__paso-barra" style={{ animationDuration: `${DURACION_PASO}ms` }} />}
+              </button>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <Mockup paso={paso} />
     </div>
   );
 }
@@ -182,7 +324,7 @@ export default function Inicio() {
       <section id="inicio" className="inicio__hero" onPointerMove={girarCamion}>
         <div className="inicio__piso" aria-hidden="true"><div /></div>
         <div className="inicio__hero-texto">
-          <span className="inicio__tag">Popayán · Beta en Android</span>
+          <span className="inicio__tag">Hecho en Popayán · Beta en Android</span>
           <h1>Mueve tu carga<i>.</i><br /><em>Más fácil<i>.</i> Más rápido<i>.</i></em></h1>
           <p>Conecta con conductores de Carga Express y solicita servicios de transporte desde una plataforma diseñada para simplificar cada viaje.</p>
           <div className="inicio__ctas">
@@ -205,21 +347,7 @@ export default function Inicio() {
       </ul>
 
       <section id="como-funciona" className="inicio__seccion">
-        <div className="inicio__funciona">
-          <div>
-            <span className="inicio__ceja">Cómo funciona</span>
-            <h2>De la solicitud a la entrega</h2>
-            <ol className="inicio__ruta">
-              {PASOS.map(([Icono, t, d]) => (
-                <li key={t} className="inicio__parada revela">
-                  <span className="inicio__icono"><Icono size={20} /></span>
-                  <div><h3>{t}</h3><p>{d}</p></div>
-                </li>
-              ))}
-            </ol>
-          </div>
-          <Mockup />
-        </div>
+        <ComoFunciona />
       </section>
 
       <section id="servicios" className="inicio__seccion">
@@ -276,8 +404,9 @@ export default function Inicio() {
         <div className="inicio__split">
           <div>
             <span className="inicio__ceja">Cobertura</span>
-            <h2>Carga Express Popayán</h2>
-            <p className="inicio__lead">Una plataforma pensada para conectar clientes y conductores de la región.</p>
+            <h2>Locales en Popayán, con mirada nacional</h2>
+            <p className="inicio__lead">Nacimos en Popayán para mover la carga de la región, con conductores que conocen sus calles. Estas son las ciudades donde operamos hoy, y vamos sumando más ciudades de Colombia.</p>
+            <Ciudades />
             <p className="inicio__detalle"><MapPin size={18} />Cuando publicas un envío, lo ven los conductores que están a menos de 20 km.</p>
           </div>
           <svg className="inicio__mapa inclina" viewBox="0 0 260 300" role="img" aria-label="Mapa estilizado de Popayán">
@@ -291,6 +420,36 @@ export default function Inicio() {
             <text x="204" y="77" textAnchor="middle" fill="var(--azul)" fontSize="10" fontWeight="700">Radio de 20 km</text>
           </svg>
         </div>
+      </section>
+
+      <section id="opiniones" className="inicio__seccion">
+        <span className="inicio__ceja">Opiniones</span>
+        <h2>Lo que dicen quienes ya la usan</h2>
+        {TESTIMONIOS.length > 0 ? (
+          <ul className="inicio__opiniones">
+            {TESTIMONIOS.map((t) => (
+              <li key={`${t.nombre}-${t.texto.slice(0, 20)}`} className="inicio__card inclina revela">
+                <Quote size={26} className="inicio__comillas" aria-hidden="true" />
+                {t.estrellas > 0 && (
+                  <span className="inicio__estrellas" aria-label={`${t.estrellas} de 5 estrellas`}>
+                    {Array.from({ length: 5 }, (_, i) => <Star key={i} size={16} fill={i < t.estrellas ? 'currentColor' : 'none'} aria-hidden="true" />)}
+                  </span>
+                )}
+                <blockquote>{t.texto}</blockquote>
+                <p className="inicio__autor"><strong>{t.nombre}</strong>{t.rol} · {t.ciudad}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="inicio__invitacion">
+            <Quote size={30} aria-hidden="true" />
+            <div>
+              <h3>Aquí van a estar las opiniones de nuestros primeros usuarios</h3>
+              <p>Estamos en beta y solo publicamos opiniones reales, con permiso de quien las escribe. ¿Ya enviaste algo o hiciste un viaje con Carga Express? Cuéntanos cómo te fue.</p>
+            </div>
+            <a className="inicio__btn" href={`mailto:${CONTACTO}?subject=${encodeURIComponent('Mi opinión sobre Carga Express')}`}>Enviar mi opinión</a>
+          </div>
+        )}
       </section>
 
       <section id="preguntas" className="inicio__seccion">
