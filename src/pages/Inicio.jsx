@@ -36,11 +36,12 @@ const SERVICIOS = [
   [CalendarClock, 'Servicios programados', 'Programa tus necesidades de transporte.'],
 ];
 
-// [valor, sufijo, etiqueta]: datos reales de la app
+// [valor, sufijo, título, explicación]: reglas reales del backend
+// (comisión 0.1 del precio final, despacho a 20 km, plazo de deuda de 15 días).
 const CIFRAS = [
-  [10, '%', 'de comisión por viaje'],
-  [20, 'km', 'radio de solicitudes cercanas'],
-  [24, 'h', 'para responder por carga reportada'],
+  [10, '%', 'Comisión por viaje', 'Es lo único que cobra Carga Express. En un viaje de $ 45.000 te quedan $ 40.500.'],
+  [20, 'km', 'Viajes cerca de ti', 'Solo te llegan solicitudes que se recogen a menos de 20 km de donde estás.'],
+  [15, 'días', 'Para pagar la comisión', 'El cliente te paga directo a ti. La comisión la pagas después, con 15 días de plazo.'],
 ];
 
 const PREGUNTAS = [
@@ -48,7 +49,7 @@ const PREGUNTAS = [
   ['¿Cómo sé que mi carga llegó?', 'El conductor no puede cerrar el viaje sin tu PIN de 4 dígitos. Si recibe otra persona, le compartes el PIN.'],
   ['¿Puedo programar un envío?', 'Sí. Puedes reservar un envío para otra fecha y hora.'],
   ['¿Qué pasa si hay un problema?', 'Usa el botón SOS durante el viaje o abre un ticket de soporte. Los moderadores de tu zona median en las disputas.'],
-  ['¿Cuánto cobra CargaExpress al conductor?', 'Solo el 10 % de cada viaje.'],
+  ['¿Cuánto cobra CargaExpress al conductor?', 'Solo el 10 % de cada viaje. El cliente te paga directo a ti y la comisión la pagas después, con 15 días de plazo.'],
   ['¿Qué necesito para ser conductor?', 'Ser mayor de 18 años, tener tu vehículo en buen estado y subir tus documentos para que el equipo los verifique.'],
   ['¿Cómo descargo la app?', 'Estamos en beta cerrada: únete al grupo de Google y luego abre el enlace de prueba de la app que necesitas.'],
 ];
@@ -62,9 +63,9 @@ const NOMBRE_CIUDAD = { popayan: 'Popayán' };
 const nombreCiudad = (z) =>
   NOMBRE_CIUDAD[z.clave] || String(z.nombre || z.clave).replace(/\b\w/g, (c) => c.toUpperCase());
 
-/** Ciudades activas, leídas en vivo de la cobertura configurada en el panel. */
-function Ciudades() {
-  const [zonas, setZonas] = useState([{ clave: 'popayan', nombre: 'popayan' }]);
+/** Cobertura explicada en 3 puntos. Ciudades y radio salen en vivo de la configuración del panel. */
+function Cobertura() {
+  const [zonas, setZonas] = useState([{ clave: 'popayan', nombre: 'popayan', radio: 40 }]);
   useEffect(() => {
     let vigente = true;
     fetch('/api/config/coverage')
@@ -73,12 +74,35 @@ function Ciudades() {
       .catch(() => {});
     return () => { vigente = false; };
   }, []);
+
   return (
-    <ul className="inicio__ciudades">
-      {zonas.map((z) => (
-        <li key={z.clave}><span className="inicio__punto" />{nombreCiudad(z)}<small>Activa</small></li>
-      ))}
-      <li className="inicio__ciudades-pronto">Más ciudades de Colombia<small>Próximamente</small></li>
+    <ul className="inicio__cobertura">
+      <li>
+        <span className="inicio__icono"><MapPin size={20} /></span>
+        <div>
+          <strong>Dónde operamos</strong>
+          <ul className="inicio__ciudades">
+            {zonas.map((z) => <li key={z.clave}><span className="inicio__punto" />{nombreCiudad(z)}<small>Activa</small></li>)}
+          </ul>
+        </div>
+      </li>
+      <li>
+        <span className="inicio__icono"><Navigation size={20} /></span>
+        <div>
+          <strong>Quién recibe tu envío</strong>
+          <p>Los conductores que están a menos de 20 km del punto de recogida. Por eso llegan rápido.</p>
+        </div>
+      </li>
+      <li>
+        <span className="inicio__icono"><Truck size={20} /></span>
+        <div>
+          <strong>Hasta dónde llevamos</strong>
+          <p>
+            Recogemos y entregamos dentro de la zona de cada ciudad
+            {zonas[0]?.radio ? `: unos ${Math.round(zonas[0].radio)} km a la redonda de ${nombreCiudad(zonas[0])}` : ''}.
+          </p>
+        </div>
+      </li>
     </ul>
   );
 }
@@ -385,14 +409,15 @@ export default function Inicio() {
             <small className="inicio__nota">Beta cerrada: primero únete al <a href={GRUPO} target="_blank" rel="noreferrer">grupo de prueba</a> con tu cuenta de Google.</small>
           </div>
           <dl className="inicio__cifras">
-            {CIFRAS.map(([n, suf, t]) => (
+            {CIFRAS.map(([n, suf, t, detalle]) => (
               <div key={t} className="inclina">
                 <dt>{t}</dt>
-                <dd>
+                <dd className="inicio__cifra">
                   <span className="contador" style={{ '--n': n }} aria-hidden="true" />
                   <span className="inicio__sr">{n}</span>
                   <small>{suf}</small>
                 </dd>
+                <dd className="inicio__cifra-detalle">{detalle}</dd>
               </div>
             ))}
           </dl>
@@ -405,9 +430,8 @@ export default function Inicio() {
           <div>
             <span className="inicio__ceja">Cobertura</span>
             <h2>Locales en Popayán, con mirada nacional</h2>
-            <p className="inicio__lead">Nacimos en Popayán para mover la carga de la región, con conductores que conocen sus calles. Estas son las ciudades donde operamos hoy, y vamos sumando más ciudades de Colombia.</p>
-            <Ciudades />
-            <p className="inicio__detalle"><MapPin size={18} />Cuando publicas un envío, lo ven los conductores que están a menos de 20 km.</p>
+            <p className="inicio__lead">Nacimos en Popayán y trabajamos con conductores de aquí, que conocen sus calles. Así funciona la cobertura:</p>
+            <Cobertura />
           </div>
           <svg className="inicio__mapa inclina" viewBox="0 0 260 300" role="img" aria-label="Mapa estilizado de Popayán">
             <Calles />
