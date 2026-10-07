@@ -293,3 +293,32 @@
   .page-header { align-items: flex-start; }
   .page-header__actions { width: 100%; }
 }
+
+/* ── Responsive total: ajustes táctiles y de desborde en móvil ───── */
+@media (max-width: 900px) {
+  /* Objetivos táctiles de al menos 40 px */
+  .btn--sm, .btn--md, .btn--lg { min-height: 40px; height: auto; }
+  .btn--icon { width: 40px; height: 40px; }
+  .topbar__menu { width: 40px; height: 40px; }
+  .topbar__select { height: 40px; max-width: 46vw; }
+  .tabs__trigger { min-height: 40px; }
+  .check input, .dispute-check input { width: 20px; height: 20px; }
+  .tabs__list { -webkit-overflow-scrolling: touch; }
+}
+
+@media (max-width: 640px) {
+  /* Avisos (toasts) a todo el ancho */
+  .toast-container { left: var(--space-3); right: var(--space-3); bottom: var(--space-3); }
+  .toast { min-width: 0; max-width: none; width: 100%; }
+
+  /* Textos con tope fijo: usan el ancho disponible */
+  .avisos__content, .dispute-reason-preview, .em-truncate { max-width: 100%; }
+  .dashboard__city, .trips-filter { min-width: 0; width: 100%; }
+
+  /* Evita que palabras largas, correos o ids rompan el ancho */
+  .app-content { overflow-wrap: anywhere; }
+  .app-content img, .app-content video, .app-content iframe { max-width: 100%; }
+  .echat__msg, .em-msg__bubble { max-width: 92%; }
+  .echat__messages, .em-chat { max-height: 50dvh; }
+  .result-list { max-height: 40dvh; }
+}
