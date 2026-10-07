@@ -130,7 +130,7 @@
 .cli-activo__cabeza small { color: var(--texto-2); font-weight: 600; }
 .cli-activo__cabeza p { margin: 4px 0 0; color: var(--texto-2); }
 
-.cli-pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.cli-pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .cli-pasos li {
   position: relative;
   padding-top: 14px;
@@ -189,7 +189,7 @@
 .cli-eta strong { color: var(--azul-noche); font-size: 17px; }
 
 /* isolation: los paneles de Leaflet (z-index 400) no tapan la barra fija */
-.cli-mapa { position: relative; z-index: 0; isolation: isolate; height: clamp(260px, 42vh, 420px); border-radius: 10px; overflow: hidden; background: #e8eef7; }
+.cli-mapa { position: relative; z-index: 0; isolation: isolate; height: clamp(300px, 62vh, 640px); border-radius: 10px; overflow: hidden; background: #e8eef7; }
 
 .cli-pin-mapa {
   width: 100%;
@@ -202,9 +202,12 @@
   color: #fff;
   box-shadow: 0 4px 12px rgba(10, 34, 89, 0.35);
 }
-.cli-pin-mapa--origen { background: #1656d6; }
-.cli-pin-mapa--destino { background: #ec6400; }
-.cli-pin-mapa--conductor { background: #0a2259; border-radius: 12px; }
+.cli-pin-mapa--origen { background: #22a55a; }
+.cli-pin-mapa--destino { background: #dc2626; }
+.cli-veh-icono { transition: transform 1s linear; }
+.leaflet-zoom-anim .cli-veh-icono { transition: none; }
+.cli-veh { width: 30px; height: 48px; transition: transform .6s ease; filter: drop-shadow(0 3px 4px rgba(10, 34, 89, .35)); }
+.cli-veh svg { display: block; }
 
 @media (prefers-reduced-motion: reduce) {
   .cli-vivo--on::before { animation: none; }
@@ -296,8 +299,24 @@
   .cli__nav { order: 3; width: 100%; overflow-x: auto; }
   .cli__usuario > span:not(.cli-vivo) { display: none; }
   .cli__usuario button span { display: none; }
-  .cli-pasos { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 14px; }
   .cli-viaje summary { flex-wrap: wrap; }
   .cli-viaje__lado { grid-auto-flow: column; align-items: center; justify-items: start; }
   .cli-msg { max-width: 90%; }
+}
+
+/* ---------- Seguimiento: mapa + tarjeta ---------- */
+.cli-activo__layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
+.cli-activo__layout .cli-card--mapa { position: sticky; top: 76px; }
+.cli-mapa__nota { margin: 0 4px 2px; font-size: 14px; }
+.cli-eta.cli-card { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 0; }
+.cli-eta small { color: var(--texto-2); font-weight: 600; }
+.cli-conductor__avatar { font-weight: 800; font-size: 16px; background: var(--azul-noche); color: #fff; border-radius: 50%; }
+.cli-conductor__veh { display: inline-block; width: 14px; height: 22px; margin-right: 4px; vertical-align: middle; }
+.cli-conductor__veh svg { width: 100%; height: 100%; }
+.cli-placa { padding: 3px 12px; border: 2px solid #1a1a1a; border-radius: 6px; background: #fcd116; color: #111; font: 800 15px/1.2 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: 0.1em; }
+.cli-vacio__icono { width: 72px; height: 72px; display: grid; place-items: center; border-radius: 50%; background: #e6eefc; }
+@media (max-width: 860px) {
+  .cli-activo__layout { grid-template-columns: 1fr; }
+  .cli-activo__layout .cli-card--mapa { position: static; }
+  .cli-mapa { height: 48dvh; min-height: 280px; }
 }

@@ -8,6 +8,7 @@ import { errorMessage, formatCurrency, formatDateTime, fullName } from '../../ut
 import useSondeo from '../../hooks/useSondeo';
 import { ClienteSocketProvider, useClienteSocket, useEventos } from '../../contexts/ClienteSocketContext';
 import MapaViaje from './MapaViaje';
+import { vehiculoSvg } from './VehiculoMarcador';
 import Marca from '../../components/Marca/Marca';
 import './ClientePage.css';
 
@@ -48,10 +49,10 @@ function Marco() {
 }
 
 // Avance del viaje: cada estado del backend cae en uno de estos pasos.
-const PASOS = ['Buscando conductor', 'Conductor asignado', 'En camino a recoger', 'En el origen', 'En ruta', 'Entregado'];
+const PASOS = ['Buscando conductor', 'En camino', 'En curso', 'Entregado'];
 const PASO_DE = {
-  creado: 0, buscando_conductor: 0, reservado: 0, aceptado: 1, conductor_en_camino: 2,
-  conductor_llegada: 3, en_curso: 4, sos: 4, entregado: 5, esperando_confirmacion: 5, pendiente_confirmacion: 5,
+  creado: 0, buscando_conductor: 0, reservado: 0, aceptado: 0, conductor_en_camino: 1,
+  conductor_llegada: 1, en_curso: 2, sos: 2, entregado: 3, esperando_confirmacion: 3, pendiente_confirmacion: 3,
 };
 
 const precioDe = (v) => v.precioFinal ?? v.precioEstimado;
@@ -65,16 +66,21 @@ function Ruta({ viaje }) {
   );
 }
 
+const iniciales = (n) => String(n || 'C').split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+
 function Conductor({ c }) {
   if (!c) return null;
   return (
     <div className="cli-conductor">
-      <span className="cli-conductor__avatar"><Truck size={20} /></span>
+      <span className="cli-conductor__avatar">{iniciales(c.nombre)}</span>
       <div>
         <strong>{c.nombre || 'Conductor'}</strong>
-        <span>{[c.tipoVehiculo, c.placa].filter(Boolean).join(' · ')}</span>
         {Number(c.calificacion) > 0 && <span><Star size={13} /> {Number(c.calificacion).toFixed(1)}</span>}
+        {c.tipoVehiculo && (
+          <span><span className="cli-conductor__veh" dangerouslySetInnerHTML={{ __html: vehiculoSvg(c.tipoVehiculo) }} />{c.tipoVehiculo}</span>
+        )}
       </div>
+      {c.placa && <span className="cli-placa" title="Placa">{c.placa}</span>}
       {c.telefono && <a className="cli-btn cli-btn--suave" href={`tel:${c.telefono}`}><Phone size={16} />Llamar</a>}
     </div>
   );
@@ -97,21 +103,20 @@ export function ViajeActivo() {
       });
   }, []);
   // El socket avisa al instante; el sondeo solo cubre si la conexión se cae.
-  useSondeo(cargar, 30000);
+  useSondeo(cargar, 20000);
 
   // Ruta + posición del conductor: se pide al cambiar de fase y luego llega por socket.
   const [ruta, setRuta] = useState(null);
   const viajeId = viaje?.id;
   const estado = viaje?.estado;
   const conConductor = Boolean(viaje?.conductor);
-  useEffect(() => {
-    if (!viajeId || !conConductor) return undefined;
-    let vigente = true;
-    clienteApi.ruta(viajeId)
-      .then(({ data }) => { if (vigente) setRuta(data); })
-      .catch(() => { if (vigente) setRuta(null); });
-    return () => { vigente = false; };
-  }, [viajeId, estado, conConductor]);
+  const cargarRuta = useCallback(() => {
+    if (!viajeId || !conConductor) return;
+    clienteApi.ruta(viajeId).then(({ data }) => setRuta(data)).catch(() => {});
+  }, [viajeId, conConductor]);
+  // Respaldo cada 8 s: el socket muere en segundo plano. Al cambiar de fase se pide de inmediato.
+  useSondeo(cargarRuta, 8000);
+  useEffect(() => { cargarRuta(); }, [estado, cargarRuta]);
 
   const actualizarRuta = (p) => {
     if (p?.tripId && String(p.tripId) !== String(viajeId)) return;
@@ -130,7 +135,7 @@ export function ViajeActivo() {
   if (!viaje) {
     return (
       <section className="cli-vacio">
-        <Package size={28} />
+        <span className="cli-vacio__icono"><Truck size={34} /></span>
         <h1>No tienes un viaje en curso</h1>
         <p>Cuando publiques un envío desde la app Carga Express, aquí verás su estado en tiempo real.</p>
         <Link to="/cliente/viajes" className="cli-btn">Ver mis viajes</Link>
@@ -163,31 +168,25 @@ export function ViajeActivo() {
         </ol>
       )}
 
-      <div className="cli-card cli-card--mapa">
-        {conConductor && ruta?.minutos != null && (
-          <p className="cli-eta">
-            <span className="cli-vivo cli-vivo--on">En vivo</span>
-            {viaje.estado === 'en_curso' ? 'Llega al destino en ' : 'El conductor llega a recoger en '}
-            <strong>{Math.max(1, Math.round(ruta.minutos))} min</strong>
-            {ruta.restanteM != null && <> · {(ruta.restanteM / 1000).toFixed(1).replace('.', ',')} km</>}
-          </p>
-        )}
-        <MapaViaje viaje={viaje} conductor={conConductor ? ruta?.conductor : null} ruta={conConductor ? ruta?.coords : null} />
-      </div>
-
-      <div className="cli-activo__grid">
-        <div className="cli-card">
-          <h2>Ruta</h2>
-          <Ruta viaje={viaje} />
-          <dl className="cli-datos">
-            {viaje.carga && <div><dt>Carga</dt><dd>{viaje.carga}</dd></div>}
-            {precio != null && <div><dt>Precio</dt><dd>{formatCurrency(precio)}</dd></div>}
-            {viaje.tiempoEstimadoMinutos && <div><dt>Tiempo estimado</dt><dd>{viaje.tiempoEstimadoMinutos} min</dd></div>}
-            <div><dt>Solicitado</dt><dd>{formatDateTime(viaje.createdAt)}</dd></div>
-          </dl>
+      <div className="cli-activo__layout">
+        <div className="cli-card cli-card--mapa">
+          <MapaViaje viaje={viaje} conductor={conConductor ? ruta?.conductor : null} ruta={conConductor ? ruta?.coords : null} />
+          {!conConductor && <p className="cli-suave cli-mapa__nota">Cuando un conductor acepte tu envío, lo verás moverse aquí.</p>}
         </div>
 
         <div className="cli-columna">
+          {conConductor && ruta?.minutos != null && (
+            <div className="cli-card cli-eta">
+              <span className="cli-vivo cli-vivo--on">En vivo</span>
+              <span>{viaje.estado === 'en_curso' ? 'Llega al destino en' : 'El conductor llega a recoger en'}</span>
+              <strong>{Math.max(1, Math.round(ruta.minutos))} min</strong>
+              {ruta.restanteM != null && <small>{(ruta.restanteM / 1000).toFixed(1).replace('.', ',')} km</small>}
+            </div>
+          )}
+          <div className="cli-card">
+            <h2>Conductor</h2>
+            {viaje.conductor ? <Conductor c={viaje.conductor} /> : <p className="cli-suave">Aún no hay conductor asignado.</p>}
+          </div>
           {viaje.pinEntrega && (
             <div className="cli-card cli-pin">
               <h2><KeyRound size={18} />PIN de entrega</h2>
@@ -196,8 +195,14 @@ export function ViajeActivo() {
             </div>
           )}
           <div className="cli-card">
-            <h2>Conductor</h2>
-            {viaje.conductor ? <Conductor c={viaje.conductor} /> : <p className="cli-suave">Aún no hay conductor asignado.</p>}
+            <h2>Ruta</h2>
+            <Ruta viaje={viaje} />
+            <dl className="cli-datos">
+              {viaje.carga && <div><dt>Carga</dt><dd>{viaje.carga}</dd></div>}
+              {precio != null && <div><dt>Precio</dt><dd>{formatCurrency(precio)}</dd></div>}
+              {viaje.tiempoEstimadoMinutos && <div><dt>Tiempo estimado</dt><dd>{viaje.tiempoEstimadoMinutos} min</dd></div>}
+              <div><dt>Solicitado</dt><dd>{formatDateTime(viaje.createdAt)}</dd></div>
+            </dl>
           </div>
           <button type="button" className="cli-btn cli-btn--borde" onClick={() => ayuda(navigate, viaje)}>
             <LifeBuoy size={18} />¿Un problema con este viaje? Escribe a soporte
@@ -243,7 +248,7 @@ export function MisViajes() {
 
       {viajes.length === 0 ? (
         <div className="cli-vacio">
-          <Package size={28} />
+          <span className="cli-vacio__icono"><Package size={30} /></span>
           <h1>Todavía no tienes viajes</h1>
           <p>Tus envíos aparecerán aquí cuando los publiques desde la app.</p>
         </div>
