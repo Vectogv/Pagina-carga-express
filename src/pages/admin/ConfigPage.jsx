@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
-import { Image, MapPin, Wallet } from 'lucide-react';
+import { Image, MapPin, Search, Wallet } from 'lucide-react';
 import {
   PageHeader, Tabs, TabsList, TabsTrigger, TabsContent, Toast, ToastContainer,
 } from '../../components/ui';
 import GeneralConfig from './config/GeneralConfig';
 import CoverageConfig from './config/CoverageConfig';
 import BannerConfig from './config/BannerConfig';
+import EscaleraConfig from './config/EscaleraConfig';
 import './config/ConfigPage.css';
 
 export default function ConfigPage() {
@@ -28,11 +29,13 @@ export default function ConfigPage() {
           <TabsTrigger value="general"><Wallet size={14} aria-hidden="true" /> Pagos</TabsTrigger>
           <TabsTrigger value="coverage"><MapPin size={14} aria-hidden="true" /> Cobertura</TabsTrigger>
           <TabsTrigger value="banner"><Image size={14} aria-hidden="true" /> Banner</TabsTrigger>
+          <TabsTrigger value="escalera"><Search size={14} aria-hidden="true" /> Búsqueda</TabsTrigger>
         </TabsList>
         <div className="config__content">
           <TabsContent value="general"><GeneralConfig notify={notify} /></TabsContent>
           <TabsContent value="coverage"><CoverageConfig notify={notify} /></TabsContent>
           <TabsContent value="banner"><BannerConfig notify={notify} /></TabsContent>
+          <TabsContent value="escalera"><EscaleraConfig notify={notify} /></TabsContent>
         </div>
       </Tabs>
 
