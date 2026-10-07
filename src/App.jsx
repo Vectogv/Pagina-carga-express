@@ -21,6 +21,7 @@ const admin = {
   clients: lazy(() => import('./pages/admin/ClientsPage')),
   moderators: lazy(() => import('./pages/admin/ModeratorsPage')),
   drivers: lazy(() => import('./pages/admin/DriversPage')),
+  'mapa-conductores': lazy(() => import('./pages/admin/DriversMapPage')),
   trips: lazy(() => import('./pages/admin/TripsPage')),
   earnings: lazy(() => import('./pages/admin/EarningsPage')),
   commissions: lazy(() => import('./pages/admin/CommissionsPage')),

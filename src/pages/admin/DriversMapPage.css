@@ -1,0 +1,9 @@
+.dmap { display: flex; flex-direction: column; height: calc(100dvh - 120px); min-height: 420px; }
+.dmap__count { font-weight: 600; margin: 0; }
+.dmap__check { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.dmap__map { flex: 1; min-height: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--border, #e2e8f0); }
+.dmap__map .leaflet-container { height: 100%; width: 100%; }
+.dmap__pin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.dmap__pin--on { background: #16a34a; }
+.dmap__pin--off { background: #94a3b8; }
+@media (max-width: 720px) { .dmap { height: calc(100dvh - 90px); } .dmap__check { white-space: normal; } }
