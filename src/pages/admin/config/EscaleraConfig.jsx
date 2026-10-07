@@ -6,16 +6,21 @@ import { Card, Input, Button, Alert } from '../../../components/ui';
 
 const DEFAULTS = {
   radioInicialKm: 3, minAmpliar: 3, radioAmpliadoKm: 8, minSugerencia: 5, minCierre: 20,
-  minRespuestaCierre: 10, minSeguirEsperando: 20, pctSugerenciaMin: 15, pctSugerenciaMax: 30,
+  minRespuestaCierre: 10, minSeguirEsperando: 20,
   etapas: { ampliar: true, sugerencia: true, cierre: true },
+  tarifaKm: { piaggio: 0, furgon: 0, camioneta: 0 },
 };
-const NUM_KEYS = Object.keys(DEFAULTS).filter((k) => k !== 'etapas');
+const NUM_KEYS = Object.keys(DEFAULTS).filter((k) => k !== 'etapas' && k !== 'tarifaKm');
+const TARIFAS = [['piaggio', 'Piaggio'], ['furgon', 'Furgón sellado'], ['camioneta', 'Camioneta']];
+const MAX_TARIFA = 100000;
 const MAX_KM = 20; // tope de ofertas del servidor
 
 /** Mezcla lo que llega del servidor con los valores por defecto. */
 function normalize(raw) {
   const r = raw && typeof raw === 'object' ? raw : {};
   const out = { etapas: { ...DEFAULTS.etapas, ...(r.etapas || {}) } };
+  out.tarifaKm = {};
+  TARIFAS.forEach(([k]) => { out.tarifaKm[k] = r.tarifaKm?.[k] ?? 0; });
   NUM_KEYS.forEach((k) => { out[k] = r[k] ?? DEFAULTS[k]; });
   return out;
 }
@@ -29,7 +34,11 @@ function validate(f) {
   const n = (k) => Number(f[k]);
   if (n('radioInicialKm') > MAX_KM || n('radioAmpliadoKm') > MAX_KM) return `Los radios no pueden pasar de ${MAX_KM} km.`;
   if (n('radioAmpliadoKm') <= n('radioInicialKm')) return 'El radio ampliado debe ser mayor que el radio inicial.';
-  if (n('pctSugerenciaMin') >= n('pctSugerenciaMax')) return 'El porcentaje mínimo debe ser menor que el máximo.';
+  for (const [k, label] of TARIFAS) {
+    const t = f.tarifaKm[k];
+    const v = Number(t);
+    if (t === '' || !Number.isInteger(v) || v < 0 || v > MAX_TARIFA) return `El valor por km de ${label} debe ser un entero entre 0 y ${MAX_TARIFA}.`;
+  }
   if (!(n('minAmpliar') < n('minSugerencia') && n('minSugerencia') < n('minCierre'))) {
     return 'Los tiempos deben ir en orden: ampliar < sugerencia < cierre.';
   }
@@ -68,6 +77,7 @@ export default function EscaleraConfig({ notify }) {
   useEffect(() => { fetchCurrent(); }, [fetchCurrent]);
 
   const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const handleTarifa = (e) => setForm((p) => ({ ...p, tarifaKm: { ...p.tarifaKm, [e.target.name]: e.target.value } }));
   const handleStage = (e) => setForm((p) => ({ ...p, etapas: { ...p.etapas, [e.target.name]: e.target.checked } }));
 
   const error = validate(form);
@@ -76,7 +86,8 @@ export default function EscaleraConfig({ notify }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (error) { notify(error, 'danger'); return; }
-    const escalera = { etapas: form.etapas };
+    const escalera = { etapas: form.etapas, tarifaKm: {} };
+    TARIFAS.forEach(([k]) => { escalera.tarifaKm[k] = Number(form.tarifaKm[k]); });
     NUM_KEYS.forEach((k) => { escalera[k] = Number(form[k]); });
     setSaving(true);
     try {
@@ -149,9 +160,22 @@ export default function EscaleraConfig({ notify }) {
 
           <Card title="Sugerencia de precio" description="Cuando nadie ofertó, proponemos subir lo que se paga.">
             <div className="form-grid">
-              {num('minSugerencia', 'Sugerir a los', `A los ${f.minSugerencia} min sin ofertas, sugerimos subir el precio.`, 'min')}
-              {num('pctSugerenciaMin', 'Subida mínima', 'Porcentaje más bajo que sugerimos.', '%')}
-              {num('pctSugerenciaMax', 'Subida máxima', 'Porcentaje más alto que sugerimos. Mayor que el mínimo.', '%')}
+              {num('minSugerencia', 'Sugerir a los', `A los ${f.minSugerencia} min sin ofertas, sugerimos un precio.`, 'min')}
+              {TARIFAS.map(([k, label]) => (
+                <Input
+                  key={k}
+                  label={`Valor por km: ${label} ($)`}
+                  name={k}
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  max={MAX_TARIFA}
+                  step="1"
+                  value={f.tarifaKm[k]}
+                  onChange={handleTarifa}
+                  helperText="El valor sugerido = km del viaje × este valor. 0 = no sugerir para este vehículo."
+                />
+              ))}
             </div>
           </Card>
 
