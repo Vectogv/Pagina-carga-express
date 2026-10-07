@@ -142,3 +142,7 @@ export const registerUser = (data) => api.post('/api/auth/register', data)
 // Listados dedicados de comunicados y encuestas (params: page, limit). Respuesta: array plano.
 export const getAdminComunicados = (params) => api.get(`${BASE}/comunicados`, { params })
 export const getAdminEncuestas = (params) => api.get(`${BASE}/encuestas`, { params })
+
+// Gerencia: pendientes de moderadores por categoria/zona (?zona=) y comunicacion propia {titulo, mensaje, destino: conductores|moderadores, zona?}
+export const getPendientes = (params) => api.get(`${BASE}/pendientes`, { params })
+export const sendComunicacion = (data) => api.post(`${BASE}/comunicacion`, data)

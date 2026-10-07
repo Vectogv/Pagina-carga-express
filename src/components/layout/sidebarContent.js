@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, TrendingUp, BadgeCheck,
   Flag, Scale, Siren, CircleX, CreditCard, Megaphone, ChartColumn, Pin, MessagesSquare,
   ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, LifeBuoy,
-  CalendarClock, Gavel, ChartLine,
+  CalendarClock, Gavel, ChartLine, Send, ListChecks,
 } from 'lucide-react';
 
 // Navegación agrupada. Cada item: { icon, label, to, end? }
@@ -15,6 +15,7 @@ export const adminNav = [
   {
     title: 'Requiere atención',
     items: [
+      { icon: ListChecks, label: 'Pendientes de moderadores', to: '/admin/pendientes' },
       { icon: Siren, label: 'Emergencias', to: '/admin/emergencies' },
       { icon: Scale, label: 'Disputas', to: '/admin/disputes' },
       { icon: CircleX, label: 'Solicitudes de cancelación', to: '/admin/cancellation-requests' },
@@ -52,6 +53,7 @@ export const adminNav = [
     items: [
       { icon: MessagesSquare, label: 'Conversatorio', to: '/admin/conversations' },
       { icon: Pin, label: 'Avisos', to: '/admin/avisos' },
+      { icon: Send, label: 'Enviar comunicación', to: '/admin/comunicacion' },
       { icon: Megaphone, label: 'Comunicados', to: '/admin/comunicados' },
       { icon: ChartColumn, label: 'Encuestas', to: '/admin/encuestas' },
     ],
