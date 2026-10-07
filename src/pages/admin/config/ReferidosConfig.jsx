@@ -93,7 +93,7 @@ export default function ReferidosConfig({ notify }) {
     setSaving(true);
     try {
       await updateConfig({ referidos });
-      notify('Referidos actualizado correctamente');
+      notify('Configuración de referidos guardada');
       fetchCurrent();
     } catch (err) {
       notify(errorMessage(err, 'Error al guardar la configuración'), 'danger');

@@ -5,6 +5,9 @@ import { errorMessage, formatDate, formatCurrency, toList } from '../../utils/fo
 import { PageHeader, DataTable, ConfirmDialog, StatusBadge, Button } from '../../components/ui';
 
 // GET /api/admin/referidos -> {referidos, comisionNoCobradaMes, topeMensualPesos}
+// Mismas palabras que la app del conductor (referidos_screen.dart).
+const ETIQUETA = { pendiente: 'En curso', activo: 'Cumplido', vencido: 'Vencido', anulado: 'Anulado' };
+
 export default function ReferidosPage() {
   const [rows, setRows] = useState([]);
   const [resumen, setResumen] = useState({ comisionNoCobradaMes: 0, topeMensualPesos: 0 });
@@ -52,7 +55,7 @@ export default function ReferidosPage() {
       ),
     },
     { key: 'invitado', label: 'Invitado', render: (v) => v?.nombre || '—' },
-    { key: 'estado', label: 'Estado', render: (v) => <StatusBadge status={v} /> },
+    { key: 'estado', label: 'Estado', render: (v) => <StatusBadge status={v} label={ETIQUETA[v]} /> },
     { key: 'viajes', label: 'Progreso', render: (v, row) => `${v ?? 0} de ${row.meta ?? 0}` },
     { key: 'venceEn', label: 'Vence', render: (v) => <span className="text-muted nowrap">{formatDate(v)}</span> },
     {
@@ -61,7 +64,7 @@ export default function ReferidosPage() {
       render: (v) => (v?.length
         ? v.map((c, i) => (
           <div key={i} className="text-muted">
-            {c.tipo} {c.pct}% · {c.usosRestantes} usos · {c.estado}
+            {c.tipo === 'invitado' ? 'Invitado' : 'Quien invita'}: {c.pct ? `${c.pct} % de comisión` : 'sin comisión'} · quedan {c.usosRestantes} viajes{c.estado === 'anulado' ? ' · anulado' : ''}
           </div>
         ))
         : '—'),
