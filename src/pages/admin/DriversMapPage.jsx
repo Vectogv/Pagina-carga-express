@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import L from 'leaflet';
-import { MapContainer, Marker, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import { RefreshCw } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { getDrivers, getAllPages } from '../../api/admin';
@@ -112,13 +112,13 @@ export default function DriversMapPage() {
           <Encuadre puntos={visibles.map((x) => x.pos)} />
           {visibles.map(({ d, pos }) => (
             <Marker key={d.id} position={pos} icon={ICONOS[!!d.online]}>
-              <Tooltip direction="top" offset={[0, -8]}>
+              <Popup>
                 <strong>{driverName(d)}</strong><br />
                 Placa: {d.placa || '—'}<br />
                 Vehículo: {d.tipoVehiculo || '—'}<br />
                 Ciudad: {ciudadLabel(d.ciudad)}<br />
                 {d.online ? 'Conectado' : 'Desconectado'}
-              </Tooltip>
+              </Popup>
             </Marker>
           ))}
         </MapContainer>
