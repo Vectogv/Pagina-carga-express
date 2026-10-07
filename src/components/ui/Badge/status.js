@@ -40,6 +40,8 @@ const STATUS = {
   suspendido: ['Suspendido', 'danger'],
   suspension_por_pago: ['Suspendido por pago', 'danger'],
   pagado: ['Pagado', 'success'],
+  vencido: ['Vencido', 'neutral'],
+  anulado: ['Anulado', 'danger'],
 };
 
 const humanize = (s) => String(s).replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
