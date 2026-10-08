@@ -33,6 +33,7 @@ function Marco() {
         <nav className="cli__nav">
           <NavLink to="/cliente" end>Mi viaje</NavLink>
           <NavLink to="/cliente/viajes">Mis viajes</NavLink>
+          {user?.empresa?.esDueno && <NavLink to="/cliente/empresa">Mi empresa</NavLink>}
           <NavLink to="/cliente/soporte">Soporte</NavLink>
         </nav>
         <div className="cli__usuario">

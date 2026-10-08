@@ -150,3 +150,8 @@ export const sendComunicacion = (data) => api.post(`${BASE}/comunicacion`, data)
 // Programa de referidos de conductores: listado y anulación
 export const getReferidos = () => api.get(`${BASE}/referidos`)
 export const anularReferido = (id) => api.put(`${BASE}/referidos/${id}/anular`)
+
+// Empresas - GET ?estado=&page=, PUT approve, PUT reject {nota}
+export const getEmpresas = (params) => api.get(`${BASE}/empresas`, { params })
+export const approveEmpresa = (id) => api.put(`${BASE}/empresas/${id}/approve`)
+export const rejectEmpresa = (id, data) => api.put(`${BASE}/empresas/${id}/reject`, data)

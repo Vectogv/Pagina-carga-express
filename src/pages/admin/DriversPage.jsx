@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { getDrivers, getAllPages, resetPassword } from '../../api/admin';
 import { errorMessage } from '../../utils/format';
+import { descargarCsv } from '../../utils/csv';
 import {
   Alert, Avatar, Badge, Button, DataTable, PageHeader, Pagination, SearchInput, Select,
 } from '../../components/ui';
@@ -98,7 +99,6 @@ export default function DriversPage() {
   const resetPage = (setter) => (value) => { setter(value); setPage(1); };
 
   const handleExport = () => {
-    const header = ['Nombre', 'Email', 'Teléfono', 'Vehículo', 'Ciudad', 'Estado', 'Verificación'].join(',');
     const rows = filtered.map((d) => {
       const u = d.usuario || {};
       return [
@@ -109,15 +109,9 @@ export default function DriversPage() {
         d.ciudad,
         connectionLabel(d),
         d.estadoVerificacion,
-      ].map(csvCell).join(',');
+      ];
     });
-    const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'conductores.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    descargarCsv('conductores.csv', ['Nombre', 'Email', 'Teléfono', 'Vehículo', 'Ciudad', 'Estado', 'Verificación'], rows);
     showNotice('Exportado conductores.csv');
   };
 

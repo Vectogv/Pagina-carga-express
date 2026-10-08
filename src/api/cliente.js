@@ -18,4 +18,8 @@ export const clienteApi = {
   crearTicket: (datos) => api.post('/api/support/tickets', datos),
   enviarMensaje: (id, mensaje) => api.post(`/api/support/tickets/${id}/messages`, { mensaje }),
   cerrarTicket: (id) => api.post(`/api/support/tickets/${id}/close`),
+  // Cuentas de empresa (solo el dueño). mes = 'YYYY-MM'
+  empresa: () => api.get('/api/empresas/mia'),
+  empresaResumen: (mes) => api.get('/api/empresas/resumen', { params: { mes } }),
+  empresaReporte: (mes) => api.get('/api/empresas/reporte', { params: { mes }, responseType: 'blob' }),
 }

@@ -320,3 +320,22 @@
   .cli-activo__layout .cli-card--mapa { position: static; }
   .cli-mapa { height: 48dvh; min-height: 280px; }
 }
+
+/* ---------- Mi empresa ---------- */
+.cli-emp { display: grid; gap: 16px; }
+.cli-emp__barra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+.cli-emp__barra label { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--azul); }
+.cli-emp__barra input { min-height: 40px; padding: 6px 10px; border: 1px solid var(--linea); border-radius: 10px; font: inherit; }
+.cli-emp__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cli-emp__stats small { display: block; color: var(--texto-2); }
+.cli-emp__stats strong { font-size: 26px; color: var(--azul); }
+.cli-emp__h2 { margin: 0 0 12px; font-size: 16px; }
+.cli-emp__scroll { overflow-x: auto; }
+.cli-emp__tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cli-emp__tabla th, .cli-emp__tabla td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--linea); }
+.cli-emp__tabla th { color: var(--texto-2); font-size: 12.5px; white-space: nowrap; }
+@media (max-width: 600px) {
+  .cli-emp__barra > * { flex: 1 1 100%; }
+  .cli-emp__barra input { width: 100%; }
+  .cli-emp__stats strong { font-size: 22px; }
+}
