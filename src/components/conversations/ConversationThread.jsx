@@ -69,7 +69,7 @@ function MessageBubble({ message: m, isMe, showAuthor, groupEnd, onRetry, onDisc
 }
 
 /** ¿El mensaje continúa el grupo del anterior (mismo remitente, mismo día, pocos minutos)? */
-const continuaGrupo = (prev, m) => Boolean(prev)
+const continuaGrupo = (prev, m) => Boolean(prev && m)
   && sameId(prev.remitente?.id, m.remitente?.id)
   && isSameDay(prev.createdAt, m.createdAt)
   && Math.abs(new Date(m.createdAt) - new Date(prev.createdAt)) < VENTANA_GRUPO_MS;
