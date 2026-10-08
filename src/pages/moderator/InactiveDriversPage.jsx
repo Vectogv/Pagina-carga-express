@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { BellRing } from 'lucide-react';
 import { getInactiveDrivers, notifyDriver } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { errorMessage, fullName, toList } from '../../utils/format';
+import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
 import {
   PageHeader, DataTable, ConfirmDialog, Avatar, Button, Badge, Toast, ToastContainer,
 } from '../../components/ui';
@@ -45,13 +46,23 @@ export default function InactiveDriversPage() {
 
   const columns = [
     {
+      // Acciones primero: se ven sin desplazar la tabla en pantallas angostas.
+      key: 'acciones',
+      label: '',
+      render: (_, r) => (
+        <Button size="sm" variant="soft-primary" icon={<BellRing size={14} />} onClick={() => setAction(r)}>
+          Notificar
+        </Button>
+      ),
+    },
+    {
       key: 'nombre',
       label: 'Conductor',
       render: (_, r) => (
         <div className="cell-user">
-          <Avatar src={r.fotoConductor} name={driverName(r)} />
+          <Avatar src={r.fotoConductor || r.usuario?.avatar} name={driverName(r)} />
           <div className="cell-user__text">
-            <span className="cell-user__name">{driverName(r)}</span>
+            <Link className="cell-user__name" to={`/moderator/drivers/${r.id}`}>{driverName(r)}</Link>
             <span className="cell-user__meta">{r.usuario?.email || '—'}</span>
           </div>
         </div>
@@ -59,21 +70,10 @@ export default function InactiveDriversPage() {
     },
     { key: 'ciudad', label: 'Ciudad', render: (v) => v || '—' },
     {
-      key: 'dias',
-      label: 'Inactividad',
-      // El backend no envía la fecha del último viaje: solo garantiza que el
-      // conductor lleva más de 7 días sin viajes y está desconectado.
-      render: () => <Badge variant="warning">Más de 7 días</Badge>,
-    },
-    {
-      key: 'acciones',
-      label: '',
-      align: 'right',
-      render: (_, r) => (
-        <Button size="sm" variant="soft-primary" icon={<BellRing size={14} />} onClick={() => setAction(r)}>
-          Notificar
-        </Button>
-      ),
+      key: 'ultimoViajeAt',
+      label: 'Último viaje',
+      // Solo conductores aprobados con más de 7 días sin viajes (el servidor ya excluye pendientes y recién registrados).
+      render: (v) => (v ? <Badge variant="warning">{formatDate(v)}</Badge> : <Badge variant="neutral">Sin viajes</Badge>),
     },
   ];
 
@@ -81,7 +81,7 @@ export default function InactiveDriversPage() {
     <div className="page">
       <PageHeader
         title="Conductores inactivos"
-        description="Conductores de tu ciudad que llevan más de 7 días sin viajes y están desconectados. Envíales un recordatorio por notificación push."
+        description="Conductores aprobados de tu ciudad que llevan más de 7 días sin viajes y están desconectados. Envíales un recordatorio por notificación push."
       />
 
       {error && <div className="page-error" role="alert">{error}</div>}

@@ -24,23 +24,22 @@ function ContactRow({ name, subtitle, etiqueta, avatar, onCreate, disabled, exis
 
 /**
  * Selector de contacto para iniciar una conversación.
- * `internal`: contactos internos (admin / moderadores); `platform`: usuarios de la plataforma.
- * La búsqueda es del servidor (nombre, apellido, teléfono y correo); los clientes
- * solo aparecen a partir de 3 caracteres para no traer usuarios de golpe.
+ * `internal`: contactos internos (admin / moderadores); `platform`: conductores de la zona.
+ * La búsqueda es del servidor (nombre, apellido, teléfono y correo). Los clientes no
+ * salen aquí: el moderador solo los contacta desde un ticket, un SOS o una disputa.
  */
 export default function NewConversationModal({
   isOpen, onClose, search, onSearchChange, searching, internal, platform, error, creating, onCreate, yaExiste,
 }) {
   const empty = internal.length === 0 && platform.length === 0;
   const q = (search || '').trim();
-  const faltanLetras = q.length > 0 && q.length < 3;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={creating ? undefined : onClose}
       title="Nueva conversación"
-      description="Conductores, clientes, admin o moderadores de otras ciudades."
+      description="Conductores de tu zona, administrador o moderadores de otras ciudades."
       footer={<Button variant="secondary" onClick={onClose} disabled={creating}>Cerrar</Button>}
     >
       <div className="stack">
@@ -50,9 +49,6 @@ export default function NewConversationModal({
           <p className="chat__searching">
             <Loader2 size={14} /> Buscando…
           </p>
-        )}
-        {!searching && faltanLetras && (
-          <p className="text-sm text-muted">Escribe al menos 3 letras para incluir clientes en la búsqueda.</p>
         )}
         {error && <div className="page-error" role="alert">{error}</div>}
 
@@ -82,7 +78,7 @@ export default function NewConversationModal({
 
         {platform.length > 0 && (
           <div className="stack">
-            <p className="section-title chat-contact__section">Conductores y clientes <span className="chat__section-count">{platform.length}</span></p>
+            <p className="section-title chat-contact__section">Conductores <span className="chat__section-count">{platform.length}</span></p>
             {platform.map((u, i) => {
               const uo = u.usuario || u;
               return (

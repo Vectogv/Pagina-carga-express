@@ -82,6 +82,7 @@ export const moderatorNav = [
       { icon: Siren, label: 'Emergencias', to: '/moderator/emergencies' },
       { icon: Gavel, label: 'Cierres por resolver', to: '/moderator/cierres' },
       { icon: LifeBuoy, label: 'Tickets de soporte', to: '/moderator/tickets' },
+      { icon: Scale, label: 'Disputas', to: '/moderator/disputes' },
     ],
   },
   {
@@ -94,7 +95,8 @@ export const moderatorNav = [
   {
     title: 'Conductores',
     items: [
-      { icon: Truck, label: 'Verificación de conductores', to: '/moderator/drivers', end: true },
+      { icon: Truck, label: 'Directorio de conductores', to: '/moderator/conductores' },
+      { icon: BadgeCheck, label: 'Verificación de conductores', to: '/moderator/drivers', end: true },
       { icon: BedDouble, label: 'Conductores inactivos', to: '/moderator/drivers/inactive' },
       { icon: Flag, label: 'Mis reportes', to: '/moderator/reports' },
     ],
@@ -103,7 +105,7 @@ export const moderatorNav = [
     title: 'Comunicación',
     items: [
       { icon: MessagesSquare, label: 'Conversatorio', to: '/moderator/conversations' },
-      { icon: UsersRound, label: 'Directorio', to: '/moderator/companeros' },
+      { icon: UsersRound, label: 'Equipo', to: '/moderator/companeros' },
       { icon: Pin, label: 'Avisos', to: '/moderator/avisos' },
       { icon: Megaphone, label: 'Comunicados', to: '/moderator/comunicados' },
       { icon: ChartColumn, label: 'Encuestas', to: '/moderator/encuestas' },

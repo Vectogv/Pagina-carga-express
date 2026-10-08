@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { ChevronRight } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { direccionCorta } from '../../utils/direccion';
 import {
   getModeratorTrips, getModeratorTripDetail, getModeratorEmergencies,
 } from '../../api/moderator';
@@ -53,7 +54,11 @@ export default function ModeratorTripsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const estadoParam = searchParams.get('estado') || '';
   const estado = VALID_ESTADOS.has(estadoParam) ? estadoParam : '';
-  const setEstado = (value) => setSearchParams(value ? { estado: value } : {}, { replace: true });
+  const setEstado = (value) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set('estado', value); else next.delete('estado');
+    setSearchParams(next, { replace: true });
+  };
   const estadoRef = useRef(estado);
   useEffect(() => { estadoRef.current = estado; }, [estado]);
   const [selectedId, setSelectedId] = useState(null);
@@ -164,7 +169,16 @@ export default function ModeratorTripsPage() {
     return () => { socket.disconnect(); };
   }, [fetchDetail]);
 
+  // ?viaje= abre el detalle al llegar desde un enlace de otra pantalla.
+  const viajeParam = searchParams.get('viaje');
+  useEffect(() => { if (viajeParam) setSelectedId(viajeParam); }, [viajeParam]);
+
   const closeDetail = () => {
+    if (searchParams.has('viaje')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('viaje');
+      setSearchParams(next, { replace: true });
+    }
     setSelectedId(null);
     setDetail(null);
     setDetailError(null);
@@ -177,10 +191,33 @@ export default function ModeratorTripsPage() {
   };
 
   const columns = [
-    { key: 'id', label: 'ID', render: (v) => <span className="text-mono text-primary-color">#{String(v).slice(0, 8)}</span> },
+    {
+      key: 'seguimiento',
+      label: '',
+      render: (_, r) => (
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={(e) => { e.stopPropagation(); setSelectedId(r.id); }}
+          aria-label={`Ver seguimiento del viaje ${String(r.id).slice(0, 8)}`}
+          title="Ver seguimiento"
+        >
+          <ChevronRight size={16} />
+        </Button>
+      ),
+    },
+    {
+      key: 'id',
+      label: 'ID',
+      render: (v) => (
+        <Link className="text-mono text-primary-color" to={`/moderator/trips?viaje=${v}`} onClick={(e) => e.stopPropagation()}>
+          #{String(v).slice(0, 8)}
+        </Link>
+      ),
+    },
     { key: 'estado', label: 'Estado', render: (v, r) => <StatusBadge status={v} label={r.estadoLabel} /> },
-    { key: 'origen', label: 'Origen', render: (_, r) => <span className="trips-place">{place(r, 'origen')}</span> },
-    { key: 'destino', label: 'Destino', render: (_, r) => <span className="trips-place">{place(r, 'destino')}</span> },
+    { key: 'origen', label: 'Origen', render: (_, r) => <span className="trips-place" title={place(r, 'origen')}>{direccionCorta(place(r, 'origen'))}</span> },
+    { key: 'destino', label: 'Destino', render: (_, r) => <span className="trips-place" title={place(r, 'destino')}>{direccionCorta(place(r, 'destino'))}</span> },
     {
       key: 'cliente',
       label: 'Cliente',
@@ -196,7 +233,11 @@ export default function ModeratorTripsPage() {
       label: 'Conductor',
       render: (_, r) => (r.conductor ? (
         <div className="cell-user__text">
-          <span className="cell-user__name">{r.conductor.nombre || r.conductor.telefono || '—'}</span>
+          {r.conductor.id ? (
+            <Link className="cell-user__name" to={`/moderator/drivers/${r.conductor.id}`} onClick={(e) => e.stopPropagation()}>
+              {r.conductor.nombre || r.conductor.telefono || '—'}
+            </Link>
+          ) : <span className="cell-user__name">{r.conductor.nombre || r.conductor.telefono || '—'}</span>}
           {r.conductor.placa && <span className="cell-user__meta text-mono">{r.conductor.placa}</span>}
         </div>
       ) : '—'),
@@ -213,21 +254,6 @@ export default function ModeratorTripsPage() {
       },
     },
     { key: 'createdAt', label: 'Creado', render: (v) => <span className="nowrap text-muted">{formatDateTime(v)}</span> },
-    {
-      key: 'seguimiento',
-      label: '',
-      align: 'right',
-      render: (_, r) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={(e) => { e.stopPropagation(); setSelectedId(r.id); }}
-          aria-label={`Ver seguimiento del viaje ${String(r.id).slice(0, 8)}`}
-        >
-          Seguimiento <ChevronRight size={14} />
-        </Button>
-      ),
-    },
   ];
 
   const [socketVariant, socketLabel] = SOCKET_BADGE[socketStatus] || SOCKET_BADGE.desconectado;

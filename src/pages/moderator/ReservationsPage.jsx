@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { direccionCorta } from '../../utils/direccion';
 import { getModeratorReservations } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { errorMessage, formatCurrency, formatDate, fullName, toList } from '../../utils/format';
@@ -47,15 +49,15 @@ export default function ModeratorReservationsPage() {
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const columns = [
-    { key: 'id', label: 'ID', render: (v) => <span className="text-mono text-primary-color">#{String(v).slice(0, 8)}</span> },
+    { key: 'id', label: 'ID', render: (v) => <Link className="text-mono text-primary-color" to={`/moderator/trips?viaje=${v}`}>#{String(v).slice(0, 8)}</Link> },
     { key: 'estado', label: 'Estado', render: (v, r) => <StatusBadge status={v} label={r.estadoLabel} /> },
     {
       key: 'programada',
       label: 'Programada',
       render: (_, r) => <span className="nowrap">{formatDate(r.fechaProgramada)} · {r.horaProgramada || '—'}</span>,
     },
-    { key: 'origenDireccion', label: 'Origen', render: (v) => v || '—' },
-    { key: 'destinoDireccion', label: 'Destino', render: (v) => v || '—' },
+    { key: 'origenDireccion', label: 'Origen', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
+    { key: 'destinoDireccion', label: 'Destino', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
     {
       key: 'cliente',
       label: 'Cliente',
@@ -71,7 +73,9 @@ export default function ModeratorReservationsPage() {
       label: 'Conductor',
       render: (_, r) => (r.conductor ? (
         <div className="cell-user__text">
-          <span className="cell-user__name">{r.conductor.nombre || r.conductor.telefono || '—'}</span>
+          {r.conductor.id ? (
+            <Link className="cell-user__name" to={`/moderator/drivers/${r.conductor.id}`}>{r.conductor.nombre || r.conductor.telefono || '—'}</Link>
+          ) : <span className="cell-user__name">{r.conductor.nombre || r.conductor.telefono || '—'}</span>}
           {r.conductor.placa && <span className="cell-user__meta text-mono">{r.conductor.placa}</span>}
         </div>
       ) : <span className="text-muted">Sin asignar</span>),

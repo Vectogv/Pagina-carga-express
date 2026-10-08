@@ -6,9 +6,8 @@ import api, { tokenStore } from '../../api/axios';
 import { getModeratorEmergencies } from '../../api/moderator';
 import { SOCKET_URL } from '../../config';
 import { toList } from '../../utils/format';
+import { ALERT_SOUND } from '../../utils/aviso';
 import './EmergencyBanner.css';
-
-const ALERT_SOUND = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
 
 function readModeratorCity() {
   try {

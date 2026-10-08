@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Gavel } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { direccionCorta } from '../../utils/direccion';
 import { useModeratorBadges } from '../../contexts/ModeratorBadgesContext';
 import { fullName } from '../../utils/format';
 import {
@@ -27,7 +29,29 @@ export default function ModeratorCierresPage() {
   };
 
   const columns = [
-    { key: 'id', label: 'Viaje', render: (v) => <span className="text-mono text-primary-color">#{String(v).slice(0, 8)}</span> },
+    {
+      key: 'accion',
+      label: '',
+      render: (_, r) => (
+        <Button
+          size="sm"
+          variant="primary"
+          icon={<Gavel size={14} />}
+          onClick={(e) => { e.stopPropagation(); setSelected(r); }}
+        >
+          Resolver cierre
+        </Button>
+      ),
+    },
+    {
+      key: 'id',
+      label: 'Viaje',
+      render: (v) => (
+        <Link className="text-mono text-primary-color" to={`/moderator/trips?viaje=${v}`} onClick={(e) => e.stopPropagation()}>
+          #{String(v).slice(0, 8)}
+        </Link>
+      ),
+    },
     {
       key: 'cliente',
       label: 'Cliente',
@@ -43,28 +67,17 @@ export default function ModeratorCierresPage() {
       label: 'Conductor',
       render: (_, r) => (r.conductor ? (
         <div className="cell-user__text">
-          <span className="cell-user__name">{r.conductor.nombre || r.conductor.telefono || '—'}</span>
+          {r.conductor.id ? (
+            <Link className="cell-user__name" to={`/moderator/drivers/${r.conductor.id}`} onClick={(e) => e.stopPropagation()}>
+              {r.conductor.nombre || r.conductor.telefono || '—'}
+            </Link>
+          ) : <span className="cell-user__name">{r.conductor.nombre || r.conductor.telefono || '—'}</span>}
           {r.conductor.placa && <span className="cell-user__meta text-mono">{r.conductor.placa}</span>}
         </div>
       ) : '—'),
     },
-    { key: 'origenDireccion', label: 'Origen', render: (v) => v || '—' },
-    { key: 'destinoDireccion', label: 'Destino', render: (v) => v || '—' },
-    {
-      key: 'accion',
-      label: '',
-      align: 'right',
-      render: (_, r) => (
-        <Button
-          size="sm"
-          variant="primary"
-          icon={<Gavel size={14} />}
-          onClick={(e) => { e.stopPropagation(); setSelected(r); }}
-        >
-          Resolver cierre
-        </Button>
-      ),
-    },
+    { key: 'origenDireccion', label: 'Origen', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
+    { key: 'destinoDireccion', label: 'Destino', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
   ];
 
   return (

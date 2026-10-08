@@ -6,6 +6,10 @@ import api from './axios'
 // Conductores
 export const getModeratorDrivers = (params) => api.get('/api/moderator/drivers', { params })
 export const getInactiveDrivers = (params) => api.get('/api/moderator/drivers/inactive', { params })
+// Ficha completa (datos, vehículo, documentos firmados, últimos viajes, reportes y disputas). 403 si no es de su zona.
+export const getModeratorDriver = (id) => api.get(`/api/moderator/drivers/${id}`)
+// Disputas de los conductores de la zona, solo lectura. { total, page, data } — params: page, limit, estado (coma)
+export const getModeratorDisputes = (params) => api.get('/api/moderator/disputes', { params })
 export const notifyDriver = (id) => api.post(`/api/moderator/drivers/${id}/notify`)
 export const reportDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/report`, data)
 export const approveDriver = (id) => api.post(`/api/moderator/drivers/${id}/approve`)
@@ -58,7 +62,8 @@ export const getConversationMessages = (id) => api.get(`/api/moderator/conversat
 export const createConversation = (data) => api.post('/api/moderator/conversations', data)
 export const sendConversationMessage = (id, data) => api.post(`/api/moderator/conversations/${id}/messages`, data)
 
-// Contactos buscables (chatapp/móvil) — clientes, conductores y moderadores. Admin y moderador.
+// Contactos buscables — conductores de la zona y equipo (admin/moderadores). Los clientes NO salen:
+// el moderador solo los contacta desde un ticket, un SOS o una disputa.
 export const getContactableUsers = (params) => api.get('/api/moderator/contactable-users', { params })
 
 // Perfil (usa mismo endpoint que admin/users/profile pero con rol moderador)

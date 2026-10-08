@@ -1,17 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import api, { tokenStore } from '../api/axios';
-import { getUnreadCount, getModeratorTrips } from '../api/moderator';
+import { getUnreadCount, getModeratorTrips, getModeratorDrivers } from '../api/moderator';
 import { useAuth } from './AuthContext';
 import { useModeratorCity } from './ModeratorCityContext';
 import { errorMessage, toList } from '../utils/format';
 import { updateFaviconBadge } from '../utils/favicon';
+import { avisar } from '../utils/aviso';
 import { SOCKET_URL } from '../config';
 
 const Ctx = createContext(null);
 
-// Estado global de los badges del moderador (Emergencias, Cierres, Conversatorio y Tickets).
-// Polling cada 60s + actualización inmediata por socket.
+// Estado global de los badges del moderador (Emergencias, Cierres, Conversatorio, Tickets y
+// conductores pendientes). Polling cada 60s + actualización inmediata por socket.
 export function ModeratorBadgesProvider({ children }) {
   const { user } = useAuth();
   const { ciudadParams } = useModeratorCity();
@@ -27,6 +28,7 @@ export function ModeratorBadgesProvider({ children }) {
   const [emergencyBadge, setEmergencyBadge] = useState(0);
   const [unreadBadge, setUnreadBadge] = useState(0);
   const [ticketBadge, setTicketBadge] = useState(0);
+  const [pendingDriversBadge, setPendingDriversBadge] = useState(0);
   const openEmergencyRef = useRef(null);
   const openConversationRef = useRef(null);
 
@@ -76,6 +78,17 @@ export function ModeratorBadgesProvider({ children }) {
     }
   }, []);
 
+  // Conductores pendientes de verificación en la zona (depende de la ciudad elegida por el admin).
+  const refreshPendingDrivers = useCallback(async () => {
+    if (!tokenStore.access) return;
+    try {
+      const res = await getModeratorDrivers({ page: 1, limit: 100, estado: 'pendiente', ...ciudadParams });
+      setPendingDriversBadge(toList(res.data, 'drivers').length);
+    } catch {
+      // Silencioso: el badge es informativo y se reintenta en el siguiente polling.
+    }
+  }, [ciudadParams]);
+
   useEffect(() => {
     refreshEmergencies();
     refreshUnread();
@@ -83,6 +96,12 @@ export function ModeratorBadgesProvider({ children }) {
     const id = setInterval(() => { refreshEmergencies(); refreshUnread(); refreshTickets(); }, 60000);
     return () => clearInterval(id);
   }, [refreshEmergencies, refreshUnread, refreshTickets]);
+
+  useEffect(() => {
+    refreshPendingDrivers();
+    const id = setInterval(refreshPendingDrivers, 60000);
+    return () => clearInterval(id);
+  }, [refreshPendingDrivers]);
 
   // Los cierres dependen de la ciudad elegida (admin), por eso van en su propio efecto.
   useEffect(() => {
@@ -122,19 +141,25 @@ export function ModeratorBadgesProvider({ children }) {
     ['emergency:alert', 'moderator:emergency:update'].forEach((ev) => socket.on(ev, () => refreshEmergencies()));
     // El evento llega a toda la sala de la ciudad (también los mensajes propios y los de
     // hilos de otros moderadores): se ignoran los propios y se recalcula con el backend.
+    // Sonido + aviso del navegador solo si la pestaña no está en primer plano (el
+    // SOS ya suena en el EmergencyBanner).
     socket.on('conversation:message', (data) => {
       if (data?.remitente?.id != null && String(data.remitente.id) === String(userIdRef.current)) return;
       if (openConversationRef.current && String(data.conversacionId) === String(openConversationRef.current)) return;
       refreshUnread();
+      if (document.hidden) avisar('Mensaje nuevo', data?.remitente?.nombre ? `De ${data.remitente.nombre}` : 'Conversatorio');
     });
     return () => { clearTimeout(closuresTimer); socket.disconnect(); };
   }, [refreshEmergencies, refreshUnread, refreshTickets]);
 
   const closuresBadge = closures.length;
 
-  // Favicon con badge rojo (total de pendientes de atención).
+  // Favicon con badge rojo y contador en el título de la pestaña (total de pendientes de atención).
   useEffect(() => {
-    updateFaviconBadge(emergencyBadge + closuresBadge + unreadBadge + ticketBadge);
+    const total = emergencyBadge + closuresBadge + unreadBadge + ticketBadge;
+    updateFaviconBadge(total);
+    document.title = total > 0 ? `(${total}) Carga Express` : 'Carga Express';
+    return () => { document.title = 'Carga Express'; };
   }, [emergencyBadge, closuresBadge, unreadBadge, ticketBadge]);
 
   const setOpenEmergency = useCallback((id) => { openEmergencyRef.current = id ?? null; }, []);
@@ -147,6 +172,8 @@ export function ModeratorBadgesProvider({ children }) {
     emergencyBadge,
     unreadBadge,
     ticketBadge,
+    pendingDriversBadge,
+    refreshPendingDrivers,
     closuresBadge,
     closures,
     closuresLoading,
@@ -160,7 +187,7 @@ export function ModeratorBadgesProvider({ children }) {
     setOpenConversation,
     clearEmergency,
     clearUnread,
-  }), [emergencyBadge, unreadBadge, ticketBadge, closuresBadge, closures, closuresLoading, closuresError, refreshClosures, refreshEmergencies, refreshUnread, refreshTickets, setOpenEmergency, setOpenConversation, clearEmergency, clearUnread]);
+  }), [emergencyBadge, unreadBadge, ticketBadge, pendingDriversBadge, refreshPendingDrivers, closuresBadge, closures, closuresLoading, closuresError, refreshClosures, refreshEmergencies, refreshUnread, refreshTickets, setOpenEmergency, setOpenConversation, clearEmergency, clearUnread]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { BellRing, Check, FileText, Flag, X } from 'lucide-react';
 import { getModeratorDrivers, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
@@ -108,37 +109,32 @@ export default function ModeratorDriversPage() {
     } catch (err) { showToast(errorMessage(err, 'Error al rechazar'), false); }
   };
 
+  // Sin cédula o licencia no se puede aprobar (el botón queda deshabilitado con el motivo).
+  const faltanDocs = (r) => !r.fotoCedula || !r.fotoLicencia;
+
   const columns = [
     {
-      key: 'nombre',
-      label: 'Conductor',
-      render: (_, r) => (
-        <div className="cell-user">
-          <Avatar src={r.fotoConductor} name={driverName(r)} />
-          <div className="cell-user__text">
-            <span className="cell-user__name">{driverName(r)}</span>
-            <span className="cell-user__meta">{r.usuario?.email || r.email || '—'}</span>
-          </div>
-        </div>
-      ),
-    },
-    { key: 'telefono', label: 'Teléfono', render: (_, r) => r.usuario?.telefono || '—' },
-    { key: 'placa', label: 'Placa', render: (v) => (v ? <span className="text-mono">{v}</span> : '—') },
-    { key: 'ciudad', label: 'Ciudad', render: (v) => (v === 'california' ? 'cali' : (v || '—')) },
-    { key: 'estadoVerificacion', label: 'Verificación', render: (v) => <StatusBadge status={v} /> },
-    {
+      // Acciones primero: se ven sin desplazar la tabla en pantallas angostas.
       key: 'acciones',
       label: '',
-      align: 'right',
       render: (_, r) => {
         const pend = (r.estadoVerificacion || 'pendiente') === 'pendiente';
         return (
-          <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
+          <div className="row" style={{ flexWrap: 'nowrap' }}>
             <Button size="icon" variant="ghost" onClick={() => setDocs(r)} aria-label={`Ver documentos de ${driverName(r)}`} title="Ver documentos">
               <FileText size={15} />
             </Button>
             {pend && (
-              <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={() => openAction('approve', r)}>Aprobar</Button>
+              <Button
+                size="sm"
+                variant="soft-success"
+                icon={<Check size={14} />}
+                disabled={faltanDocs(r)}
+                title={faltanDocs(r) ? 'Falta la cédula o la licencia' : undefined}
+                onClick={() => openAction('approve', r)}
+              >
+                Aprobar
+              </Button>
             )}
             {pend && (
               <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={() => openAction('reject', r)}>Rechazar</Button>
@@ -153,6 +149,23 @@ export default function ModeratorDriversPage() {
         );
       },
     },
+    {
+      key: 'nombre',
+      label: 'Conductor',
+      render: (_, r) => (
+        <div className="cell-user">
+          <Avatar src={r.fotoConductor || r.usuario?.avatar} name={driverName(r)} />
+          <div className="cell-user__text">
+            <Link className="cell-user__name" to={`/moderator/drivers/${r.id}`}>{driverName(r)}</Link>
+            <span className="cell-user__meta">{r.usuario?.email || r.email || '—'}</span>
+          </div>
+        </div>
+      ),
+    },
+    { key: 'telefono', label: 'Teléfono', render: (_, r) => r.usuario?.telefono || '—' },
+    { key: 'placa', label: 'Placa', render: (v) => (v ? <span className="text-mono">{v}</span> : '—') },
+    { key: 'ciudad', label: 'Ciudad', render: (v) => (v === 'california' ? 'cali' : (v || '—')) },
+    { key: 'estadoVerificacion', label: 'Verificación', render: (v) => <StatusBadge status={v} /> },
   ];
 
   const drivers = tab === 'todos'
@@ -180,7 +193,7 @@ export default function ModeratorDriversPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Conductores" description="Verifica, notifica y reporta a los conductores de tu ciudad." />
+      <PageHeader title="Verificación de conductores" description="Verifica, notifica y reporta a los conductores de tu ciudad. Toca el nombre para abrir la ficha completa." />
 
       <div className="toolbar">
         <SearchInput value={filter} onChange={setFilter} placeholder="Buscar por nombre, placa, correo o teléfono" />
@@ -208,7 +221,15 @@ export default function ModeratorDriversPage() {
             {(docs.estadoVerificacion || 'pendiente') === 'pendiente' && (
               <>
                 <Button variant="soft-danger" icon={<X size={14} />} onClick={() => openAction('reject', docs)}>Rechazar</Button>
-                <Button variant="soft-success" icon={<Check size={14} />} onClick={() => openAction('approve', docs)}>Aprobar</Button>
+                <Button
+                  variant="soft-success"
+                  icon={<Check size={14} />}
+                  disabled={faltanDocs(docs)}
+                  title={faltanDocs(docs) ? 'Falta la cédula o la licencia' : undefined}
+                  onClick={() => openAction('approve', docs)}
+                >
+                  Aprobar
+                </Button>
               </>
             )}
           </>

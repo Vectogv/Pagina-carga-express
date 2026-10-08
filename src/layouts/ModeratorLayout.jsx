@@ -32,7 +32,7 @@ function CitySelector() {
 function ModeratorShell() {
   const location = useLocation();
   const {
-    emergencyBadge, closuresBadge, unreadBadge, ticketBadge, clearUnread,
+    emergencyBadge, closuresBadge, unreadBadge, ticketBadge, pendingDriversBadge, clearUnread,
   } = useModeratorBadges();
   const { isAdmin, ciudadLabel } = useModeratorCity();
   const { user } = useAuth();
@@ -55,9 +55,15 @@ function ModeratorShell() {
     '/moderator/conversations': unreadBadge,
     // Tickets abiertos sin atender: baja solo cuando alguien los toma (el backend manda).
     '/moderator/tickets': ticketBadge,
+    // Conductores pendientes de verificar en la zona.
+    '/moderator/drivers': pendingDriversBadge,
   };
 
-  const { group, label } = findNavEntry(moderatorNav, location.pathname);
+  const nav = findNavEntry(moderatorNav, location.pathname);
+  // La ficha (/moderator/drivers/:id) no está en el menú: cuelga de "Conductores".
+  const esFicha = /^\/moderator\/drivers\/\d+/.test(location.pathname);
+  const group = esFicha ? 'Conductores' : nav.group;
+  const label = esFicha ? 'Ficha del conductor' : nav.label;
 
   return (
     <div className="app-shell">

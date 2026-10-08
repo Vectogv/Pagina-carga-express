@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Car, CheckCheck, CircleCheck, MapPin, Phone, Siren, Star } from 'lucide-react';
 import { acknowledgeEmergency, resolveEmergency } from '../../../api/moderator';
 import PendingCloseResolver from '../../../components/moderator/PendingCloseResolver';
@@ -148,6 +149,11 @@ export default function TripDetailModal({
           <section className="trip-detail__section">
             <h4 className="section-title">Seguimiento</h4>
             <ServiceStatusTimeline estado={detail.estado} />
+            {(detail.tieneDisputa || detail.disputa) && (
+              <div className="row">
+                <Link className="btn btn--soft-danger btn--sm" to={`/moderator/disputes?viaje=${detail.id}`}>Ver disputa</Link>
+              </div>
+            )}
           </section>
 
           <RouteMap key={detail.id} origen={detail.origen} destino={detail.destino} mapboxToken={mapboxToken} />
@@ -159,10 +165,16 @@ export default function TripDetailModal({
                 <Avatar src={cliente?.avatar} name={fullName(cliente)} size={40} />
                 <div className="cell-user__text">
                   <span className="cell-user__name">{cliente?.nombre || '—'}</span>
-                  {cliente?.telefono && (
-                    <a className="trip-detail__link" href={`tel:${cliente.telefono}`}><Phone size={12} /> {cliente.telefono}</a>
+                  {detail.contactoVisible === false ? (
+                    <span className="cell-user__meta">Contacto reservado: solo con ticket, SOS o disputa</span>
+                  ) : (
+                    <>
+                      {cliente?.telefono && (
+                        <a className="trip-detail__link" href={`tel:${cliente.telefono}`}><Phone size={12} /> {cliente.telefono}</a>
+                      )}
+                      {cliente?.email && <span className="cell-user__meta">{cliente.email}</span>}
+                    </>
                   )}
-                  {cliente?.email && <span className="cell-user__meta">{cliente.email}</span>}
                 </div>
               </div>
             </section>
@@ -190,6 +202,16 @@ export default function TripDetailModal({
                   )}
                 </div>
               </div>
+              {(conductor?.id || conductor?.usuarioId) && (
+                <div className="row">
+                  {conductor.id && (
+                    <Link className="btn btn--soft-primary btn--sm" to={`/moderator/drivers/${conductor.id}`}>Ver ficha</Link>
+                  )}
+                  {conductor.usuarioId && (
+                    <Link className="btn btn--soft-primary btn--sm" to={`/moderator/conversations?usuario=${conductor.usuarioId}`}>Chat con conductor</Link>
+                  )}
+                </div>
+              )}
             </section>
           </div>
 
