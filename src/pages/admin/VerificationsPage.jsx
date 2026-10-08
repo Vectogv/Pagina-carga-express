@@ -4,6 +4,7 @@ import {
   getVerifications, approveVerification, rejectVerification, resolveSoatException,
 } from '../../api/admin';
 import { resolveStorageUrl } from '../../utils/storage';
+import { faltantesDe, textoFaltantes } from '../../utils/documentos';
 import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
 import {
   Avatar, Badge, Button, ConfirmDialog, DataTable, Modal, PageHeader, Textarea,
@@ -146,15 +147,22 @@ export default function VerificationsPage() {
       key: 'acciones',
       label: '',
       align: 'right',
-      render: (_, row) => (
-        <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
-          <Button size="sm" variant="ghost" icon={<Eye size={14} />} onClick={(e) => { e.stopPropagation(); setSelected(row); }}>
-            Ver
-          </Button>
-          <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={ask(row, 'approve')}>Aprobar</Button>
-          <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={ask(row, 'reject')}>Rechazar</Button>
-        </div>
-      ),
+      render: (_, row) => {
+        // Sin los 6 documentos y el número de cédula el servidor responde 422: se bloquea aquí con el motivo.
+        const bloqueado = textoFaltantes(faltantesDe(row));
+        return (
+          <div className="acciones-fila">
+            <div className="acciones-fila__botones">
+              <Button size="sm" variant="ghost" icon={<Eye size={14} />} onClick={(e) => { e.stopPropagation(); setSelected(row); }}>
+                Ver
+              </Button>
+              <Button size="sm" variant="soft-success" icon={<Check size={14} />} disabled={!!bloqueado} title={bloqueado || undefined} onClick={ask(row, 'approve')}>Aprobar</Button>
+              <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={ask(row, 'reject')}>Rechazar</Button>
+            </div>
+            {bloqueado && <span className="acciones-fila__aviso">{bloqueado}</span>}
+          </div>
+        );
+      },
     },
   ];
 
@@ -166,7 +174,7 @@ export default function VerificationsPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Verificaciones" description="Conductores nuevos esperando que revises su cédula, licencia, vehículo, tarjeta de propiedad, técnico-mecánica y SOAT. Para aprobarlos necesitan SOAT vigente o una excepción de SOAT aprobada. Mientras no los apruebes no pueden recibir viajes." />
+      <PageHeader title="Verificaciones" description="Conductores nuevos esperando que revises su licencia, SOAT, técnico-mecánica, tarjeta de propiedad, foto del vehículo, foto del conductor y número de cédula. Para aprobarlos necesitan todo eso y SOAT vigente o una excepción de SOAT aprobada. Mientras no los apruebes no pueden recibir viajes." />
 
       {error && (
         <div className="page-error" role="alert">
@@ -222,7 +230,7 @@ export default function VerificationsPage() {
             <hr className="divider" />
             <h3 className="section-title">Documentos cargados</h3>
             <div className="form-grid">
-              <Photo label="Cédula (frente)" path={selected.fotoCedula} />
+              <Photo label="Cédula (frente, ya no se exige)" path={selected.fotoCedula} />
               <Photo label="Cédula (reverso)" path={selected.fotoCedulaReverso} />
               <Photo label="Licencia" path={selected.fotoLicencia} />
               <Photo label="Vehículo" path={selected.fotoVehiculo} />

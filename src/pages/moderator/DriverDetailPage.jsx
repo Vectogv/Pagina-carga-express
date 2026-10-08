@@ -4,21 +4,20 @@ import { ArrowLeft, BellRing, Check, Flag, MessageSquare, X } from 'lucide-react
 import { getModeratorDriver, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
 import { errorMessage, formatCurrency, formatDate, formatDateTime, timeAgo } from '../../utils/format';
 import { resolveStorageUrl } from '../../utils/storage';
+import { faltantesDe, textoFaltantes } from '../../utils/documentos';
+import NotificarDocumentosDialog from './NotificarDocumentosDialog';
 import {
   PageHeader, Card, DataTable, ConfirmDialog, Avatar, Button, Badge, StatusBadge, LoadingState,
   Textarea, Toast, ToastContainer,
 } from '../../components/ui';
 
-// Nombres legibles de los documentos que manda el servidor (clave → etiqueta).
-const DOC_LABELS = {
-  fotoCedula: 'Cédula',
-  fotoLicencia: 'Licencia de conducción',
-  tarjetaPropiedad: 'Tarjeta de propiedad',
-  soat: 'SOAT',
-  tecnomecanica: 'Tecnomecánica',
-  antecedentes: 'Antecedentes',
-};
-const docLabel = (k) => DOC_LABELS[k] || k.replace(/^foto/, '').replace(/([A-Z])/g, ' $1').trim();
+// Documentos con foto de la ficha (`documentos` del servidor): clave, etiqueta y clave del vencimiento.
+const DOCS_FICHA = [
+  ['fotoLicencia', 'Licencia de conducción'],
+  ['fotoSoat', 'SOAT', 'soatVence'],
+  ['fotoTecnomecanica', 'Tecnomecánica', 'tecnomecanicaVence'],
+  ['fotoTarjetaPropiedad', 'Tarjeta de propiedad'],
+];
 
 function Photo({ label, path }) {
   const url = resolveStorageUrl(path);
@@ -45,10 +44,8 @@ function Detail({ label, children }) {
   );
 }
 
-// Un documento puede llegar como string (URL firmada) o como objeto {url, estado, vence}.
+// Un documento puede llegar como string (URL firmada) o como objeto {url, ruta}.
 const docUrl = (d) => (typeof d === 'string' ? d : d?.url || d?.ruta || null);
-const docEstado = (d) => (typeof d === 'object' && d ? d.estado : null);
-const docVence = (d) => (typeof d === 'object' && d ? (d.vence || d.venceAt || d.fechaVencimiento) : null);
 
 export default function DriverDetailPage() {
   const { id } = useParams();
@@ -99,7 +96,8 @@ export default function DriverDetailPage() {
   const nombre = u.nombre || '—';
   const pend = (driver.estadoVerificacion || 'pendiente') === 'pendiente';
   const docs = driver.documentos || {};
-  const faltanDocs = !docUrl(docs.fotoCedula) || !docUrl(docs.fotoLicencia);
+  const faltantes = faltantesDe(driver);
+  const faltanDocs = faltantes.length > 0;
   const viajes = driver.viajes || [];
   const reportes = driver.reportes || [];
   const reportesMod = driver.reportesModerador || [];
@@ -148,7 +146,7 @@ export default function DriverDetailPage() {
                 variant="soft-success"
                 icon={<Check size={14} />}
                 disabled={faltanDocs}
-                title={faltanDocs ? 'Falta la cédula o la licencia' : undefined}
+                title={faltanDocs ? textoFaltantes(faltantes) : undefined}
                 onClick={() => openAction('approve')}
               >
                 Aprobar
@@ -173,7 +171,7 @@ export default function DriverDetailPage() {
             Registrado {formatDate(driver.createdAt)}
             {driver.ubicacionActualizadaEn ? ` · Última ubicación ${timeAgo(driver.ubicacionActualizadaEn)}` : ''}
           </span>
-          {pend && faltanDocs && <span className="text-sm text-warning">No se puede aprobar: falta la cédula o la licencia.</span>}
+          {pend && faltanDocs && <span className="text-sm text-warning">No se puede aprobar. {textoFaltantes(faltantes)}.</span>}
           {driver.notaRechazo && <span className="text-sm text-muted">Nota de rechazo: {driver.notaRechazo}</span>}
         </div>
       </div>
@@ -182,7 +180,7 @@ export default function DriverDetailPage() {
         <Card title="Datos personales">
           <div className="detail-list">
             <Detail label="Nombre">{nombre}</Detail>
-            <Detail label="Cédula">{driver.cedula || u.cedula}</Detail>
+            <Detail label="Número de cédula">{driver.cedula || u.cedula}</Detail>
             <Detail label="Teléfono">{u.telefono}</Detail>
             <Detail label="Correo">{u.email}</Detail>
             <Detail label="Edad">{u.edad}</Detail>
@@ -217,22 +215,17 @@ export default function DriverDetailPage() {
         <Card title="Documentos">
           <div className="form-grid">
             <Photo label="Foto del conductor" path={driver.fotoConductor || u.avatar} />
-            {Object.keys({ fotoCedula: 1, fotoLicencia: 1, ...docs }).map((k) => {
-              const d = docs[k];
-              const vence = docVence(d);
-              const estado = docEstado(d);
-              return (
-                <div key={k} className="stack">
-                  <Photo label={docLabel(k)} path={docUrl(d)} />
-                  {(estado || vence) && (
-                    <span className="text-sm text-muted">
-                      {estado && <StatusBadge status={estado} />}
-                      {vence && ` Vence ${formatDate(vence)}`}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+            {DOCS_FICHA.map(([k, label, venceKey]) => (
+              <div key={k} className="stack">
+                <Photo label={label} path={docUrl(docs[k])} />
+                {venceKey && docs[venceKey] && <span className="text-sm text-muted">Vence {formatDate(docs[venceKey])}</span>}
+                {k === 'fotoSoat' && docs.excepcionSoatEstado && (
+                  <span className="text-sm text-muted">Excepción del SOAT: <StatusBadge status={docs.excepcionSoatEstado} /></span>
+                )}
+              </div>
+            ))}
+            {/* La foto de la cédula ya no se exige; se muestra solo si la subió antes. */}
+            {docUrl(docs.fotoCedula) && <Photo label="Cédula (ya no se exige)" path={docUrl(docs.fotoCedula)} />}
           </div>
         </Card>
       </div>
@@ -262,14 +255,14 @@ export default function DriverDetailPage() {
         </Card>
       )}
 
-      <ConfirmDialog
-        isOpen={action === 'notify'}
-        onClose={closeAction}
-        onConfirm={() => run(() => notifyDriver(driver.id), 'Notificación enviada', 'Error al notificar')}
-        title="Notificar conductor"
-        message={`Se enviará una notificación push a ${u.email || nombre}.`}
-        confirmText="Notificar"
-      />
+      {action === 'notify' && (
+        <NotificarDocumentosDialog
+          onClose={closeAction}
+          faltantes={faltantes}
+          destinatario={u.email || nombre}
+          onEnviar={(data) => run(() => notifyDriver(driver.id, data), 'Notificación enviada', 'Error al notificar')}
+        />
+      )}
       <ConfirmDialog
         isOpen={action === 'approve'}
         onClose={closeAction}

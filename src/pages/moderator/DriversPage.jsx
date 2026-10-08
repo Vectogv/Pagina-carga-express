@@ -5,6 +5,8 @@ import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { ciudadLabel, errorMessage, formatDate, fullName, toList } from '../../utils/format';
 import { resolveStorageUrl } from '../../utils/storage';
 import { CeldaConductor, CeldaVehiculo } from './driverCells';
+import { faltantesDe, textoFaltantes } from '../../utils/documentos';
+import NotificarDocumentosDialog from './NotificarDocumentosDialog';
 import {
   PageHeader, SearchInput, SegmentedFilter, DataTable, ConfirmDialog, Modal, Button, StatusBadge,
   Textarea, Toast, ToastContainer,
@@ -88,8 +90,8 @@ export default function ModeratorDriversPage() {
   const openAction = (type, r) => { setDocs(null); setNota(''); setAction({ type, ...r }); };
   const closeAction = () => { setAction(null); setNota(''); };
 
-  const handleNotify = async () => {
-    try { await notifyDriver(driverId(action)); showToast('Notificación enviada'); } catch (err) { showToast(errorMessage(err, 'Error al notificar'), false); }
+  const handleNotify = async (data) => {
+    try { await notifyDriver(driverId(action), data); showToast('Notificación enviada'); } catch (err) { showToast(errorMessage(err, 'Error al notificar'), false); }
   };
   const handleReport = async () => {
     try {
@@ -109,8 +111,8 @@ export default function ModeratorDriversPage() {
     } catch (err) { showToast(errorMessage(err, 'Error al rechazar'), false); }
   };
 
-  // Sin cédula o licencia no se puede aprobar (el botón queda deshabilitado con el motivo).
-  const faltanDocs = (r) => !r.fotoCedula || !r.fotoLicencia;
+  // Sin los 6 documentos y el número de cédula no se puede aprobar (el botón queda deshabilitado con el motivo).
+  const motivoBloqueo = (r) => textoFaltantes(faltantesDe(r));
 
   const columns = [
     {
@@ -128,13 +130,13 @@ export default function ModeratorDriversPage() {
       align: 'right',
       render: (_, r) => {
         const pend = (r.estadoVerificacion || 'pendiente') === 'pendiente';
-        const bloqueado = pend && faltanDocs(r);
+        const bloqueado = pend ? motivoBloqueo(r) : '';
         return (
           <div className="acciones-fila">
             <div className="acciones-fila__botones">
               {pend && (
                 <>
-                  <Button size="sm" variant="soft-success" icon={<Check size={14} />} disabled={bloqueado} onClick={() => openAction('approve', r)}>
+                  <Button size="sm" variant="soft-success" icon={<Check size={14} />} disabled={!!bloqueado} title={bloqueado || undefined} onClick={() => openAction('approve', r)}>
                     Aprobar
                   </Button>
                   <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={() => openAction('reject', r)}>Rechazar</Button>
@@ -151,7 +153,7 @@ export default function ModeratorDriversPage() {
                 <Flag size={15} />
               </Button>
             </div>
-            {bloqueado && <span className="acciones-fila__aviso">Faltan cédula o licencia</span>}
+            {bloqueado && <span className="acciones-fila__aviso">{bloqueado}</span>}
           </div>
         );
       },
@@ -214,8 +216,8 @@ export default function ModeratorDriversPage() {
                 <Button
                   variant="soft-success"
                   icon={<Check size={14} />}
-                  disabled={faltanDocs(docs)}
-                  title={faltanDocs(docs) ? 'Falta la cédula o la licencia' : undefined}
+                  disabled={!!motivoBloqueo(docs)}
+                  title={motivoBloqueo(docs) || undefined}
                   onClick={() => openAction('approve', docs)}
                 >
                   Aprobar
@@ -232,7 +234,8 @@ export default function ModeratorDriversPage() {
               <Detail label="Nombre">{docs.usuario?.nombre}</Detail>
               <Detail label="Teléfono">{docs.usuario?.telefono}</Detail>
               <Detail label="Correo">{docs.usuario?.email}</Detail>
-              <Detail label="Cédula">{docs.cedula}</Detail>
+              <Detail label="Número de cédula">{docs.cedula}</Detail>
+              {motivoBloqueo(docs) && <Detail label="Para aprobar"><span className="text-warning">{motivoBloqueo(docs)}</span></Detail>}
               <Detail label="Placa">{docs.placa && <span className="text-mono">{docs.placa}</span>}</Detail>
               <Detail label="Tipo de vehículo">{docs.tipoVehiculo}</Detail>
               <Detail label="Ciudad">{docs.ciudad}</Detail>
@@ -245,21 +248,22 @@ export default function ModeratorDriversPage() {
             <div className="form-grid">
               <Photo label="Foto del conductor" path={docs.fotoConductor} />
               <Photo label="Vehículo" path={docs.fotoVehiculo} />
-              <Photo label="Cédula" path={docs.fotoCedula} />
               <Photo label="Licencia" path={docs.fotoLicencia} />
+              {/* La foto de la cédula ya no se exige; se muestra solo si la subió antes. */}
+              {docs.fotoCedula && <Photo label="Cédula (ya no se exige)" path={docs.fotoCedula} />}
             </div>
           </div>
         )}
       </Modal>
 
-      <ConfirmDialog
-        isOpen={action?.type === 'notify'}
-        onClose={closeAction}
-        onConfirm={handleNotify}
-        title="Notificar conductor"
-        message={`Se enviará una notificación push a ${actionEmail || driverName(action || {})}.`}
-        confirmText="Notificar"
-      />
+      {action?.type === 'notify' && (
+        <NotificarDocumentosDialog
+          onClose={closeAction}
+          faltantes={faltantesDe(action)}
+          destinatario={actionEmail || driverName(action)}
+          onEnviar={handleNotify}
+        />
+      )}
       <ConfirmDialog
         isOpen={action?.type === 'approve'}
         onClose={closeAction}

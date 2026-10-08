@@ -98,7 +98,8 @@ export const resolveSoatException = (conductorId, data) =>
   api.put(`${BASE}/verifications/${conductorId}/soat-exception`, data)
 
 // Drivers - notificar/reportar (moderator, admin con token puede intentar)
-export const notifyDriver = (id) => api.post(`/api/moderator/drivers/${id}/notify`)
+// data opcional: { documentos: [...], mensaje } → aviso de documentos faltantes; sin cuerpo, recordatorio de actividad.
+export const notifyDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/notify`, data)
 export const reportDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/report`, data)
 
 // Payments

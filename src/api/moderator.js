@@ -10,7 +10,8 @@ export const getInactiveDrivers = (params) => api.get('/api/moderator/drivers/in
 export const getModeratorDriver = (id) => api.get(`/api/moderator/drivers/${id}`)
 // Disputas de los conductores de la zona, solo lectura. { total, page, data } — params: page, limit, estado (coma)
 export const getModeratorDisputes = (params) => api.get('/api/moderator/disputes', { params })
-export const notifyDriver = (id) => api.post(`/api/moderator/drivers/${id}/notify`)
+// data opcional: { documentos: [...], mensaje } → aviso de documentos faltantes; sin cuerpo, recordatorio de actividad.
+export const notifyDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/notify`, data)
 export const reportDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/report`, data)
 export const approveDriver = (id) => api.post(`/api/moderator/drivers/${id}/approve`)
 export const rejectDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/reject`, data)
