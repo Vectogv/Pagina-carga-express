@@ -555,6 +555,9 @@
   }
 
   .chat__list { border-right: none; }
+  /* El selector de ciudad baja a su propia fila; al lado de los filtros quedaba de 0 px. */
+  .chat__list-filters { flex-wrap: wrap; }
+  .chat__city-select { flex: 1 1 100%; }
   .chat__back { display: inline-flex; margin-left: calc(var(--space-2) * -1); }
   .chat .chat__thread { display: none; }
   .chat--thread-open .chat__list { display: none; }

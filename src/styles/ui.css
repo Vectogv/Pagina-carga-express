@@ -286,7 +286,7 @@
   .toolbar > * { width: 100%; }
   .toolbar > .inline-select { width: 100%; min-width: 0; }
   .search-input { max-width: none; flex-basis: auto; }
-  .segmented { width: 100%; }
+  .segmented { width: 100%; flex-wrap: wrap; }
 
   .search-input__field { font-size: 16px; }
 
@@ -302,7 +302,8 @@
   .topbar__menu { width: 40px; height: 40px; }
   .topbar__select { height: 40px; max-width: 46vw; }
   .tabs__trigger { min-height: 40px; }
-  .check input, .dispute-check input { width: 20px; height: 20px; }
+  /* `label input` gana a `.check input` (16 px) de los formularios. */
+  input[type="checkbox"], label input[type="checkbox"] { width: 20px; height: 20px; }
   .tabs__list { -webkit-overflow-scrolling: touch; }
 }
 

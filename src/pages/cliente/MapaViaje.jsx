@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapContainer, Marker, Polyline, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { iconoVehiculo, rumboEntre, setRumbo } from './VehiculoMarcador';
 
 const pin = (clase, texto) => L.divIcon({
   className: '',
@@ -13,12 +14,6 @@ const pin = (clase, texto) => L.divIcon({
 const ICONO = {
   origen: pin('cli-pin-mapa--origen', 'A'),
   destino: pin('cli-pin-mapa--destino', 'B'),
-  conductor: L.divIcon({
-    className: '',
-    html: '<span class="cli-pin-mapa cli-pin-mapa--conductor"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62L18.3 9.38a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></span>',
-    iconSize: [38, 38],
-    iconAnchor: [19, 19],
-  }),
 };
 
 const valido = (p) => p && Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lng)) && (Number(p.lat) || Number(p.lng));
@@ -37,18 +32,33 @@ function Encuadre({ puntos, clave }) {
 
 /** Mapa del viaje activo: origen, destino, conductor en vivo y la ruta que sigue. */
 export default function MapaViaje({ viaje, conductor, ruta }) {
+  const icono = useMemo(() => iconoVehiculo(viaje.conductor?.tipoVehiculo), [viaje.conductor?.tipoVehiculo]);
+  const marcador = useRef(null);
+  const previa = useRef(null);
+  const [rumbo, setRumboState] = useState(0);
+  const lat = Number(conductor?.lat);
+  const lng = Number(conductor?.lng);
+  useEffect(() => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const nueva = { lat, lng };
+    const r = previa.current ? rumboEntre(previa.current, nueva) : null;
+    if (r != null) setRumboState(r);
+    previa.current = nueva;
+  }, [lat, lng]);
+  // El ícono se recrea al cambiar el tipo: se vuelve a girar.
+  useEffect(() => { setRumbo(marcador.current, rumbo); }, [rumbo, icono, lat, lng]);
   const puntos = [viaje.origen, viaje.destino, conductor].filter(valido).map(punto);
   if (puntos.length === 0) return null;
   const clave = `${viaje.id}-${viaje.estado}-${valido(conductor) ? 1 : 0}`;
 
   return (
     <div className="cli-mapa">
-      <MapContainer center={puntos[0]} zoom={13} scrollWheelZoom={false} attributionControl={false} style={{ height: '100%', width: '100%' }}>
+      <MapContainer center={puntos[0]} zoom={13} scrollWheelZoom={false} zoomControl attributionControl={false} style={{ height: '100%', width: '100%' }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
         {ruta?.length > 1 && <Polyline positions={ruta} pathOptions={{ color: '#1656d6', weight: 5, opacity: 0.85 }} />}
         {valido(viaje.origen) && <Marker position={punto(viaje.origen)} icon={ICONO.origen} />}
         {valido(viaje.destino) && <Marker position={punto(viaje.destino)} icon={ICONO.destino} />}
-        {valido(conductor) && <Marker position={punto(conductor)} icon={ICONO.conductor} zIndexOffset={1000} />}
+        {valido(conductor) && <Marker ref={marcador} position={punto(conductor)} icon={icono} zIndexOffset={1000} />}
         <Encuadre puntos={puntos} clave={clave} />
       </MapContainer>
     </div>
