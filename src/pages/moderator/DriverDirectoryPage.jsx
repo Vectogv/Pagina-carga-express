@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getModeratorDrivers } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { errorMessage, fullName, toList } from '../../utils/format';
+import { ciudadLabel, errorMessage, fullName, toList } from '../../utils/format';
 import {
-  PageHeader, SearchInput, SegmentedFilter, DataTable, Avatar, Badge, StatusBadge, Pagination,
+  PageHeader, SearchInput, SegmentedFilter, DataTable, Badge, StatusBadge, Pagination,
 } from '../../components/ui';
+import { CeldaConductor, CeldaVehiculo } from './driverCells';
 
 const LIMIT = 50;
 const ESTADOS = [
@@ -55,23 +56,16 @@ export default function DriverDirectoryPage() {
     {
       key: 'nombre',
       label: 'Conductor',
-      render: (_, r) => (
-        <div className="cell-user">
-          <Avatar src={r.fotoConductor || r.usuario?.avatar} name={driverName(r)} />
-          <div className="cell-user__text">
-            <span className="cell-user__name">{driverName(r)}</span>
-            <span className="cell-user__meta">{r.usuario?.telefono || r.usuario?.email || '—'}</span>
-          </div>
-        </div>
-      ),
+      render: (_, r) => <CeldaConductor r={r} name={driverName(r)} />,
     },
-    { key: 'cedula', label: 'Cédula', render: (v) => (v ? <span className="text-mono">{v}</span> : '—') },
-    { key: 'placa', label: 'Placa', render: (v) => (v ? <span className="text-mono">{v}</span> : '—') },
-    { key: 'tipoVehiculo', label: 'Vehículo', render: (v) => v || '—' },
-    { key: 'estadoVerificacion', label: 'Verificación', render: (v) => <StatusBadge status={v || 'pendiente'} /> },
+    { key: 'placa', label: 'Vehículo', render: (_, r) => <CeldaVehiculo r={r} /> },
+    { key: 'telefono', label: 'Contacto', render: (_, r) => r.usuario?.telefono || '—' },
+    { key: 'ciudad', label: 'Ciudad', render: (v) => ciudadLabel(v === 'california' ? 'cali' : v) },
+    { key: 'estadoVerificacion', label: 'Estado', render: (v) => <StatusBadge status={v || 'pendiente'} /> },
     {
       key: 'online',
       label: 'Conexión',
+      align: 'right',
       render: (v, r) => (r.usuario?.estadoCuenta === 'suspendida' || r.usuario?.suspendido
         ? <Badge variant="danger">Suspendido</Badge>
         : <Badge variant={v ? 'success' : 'neutral'}>{v ? 'Conectado' : 'Desconectado'}</Badge>),

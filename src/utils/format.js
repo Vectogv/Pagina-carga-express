@@ -65,3 +65,12 @@ export const errorMessage = (err, fallback = 'Ocurrió un error inesperado') =>
   || err?.response?.data?.error
   || err?.message
   || fallback;
+
+const CIUDADES = { popayan: 'Popayán', california: 'Cali', cali: 'Cali', bogota: 'Bogotá', medellin: 'Medellín' };
+
+/** "popayan" → "Popayán"; las desconocidas solo llevan mayúscula inicial. */
+export const ciudadLabel = (v) => {
+  if (!v) return '—';
+  const k = String(v).trim().toLowerCase();
+  return CIUDADES[k] || k.replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+};

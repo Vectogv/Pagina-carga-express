@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { BellRing } from 'lucide-react';
 import { getInactiveDrivers, notifyDriver } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
+import { ciudadLabel, errorMessage, formatDate, fullName, toList } from '../../utils/format';
 import {
-  PageHeader, DataTable, ConfirmDialog, Avatar, Button, Badge, Toast, ToastContainer,
+  PageHeader, DataTable, ConfirmDialog, Button, Badge, Toast, ToastContainer,
 } from '../../components/ui';
+import { CeldaConductor, CeldaVehiculo } from './driverCells';
 
 const driverName = (r) => (r.usuario ? fullName(r.usuario) : (r.nombre || '—'));
 
@@ -46,34 +46,32 @@ export default function InactiveDriversPage() {
 
   const columns = [
     {
-      // Acciones primero: se ven sin desplazar la tabla en pantallas angostas.
-      key: 'acciones',
-      label: '',
-      render: (_, r) => (
-        <Button size="sm" variant="soft-primary" icon={<BellRing size={14} />} onClick={() => setAction(r)}>
-          Notificar
-        </Button>
-      ),
-    },
-    {
       key: 'nombre',
       label: 'Conductor',
-      render: (_, r) => (
-        <div className="cell-user">
-          <Avatar src={r.fotoConductor || r.usuario?.avatar} name={driverName(r)} />
-          <div className="cell-user__text">
-            <Link className="cell-user__name" to={`/moderator/drivers/${r.id}`}>{driverName(r)}</Link>
-            <span className="cell-user__meta">{r.usuario?.email || '—'}</span>
-          </div>
-        </div>
-      ),
+      render: (_, r) => <CeldaConductor r={r} name={driverName(r)} to={`/moderator/drivers/${r.id}`} />,
     },
-    { key: 'ciudad', label: 'Ciudad', render: (v) => v || '—' },
+    { key: 'placa', label: 'Vehículo', render: (_, r) => <CeldaVehiculo r={r} /> },
+    { key: 'telefono', label: 'Contacto', render: (_, r) => r.usuario?.telefono || '—' },
+    { key: 'ciudad', label: 'Ciudad', render: (v) => ciudadLabel(v) },
     {
       key: 'ultimoViajeAt',
       label: 'Último viaje',
       // Solo conductores aprobados con más de 7 días sin viajes (el servidor ya excluye pendientes y recién registrados).
       render: (v) => (v ? <Badge variant="warning">{formatDate(v)}</Badge> : <Badge variant="neutral">Sin viajes</Badge>),
+    },
+    {
+      key: 'acciones',
+      label: '',
+      align: 'right',
+      render: (_, r) => (
+        <div className="acciones-fila">
+          <div className="acciones-fila__botones">
+            <Button size="sm" variant="soft-primary" icon={<BellRing size={14} />} onClick={() => setAction(r)}>
+              Notificar
+            </Button>
+          </div>
+        </div>
+      ),
     },
   ];
 
