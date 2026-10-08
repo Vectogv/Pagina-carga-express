@@ -154,7 +154,7 @@ export default function EmpresasPage() {
       />
       <Pagination
         page={page}
-        totalPages={meta.lastPage || meta.last_page || (empresas.length >= 20 ? page + 1 : page)}
+        totalPages={meta.lastPage || meta.last_page || (meta.total && meta.limit ? Math.max(1, Math.ceil(meta.total / meta.limit)) : page)}
         total={meta.total}
         onChange={setPage}
       />
