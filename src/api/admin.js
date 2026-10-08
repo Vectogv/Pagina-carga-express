@@ -146,3 +146,8 @@ export const getAdminEncuestas = (params) => api.get(`${BASE}/encuestas`, { para
 // Gerencia: pendientes de moderadores por categoria/zona (?zona=) y comunicacion propia {titulo, mensaje, destino: conductores|moderadores, zona?}
 export const getPendientes = (params) => api.get(`${BASE}/pendientes`, { params })
 export const sendComunicacion = (data) => api.post(`${BASE}/comunicacion`, data)
+
+// Empresas - GET ?estado=&page=, PUT approve, PUT reject {nota}
+export const getEmpresas = (params) => api.get(`${BASE}/empresas`, { params })
+export const approveEmpresa = (id) => api.put(`${BASE}/empresas/${id}/approve`)
+export const rejectEmpresa = (id, data) => api.put(`${BASE}/empresas/${id}/reject`, data)

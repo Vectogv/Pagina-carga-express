@@ -13,6 +13,7 @@ const cliente = {
   index: lazy(() => import('./pages/cliente/ClientePage').then((m) => ({ default: m.ViajeActivo }))),
   viajes: lazy(() => import('./pages/cliente/ClientePage').then((m) => ({ default: m.MisViajes }))),
   soporte: lazy(() => import('./pages/cliente/Soporte')),
+  empresa: lazy(() => import('./pages/cliente/Empresa')),
 };
 
 const admin = {
@@ -27,6 +28,7 @@ const admin = {
   commissions: lazy(() => import('./pages/admin/CommissionsPage')),
   payments: lazy(() => import('./pages/admin/PaymentsPage')),
   verifications: lazy(() => import('./pages/admin/VerificationsPage')),
+  empresas: lazy(() => import('./pages/admin/EmpresasPage')),
   reports: lazy(() => import('./pages/admin/ReportsPage')),
   tickets: lazy(() => import('./pages/admin/TicketsPage')),
   disputes: lazy(() => import('./pages/admin/DisputesPage')),
