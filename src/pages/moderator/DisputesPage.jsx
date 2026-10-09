@@ -40,7 +40,6 @@ export default function ModeratorDisputesPage() {
     } catch (err) {
       const st = err.response?.status;
       if (st === 403) setError(err.response?.data?.error || 'No tienes permisos de moderador o ciudad no asignada');
-      else if (st === 404) setError('El servidor aún no tiene la lista de disputas del moderador');
       else setError(errorMessage(err, 'Error al cargar las disputas'));
     } finally {
       setLoading(false);

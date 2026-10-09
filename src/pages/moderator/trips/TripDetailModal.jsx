@@ -149,7 +149,7 @@ export default function TripDetailModal({
           <section className="trip-detail__section">
             <h4 className="section-title">Seguimiento</h4>
             <ServiceStatusTimeline estado={detail.estado} />
-            {(detail.tieneDisputa || detail.disputa) && (
+            {detail.disputa && (
               <div className="row">
                 <Link className="btn btn--soft-danger btn--sm" to={`/moderator/disputes?viaje=${detail.id}`}>Ver disputa</Link>
               </div>
@@ -238,7 +238,7 @@ export default function TripDetailModal({
             {ganancia && (
               <div className="trip-detail__earning">
                 <span className="text-muted">Ganancia conductor:</span>
-                <span>{formatCurrency(ganancia.montoBruto)} bruto · {formatCurrency(ganancia.montoNeto)} neto · Comisión 10%: {formatCurrency(ganancia.comision)}</span>
+                <span>{formatCurrency(ganancia.montoBruto)} bruto · {formatCurrency(ganancia.montoNeto)} neto · Comisión: {formatCurrency(ganancia.comision)}</span>
                 <Badge variant={ganancia.comisionPagada ? 'success' : 'warning'} size="sm">
                   {ganancia.comisionPagada ? 'Pagada' : 'Pendiente'}
                 </Badge>

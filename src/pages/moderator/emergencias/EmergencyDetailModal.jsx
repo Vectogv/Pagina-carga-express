@@ -9,18 +9,7 @@ import EmergencyChat from './EmergencyChat';
 
 const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
 
-/** Determina quién activó el SOS (conductor o cliente) comparando con los datos del viaje. */
-function resolveParties(alerta, viaje) {
-  if (!viaje) return null;
-  const esConductor = (viaje.conductor?.telefono && alerta.usuario?.telefono && viaje.conductor.telefono === alerta.usuario.telefono)
-    || viaje.conductor?.nombre === alerta.usuario?.nombre;
-  return {
-    solicitante: esConductor ? viaje.conductor : viaje.cliente,
-    contraparte: esConductor ? viaje.cliente : viaje.conductor,
-    solicitanteRol: esConductor ? 'Conductor' : 'Cliente',
-    contraparteRol: esConductor ? 'Cliente' : 'Conductor',
-  };
-}
+const ROL_LABEL = { conductor: 'Conductor', cliente: 'Cliente' };
 
 function PhoneLink({ value }) {
   if (!value) return null;
@@ -33,14 +22,13 @@ export default function EmergencyDetailModal({
   actionLoading, onAcknowledge, onResolve,
 }) {
   if (!selected) return null;
-  const parties = resolveParties(selected, tripDetail);
+  // El servidor manda en `usuario` a quien activó el SOS (con su rol); no hay que adivinarlo.
+  const solicitante = selected.usuario;
   const conductor = tripDetail?.conductor;
   const hasLocation = selected.lat && selected.lng;
   const mapa = sosRouteProps(selected, tripDetail);
   const busy = actionLoading === selected.id;
-  const chatTitle = parties?.solicitante
-    ? `Chat con ${parties.solicitante.nombre || selected.usuario?.nombre || 'solicitante'}`
-    : 'Chat de emergencia';
+  const chatTitle = solicitante?.nombre ? `Chat con ${solicitante.nombre}` : 'Chat de emergencia';
 
   let footer = null;
   if (selected.estado === 'pendiente') {
@@ -92,35 +80,18 @@ export default function EmergencyDetailModal({
           </section>
         )}
 
-        {parties && (
-          <div className="two-col">
-            <section className="em-card em-card--danger">
-              <h4 className="section-title em-card__danger-title"><Siren size={13} /> Solicitante · quien activó el SOS</h4>
-              <div className="em-person">
-                <span className="em-person__name">
-                  {parties.solicitante?.nombre || selected.usuario?.nombre || '—'}
-                  <Badge variant="danger" size="sm">{parties.solicitanteRol}</Badge>
-                </span>
-                <PhoneLink value={parties.solicitante?.telefono || selected.usuario?.telefono} />
-                {parties.solicitante?.email && <span className="text-sm text-muted">{parties.solicitante.email}</span>}
-                {parties.solicitante?.placa && (
-                  <span className="text-sm text-muted em-inline">
-                    Placa {parties.solicitante.placa} · {parties.solicitante.tipoVehiculo || '—'} · <Star size={12} /> {parties.solicitante.calificacion || '0.0'}
-                  </span>
-                )}
-              </div>
-            </section>
-            <section className="em-card">
-              <h4 className="section-title">Contraparte · {parties.contraparteRol}</h4>
-              <div className="em-person">
-                <span className="em-person__name">{parties.contraparte?.nombre || '—'}</span>
-                <PhoneLink value={parties.contraparte?.telefono} />
-                {parties.contraparte?.placa && (
-                  <span className="text-sm text-muted">Placa {parties.contraparte.placa} · {parties.contraparte.tipoVehiculo || '—'}</span>
-                )}
-              </div>
-            </section>
-          </div>
+        {solicitante && (
+          <section className="em-card em-card--danger">
+            <h4 className="section-title em-card__danger-title"><Siren size={13} /> Solicitante · quien activó el SOS</h4>
+            <div className="em-person">
+              <span className="em-person__name">
+                {solicitante.nombre || '—'}
+                {ROL_LABEL[solicitante.rol] && <Badge variant="danger" size="sm">{ROL_LABEL[solicitante.rol]}</Badge>}
+              </span>
+              <PhoneLink value={solicitante.telefono} />
+              {solicitante.email && <span className="text-sm text-muted">{solicitante.email}</span>}
+            </div>
+          </section>
         )}
 
         {tripDetail && (

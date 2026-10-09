@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, BellRing, Check, Flag, MessageSquare, X } from 'lucide-react';
 import { getModeratorDriver, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
-import { errorMessage, formatCurrency, formatDate, formatDateTime, timeAgo } from '../../utils/format';
+import { errorMessage, formatCurrency, formatDate, formatDateTime } from '../../utils/format';
 import { resolveStorageUrl } from '../../utils/storage';
 import { faltantesDe, textoFaltantes } from '../../utils/documentos';
 import NotificarDocumentosDialog from './NotificarDocumentosDialog';
@@ -169,7 +169,7 @@ export default function DriverDetailPage() {
           </div>
           <span className="text-sm text-muted">
             Registrado {formatDate(driver.createdAt)}
-            {driver.ubicacionActualizadaEn ? ` · Última ubicación ${timeAgo(driver.ubicacionActualizadaEn)}` : ''}
+            {driver.ultimaActividadAt ? ` · Última actividad ${formatDate(driver.ultimaActividadAt)}` : ''}
           </span>
           {pend && faltanDocs && <span className="text-sm text-warning">No se puede aprobar. {textoFaltantes(faltantes)}.</span>}
           {driver.notaRechazo && <span className="text-sm text-muted">Nota de rechazo: {driver.notaRechazo}</span>}

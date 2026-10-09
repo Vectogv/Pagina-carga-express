@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { BellRing, Check, FileText, Flag, X } from 'lucide-react';
 import { getModeratorDrivers, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { ciudadLabel, errorMessage, formatDate, fullName, toList } from '../../utils/format';
+import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import { resolveStorageUrl } from '../../utils/storage';
 import { CeldaConductor, CeldaVehiculo } from './driverCells';
 import { faltantesDe, textoFaltantes } from '../../utils/documentos';
@@ -53,9 +54,11 @@ function Detail({ label, children }) {
 
 export default function ModeratorDriversPage() {
   const { ciudadParams } = useModeratorCity();
+  const zonas = useZonas();
   // Una petición por estado: así cada pestaña tiene su propio conteo aunque se
-  // esté viendo otra (el backend filtra y pagina por estado, máx. 100 por página).
+  // esté viendo otra (el backend filtra y pagina por estado; el conteo sale de `total`).
   const [byEstado, setByEstado] = useState(EMPTY_BY_ESTADO);
+  const [totales, setTotales] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [action, setAction] = useState(null);
@@ -74,8 +77,13 @@ export default function ModeratorDriversPage() {
         ESTADOS.map((estado) => getModeratorDrivers({ page: 1, limit: 100, estado, ...ciudadParams })),
       );
       const next = {};
-      ESTADOS.forEach((estado, i) => { next[estado] = toList(responses[i].data, 'drivers'); });
+      const tot = {};
+      ESTADOS.forEach((estado, i) => {
+        next[estado] = toList(responses[i].data, 'drivers');
+        tot[estado] = responses[i].data?.total ?? next[estado].length;
+      });
       setByEstado(next);
+      setTotales(tot);
     } catch (err) {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
       else setError(errorMessage(err, 'Error al cargar conductores'));
@@ -122,7 +130,7 @@ export default function ModeratorDriversPage() {
     },
     { key: 'placa', label: 'Vehículo', render: (_, r) => <CeldaVehiculo r={r} /> },
     { key: 'telefono', label: 'Contacto', render: (_, r) => r.usuario?.telefono || '—' },
-    { key: 'ciudad', label: 'Ciudad', render: (v) => ciudadLabel(v === 'california' ? 'cali' : v) },
+    { key: 'ciudad', label: 'Ciudad', render: (v) => zonaLabelFrom(zonas, v) },
     { key: 'estadoVerificacion', label: 'Estado', render: (v) => <StatusBadge status={v} /> },
     {
       key: 'acciones',
@@ -164,10 +172,10 @@ export default function ModeratorDriversPage() {
     ? ESTADOS.flatMap((e) => byEstado[e]).sort(byNewest)
     : byEstado[tab] || [];
   const counts = {
-    pendiente: byEstado.pendiente.length,
-    aprobado: byEstado.aprobado.length,
-    rechazado: byEstado.rechazado.length,
-    todos: ESTADOS.reduce((acc, e) => acc + byEstado[e].length, 0),
+    pendiente: totales.pendiente ?? 0,
+    aprobado: totales.aprobado ?? 0,
+    rechazado: totales.rechazado ?? 0,
+    todos: ESTADOS.reduce((acc, e) => acc + (totales[e] ?? 0), 0),
   };
   const tabOptions = TABS.map(([value, label]) => ({ value, label, count: counts[value] }));
 

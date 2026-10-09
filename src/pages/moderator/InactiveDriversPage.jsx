@@ -2,17 +2,22 @@ import { useState, useEffect, useCallback } from 'react';
 import { BellRing } from 'lucide-react';
 import { getInactiveDrivers, notifyDriver } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { ciudadLabel, errorMessage, formatDate, fullName, toList } from '../../utils/format';
+import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import {
-  PageHeader, DataTable, ConfirmDialog, Button, Badge, Toast, ToastContainer,
+  PageHeader, DataTable, ConfirmDialog, Button, Badge, Toast, ToastContainer, Pagination,
 } from '../../components/ui';
 import { CeldaConductor, CeldaVehiculo } from './driverCells';
 
+const LIMIT = 50;
 const driverName = (r) => (r.usuario ? fullName(r.usuario) : (r.nombre || '—'));
 
 export default function InactiveDriversPage() {
   const { ciudadParams } = useModeratorCity();
+  const zonas = useZonas();
   const [drivers, setDrivers] = useState([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [action, setAction] = useState(null);
@@ -23,15 +28,16 @@ export default function InactiveDriversPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getInactiveDrivers({ page: 1, limit: 50, ...ciudadParams });
+      const res = await getInactiveDrivers({ page, limit: LIMIT, ...ciudadParams });
       setDrivers(toList(res.data, 'drivers'));
+      setTotal(res.data?.total ?? 0);
     } catch (err) {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
       else setError(errorMessage(err, 'Error al cargar inactivos'));
     } finally {
       setLoading(false);
     }
-  }, [ciudadParams]);
+  }, [page, ciudadParams]);
 
   useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
 
@@ -52,7 +58,7 @@ export default function InactiveDriversPage() {
     },
     { key: 'placa', label: 'Vehículo', render: (_, r) => <CeldaVehiculo r={r} /> },
     { key: 'telefono', label: 'Contacto', render: (_, r) => r.usuario?.telefono || '—' },
-    { key: 'ciudad', label: 'Ciudad', render: (v) => ciudadLabel(v) },
+    { key: 'ciudad', label: 'Ciudad', render: (v) => zonaLabelFrom(zonas, v) },
     {
       key: 'ultimoViajeAt',
       label: 'Último viaje',
@@ -91,6 +97,8 @@ export default function InactiveDriversPage() {
         emptyMessage="No hay conductores inactivos"
         emptyDescription="Todos los conductores de tu ciudad han tenido actividad reciente."
       />
+
+      {total > LIMIT && <Pagination page={page} totalPages={Math.ceil(total / LIMIT)} total={total} onChange={setPage} />}
 
       <ConfirmDialog
         isOpen={!!action}

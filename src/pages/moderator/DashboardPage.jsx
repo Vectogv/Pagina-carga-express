@@ -5,9 +5,7 @@ import {
   ArrowRight, BadgeCheck, ClipboardList, Clock, Gavel, Inbox, LifeBuoy, MapPin, Megaphone, MessageSquare, Navigation, RefreshCw, Siren, Truck,
 } from 'lucide-react';
 import {
-  getModeratorDrivers,
-  getInactiveDrivers,
-  getModeratorComunicados,
+  getModeratorDashboard,
   getModeratorEmergencies,
   getModeratorTrips,
   getConversations,
@@ -25,7 +23,7 @@ import {
 import ZoneLimitCard from '../../components/maps/ZoneLimitCard';
 import './DashboardPage.css';
 
-const LIST_KEYS = ['drivers', 'trips', 'emergencies', 'conversations'];
+const LIST_KEYS = ['trips', 'emergencies', 'conversations'];
 const normalizeList = (d) => toList(d, ...LIST_KEYS);
 
 const readStoredUser = () => {
@@ -95,9 +93,8 @@ export default function ModeratorDashboard() {
   const { user: authUser } = useAuth();
   const { ciudadParams } = useModeratorCity();
   const [user, setUser] = useState(readStoredUser);
-  const [drivers, setDrivers] = useState([]);
-  const [inactive, setInactive] = useState(0);
-  const [comunicados, setComunicados] = useState([]);
+  // Conteos del panel: los calcula el servidor en GET /api/moderator/dashboard.
+  const [stats, setStats] = useState({});
   const [emergencies, setEmergencies] = useState([]);
   const [trips, setTrips] = useState([]);
   const [conversations, setConversations] = useState([]);
@@ -111,19 +108,15 @@ export default function ModeratorDashboard() {
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
     const results = await Promise.allSettled([
-      getModeratorDrivers({ page: 1, limit: 100, ...ciudadParams }),
-      getInactiveDrivers({ page: 1, limit: 100, ...ciudadParams }),
-      getModeratorComunicados({ page: 1, limit: 100, ...ciudadParams }),
+      getModeratorDashboard(ciudadParams.ciudad),
       getModeratorEmergencies({ page: 1, limit: 100, ...ciudadParams }),
       getModeratorTrips({ page: 1, limit: 100, ...ciudadParams }),
       getConversations({ page: 1, limit: 50, ...ciudadParams }),
     ]);
-    if (results[0].status === 'fulfilled') setDrivers(normalizeList(results[0].value.data));
-    if (results[1].status === 'fulfilled') setInactive(normalizeList(results[1].value.data).length);
-    if (results[2].status === 'fulfilled') setComunicados(toList(results[2].value.data, 'comunicados'));
-    if (results[3].status === 'fulfilled') setEmergencies(normalizeList(results[3].value.data));
-    if (results[4].status === 'fulfilled') setTrips(normalizeList(results[4].value.data));
-    if (results[5].status === 'fulfilled') setConversations(normalizeList(results[5].value.data));
+    if (results[0].status === 'fulfilled') setStats(results[0].value.data || {});
+    if (results[1].status === 'fulfilled') setEmergencies(normalizeList(results[1].value.data));
+    if (results[2].status === 'fulfilled') setTrips(normalizeList(results[2].value.data));
+    if (results[3].status === 'fulfilled') setConversations(normalizeList(results[3].value.data));
     setUpdatedAt(new Date());
     setLoading(false);
     setRefreshing(false);
@@ -192,18 +185,18 @@ export default function ModeratorDashboard() {
   const ciudad = user.zonaModerador || user.zona_moderador || '—';
   const userName = [`${user.nombre || ''} ${user.apellido || ''}`.trim(), user.email].filter(Boolean).join(' · ') || 'Moderador';
 
-  const asignados = drivers.length;
-  const online = drivers.filter((d) => d.online).length;
+  const asignados = stats.totalDrivers ?? 0;
+  const online = stats.onlineDrivers ?? 0;
   const offline = Math.max(0, asignados - online);
-  const pendVerif = drivers.filter((d) => (d.estadoVerificacion || d.estado_verificacion || '') === 'pendiente').length;
+  const pendVerif = stats.pendientesVerificacion ?? 0;
+  const inactive = stats.inactiveDrivers ?? 0;
+  const enCurso = stats.enCurso ?? 0;
+  const pendEmerg = stats.emergenciasPendientes ?? 0;
+  const comunicadosPend = stats.comunicadosPendientes ?? 0;
 
+  // Las listas siguen viniendo del socket y de /trips y /emergency; los conteos, del dashboard.
   const activeTrips = trips.filter((t) => ACTIVE_TRIP_STATES.includes((t.estado || '').toLowerCase()));
-  const enCurso = activeTrips.filter((t) => t.estado === 'en_curso').length;
-
   const activeEmergencies = emergencies.filter((e) => ACTIVE_EMERGENCY_STATES.includes((e.estado || '').toLowerCase()));
-  const pendEmerg = activeEmergencies.filter((e) => e.estado === 'pendiente').length;
-
-  const comunicadosPend = comunicados.filter((c) => ((c.estado || 'pendiente').toLowerCase()) === 'pendiente').length;
 
   // Lo que requiere acción del moderador, en el mismo orden que el Resumen de la app.
   const kpis = [
@@ -289,7 +282,7 @@ export default function ModeratorDashboard() {
       <div className="two-col">
         <Card
           title="Estado de conductores"
-          description={`${asignados} conductores asignados en ${ciudad}`}
+          description={`${asignados} conductores en tu zona (${ciudad})`}
           actions={<SeeAll to="/moderator/drivers" />}
         >
           <div className="ccop-bar" role="img" aria-label={`${online} en línea, ${offline} desconectados`}>
@@ -312,7 +305,7 @@ export default function ModeratorDashboard() {
 
         <Card
           title="Viajes en tiempo real"
-          description={`${activeTrips.length} en servicio · ${enCurso} en ruta`}
+          description={`${stats.viajesActivos ?? activeTrips.length} en servicio · ${enCurso} en ruta`}
           actions={<SeeAll to="/moderator/trips" />}
         >
           {tripsToShow.length === 0 ? (
@@ -340,7 +333,7 @@ export default function ModeratorDashboard() {
       <div className="two-col">
         <Card
           title="Emergencias activas"
-          description={activeEmergencies.length > 0 ? `${activeEmergencies.length} caso(s) activo(s)` : 'Casos que requieren atención'}
+          description={(stats.emergenciasActivas ?? activeEmergencies.length) > 0 ? `${stats.emergenciasActivas ?? activeEmergencies.length} caso(s) activo(s)` : 'Casos que requieren atención'}
           actions={<SeeAll to="/moderator/emergencies" />}
         >
           {emeToShow.length === 0 ? (

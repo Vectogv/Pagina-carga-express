@@ -199,8 +199,8 @@ export default function ModeratorTripsPage() {
           size="icon"
           variant="ghost"
           onClick={(e) => { e.stopPropagation(); setSelectedId(r.id); }}
-          aria-label={`Ver seguimiento del viaje ${String(r.id).slice(0, 8)}`}
-          title="Ver seguimiento"
+          aria-label={`Ver detalle del viaje ${String(r.id).slice(0, 8)}`}
+          title="Ver detalle"
         >
           <ChevronRight size={16} />
         </Button>

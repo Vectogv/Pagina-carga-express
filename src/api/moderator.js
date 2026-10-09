@@ -24,7 +24,6 @@ export const getModeratorComunicados = (params) => api.get('/api/moderator/comun
 // Encuestas
 export const createEncuesta = (data) => api.post('/api/moderator/encuestas', data)
 export const getEncuestaResults = (id) => api.get(`/api/moderator/encuestas/${id}/results`)
-export const answerEncuesta = (id, data) => api.post(`/api/moderator/encuestas/${id}/answer`, data)
 
 // Avisos — doc §17 (también accesible como moderador)
 export const getAvisos = (params) => api.get('/api/avisos', { params })

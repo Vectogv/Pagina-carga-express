@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getModeratorDrivers } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { ciudadLabel, errorMessage, fullName, toList } from '../../utils/format';
+import { errorMessage, fullName, toList } from '../../utils/format';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import {
   PageHeader, SearchInput, SegmentedFilter, DataTable, Badge, StatusBadge, Pagination,
 } from '../../components/ui';
@@ -21,7 +22,9 @@ const driverName = (r) => fullName(r.usuario || r);
 export default function DriverDirectoryPage() {
   const navigate = useNavigate();
   const { ciudadParams } = useModeratorCity();
+  const zonas = useZonas();
   const [drivers, setDrivers] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [q, setQ] = useState('');
@@ -36,6 +39,7 @@ export default function DriverDirectoryPage() {
         page, limit: LIMIT, estado: estado || undefined, buscar: q.trim() || undefined, ...ciudadParams,
       });
       setDrivers(toList(res.data, 'drivers'));
+      setTotal(res.data?.total ?? 0);
     } catch (err) {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
       else setError(errorMessage(err, 'Error al cargar los conductores'));
@@ -60,7 +64,7 @@ export default function DriverDirectoryPage() {
     },
     { key: 'placa', label: 'Vehículo', render: (_, r) => <CeldaVehiculo r={r} /> },
     { key: 'telefono', label: 'Contacto', render: (_, r) => r.usuario?.telefono || '—' },
-    { key: 'ciudad', label: 'Ciudad', render: (v) => ciudadLabel(v === 'california' ? 'cali' : v) },
+    { key: 'ciudad', label: 'Ciudad', render: (v) => zonaLabelFrom(zonas, v) },
     { key: 'estadoVerificacion', label: 'Estado', render: (v) => <StatusBadge status={v || 'pendiente'} /> },
     {
       key: 'online',
@@ -72,8 +76,7 @@ export default function DriverDirectoryPage() {
     },
   ];
 
-  // El backend no manda el total: se ofrece "siguiente" mientras la página venga llena.
-  const totalPages = page + (drivers.length === LIMIT ? 1 : 0);
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   return (
     <div className="page">
@@ -97,7 +100,7 @@ export default function DriverDirectoryPage() {
         emptyMessage={q ? `Sin resultados para “${q}”` : 'No hay conductores en tu zona'}
       />
 
-      {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={setPage} />}
+      {totalPages > 1 && <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} />}
     </div>
   );
 }

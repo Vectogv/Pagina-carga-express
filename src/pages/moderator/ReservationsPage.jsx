@@ -64,7 +64,7 @@ export default function ModeratorReservationsPage() {
       render: (_, r) => (r.cliente ? (
         <div className="cell-user__text">
           <span className="cell-user__name">{fullName(r.cliente)}</span>
-          {r.cliente.telefono && <span className="cell-user__meta">{r.cliente.telefono}</span>}
+          <span className="cell-user__meta">{r.cliente.telefono || '—'}</span>
         </div>
       ) : '—'),
     },

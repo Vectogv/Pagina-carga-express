@@ -83,7 +83,7 @@ export function ModeratorBadgesProvider({ children }) {
     if (!tokenStore.access) return;
     try {
       const res = await getModeratorDrivers({ page: 1, limit: 100, estado: 'pendiente', ...ciudadParams });
-      setPendingDriversBadge(toList(res.data, 'drivers').length);
+      setPendingDriversBadge(res.data?.total ?? toList(res.data, 'drivers').length);
     } catch {
       // Silencioso: el badge es informativo y se reintenta en el siguiente polling.
     }
