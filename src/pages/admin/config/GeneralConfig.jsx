@@ -13,13 +13,19 @@ function statusOf(current) {
 }
 
 const EMPTY_FORM = {
-  nequiNumero: '', nequiNombre: '', soporteTelefono: '', soporteEmail: '',
+  nequiNumero: '', nequiNombre: '', soporteTelefono: '', soporteEmail: '', inactividadDias: '',
 };
 
+// Mismo rango que valida el servidor (admin_controller.ts updateConfig: entero 1–365).
+const DIAS_MIN = 1;
+const DIAS_MAX = 365;
+const diasValidos = (v) => /^\d+$/.test(v) && Number(v) >= DIAS_MIN && Number(v) <= DIAS_MAX;
+
 /**
- * Doc §18: GET/PUT /api/admin/config {nequiNumero?, nequiNombre?, soporteTelefono?, soporteEmail?}.
+ * Doc §18: GET/PUT /api/admin/config {nequiNumero?, nequiNombre?, soporteTelefono?, soporteEmail?, inactividadDias?}.
  * soporteTelefono/soporteEmail son el contacto que ve el cliente en la app (Soporte); si quedan
  * vacíos, el servidor usa un valor fijo de respaldo (support_controller.ts).
+ * inactividadDias: días sin actividad para que un conductor salga en "Inactivos" del moderador.
  */
 export default function GeneralConfig({ notify }) {
   const [form, setForm] = useState(EMPTY_FORM);
@@ -39,6 +45,7 @@ export default function GeneralConfig({ notify }) {
         nequiNombre: data.nequiNombre || '',
         soporteTelefono: data.soporteTelefono || '',
         soporteEmail: data.soporteEmail || '',
+        inactividadDias: data.inactividadDias != null ? String(data.inactividadDias) : '',
       };
       setCurrent(next);
       // El formulario arranca con los valores publicados para editar solo lo necesario.
@@ -59,11 +66,15 @@ export default function GeneralConfig({ notify }) {
   const nombre = form.nequiNombre.trim();
   const telefono = form.soporteTelefono.trim();
   const email = form.soporteEmail.trim();
+  const dias = String(form.inactividadDias ?? '').trim();
+  const diasCambiaron = !!current && dias !== current.inactividadDias;
+  const diasError = diasCambiaron && dias && !diasValidos(dias) ? `Entre ${DIAS_MIN} y ${DIAS_MAX} días` : '';
   const dirty = !current
     || numero !== current.nequiNumero
     || nombre !== current.nequiNombre
     || telefono !== current.soporteTelefono
-    || email !== current.soporteEmail;
+    || email !== current.soporteEmail
+    || diasCambiaron;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,6 +83,13 @@ export default function GeneralConfig({ notify }) {
     if (nombre) payload.nequiNombre = nombre;
     if (telefono) payload.soporteTelefono = telefono;
     if (email) payload.soporteEmail = email;
+    if (diasCambiaron && dias) {
+      if (!diasValidos(dias)) {
+        notify(`Los días de inactividad deben estar entre ${DIAS_MIN} y ${DIAS_MAX}`, 'danger');
+        return;
+      }
+      payload.inactividadDias = Number(dias);
+    }
     if (!Object.keys(payload).length) {
       notify('Ingresa al menos un campo', 'danger');
       return;
@@ -95,7 +113,8 @@ export default function GeneralConfig({ notify }) {
       <div className="config__intro">
         <h2 className="config__intro-title">Pagos y soporte</h2>
         <p className="config__intro-text">
-          Cuenta Nequi que la app muestra cuando hay que pagar una deuda o comisión, y el teléfono/correo de soporte que ve el cliente.
+          Cuenta Nequi que la app muestra cuando hay que pagar una deuda o comisión, el teléfono/correo de soporte que ve el cliente
+          y los días sin actividad para que un conductor cuente como inactivo en el panel del moderador.
         </p>
       </div>
 
@@ -142,13 +161,19 @@ export default function GeneralConfig({ notify }) {
                 ? <span className="config__value">{current.soporteEmail}</span>
                 : <span className="config__value config__value--empty">Usa el valor por defecto</span>}
             </div>
+            <div className="config__value-box">
+              <span className="config__value-label">Conductor inactivo tras</span>
+              {current.inactividadDias
+                ? <span className="config__value">{current.inactividadDias} días sin actividad</span>
+                : <span className="config__value config__value--empty">7 días (valor por defecto)</span>}
+            </div>
           </div>
         )}
       </Card>
 
       <form onSubmit={handleSubmit}>
         <Card
-          title="Editar cuenta Nequi y contacto de soporte"
+          title="Editar cuenta Nequi, contacto de soporte e inactividad"
           description="Cambia lo que necesites. Los cambios se aplican de inmediato en la app."
         >
           <Alert variant="info" title="Antes de guardar">
@@ -192,6 +217,20 @@ export default function GeneralConfig({ notify }) {
               onChange={handleChange}
               placeholder="Ej: soporte@cargaexpress.com"
               helperText="Lo ve el cliente en Soporte. Vacío = valor por defecto"
+            />
+            <Input
+              label="Días para marcar un conductor como inactivo"
+              name="inactividadDias"
+              type="number"
+              inputMode="numeric"
+              min={DIAS_MIN}
+              max={DIAS_MAX}
+              autoComplete="off"
+              value={form.inactividadDias}
+              onChange={handleChange}
+              placeholder="Ej: 7"
+              error={diasError}
+              helperText={diasError ? undefined : `Sin conectarse ni hacer viajes durante estos días aparece en "Inactivos". Entre ${DIAS_MIN} y ${DIAS_MAX}`}
             />
           </div>
           <div className="config__footer">

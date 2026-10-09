@@ -5,9 +5,8 @@ import {
   CalendarClock, Gavel, ChartLine, Send, ListChecks, MapPinned, Gift, Building2,
 } from 'lucide-react';
 
-// Navegación agrupada. Cada item: { icon, label, to, end? }
-// Admin: ordenado por tarea, primero lo que espera una decisión. Las etiquetas son las
-// mismas que el título de cada página (el Header muestra la etiqueta del menú).
+// Navegación agrupada por tarea. Cada item: { icon, label, to, end? }
+// Las etiquetas son las mismas que el título de cada página (el Header muestra la del menú).
 export const adminNav = [
   {
     items: [{ icon: LayoutDashboard, label: 'Inicio', to: '/admin', end: true }],
@@ -16,11 +15,12 @@ export const adminNav = [
     title: 'Requiere atención',
     items: [
       { icon: ListChecks, label: 'Pendientes de moderadores', to: '/admin/pendientes' },
-      { icon: Siren, label: 'Emergencias', to: '/admin/emergencies' },
+      { icon: Siren, label: 'SOS', to: '/admin/emergencies' },
       { icon: Scale, label: 'Disputas', to: '/admin/disputes' },
-      { icon: CircleX, label: 'Solicitudes de cancelación', to: '/admin/cancellation-requests' },
-      { icon: LifeBuoy, label: 'Tickets de soporte', to: '/admin/tickets' },
+      { icon: CircleX, label: 'Cancelaciones', to: '/admin/cancellation-requests' },
+      { icon: LifeBuoy, label: 'Tickets', to: '/admin/tickets' },
       { icon: Flag, label: 'Reportes entre usuarios', to: '/admin/reports' },
+      { icon: ClipboardList, label: 'Reportes de moderadores', to: '/admin/moderator-reports' },
     ],
   },
   {
@@ -29,18 +29,17 @@ export const adminNav = [
       { icon: Users, label: 'Usuarios', to: '/admin/users' },
       { icon: Handshake, label: 'Clientes', to: '/admin/clients' },
       { icon: Truck, label: 'Conductores', to: '/admin/drivers' },
-      { icon: MapPinned, label: 'Mapa de conductores', to: '/admin/mapa-conductores' },
-      { icon: Gift, label: 'Referidos', to: '/admin/referidos' },
       { icon: BadgeCheck, label: 'Verificaciones', to: '/admin/verifications' },
-      { icon: Building2, label: 'Empresas', to: '/admin/empresas' },
       { icon: ShieldCheck, label: 'Moderadores', to: '/admin/moderators' },
-      { icon: ClipboardList, label: 'Reportes de moderadores', to: '/admin/moderator-reports' },
+      { icon: Building2, label: 'Empresas', to: '/admin/empresas' },
+      { icon: Gift, label: 'Referidos', to: '/admin/referidos' },
     ],
   },
   {
     title: 'Operación',
     items: [
       { icon: Route, label: 'Viajes', to: '/admin/trips' },
+      { icon: MapPinned, label: 'Mapa en vivo', to: '/admin/mapa' },
     ],
   },
   {
@@ -71,18 +70,26 @@ export const adminNav = [
   },
 ];
 
-// Ordenado por urgencia, igual que la app: primero lo que requiere acción del moderador.
 export const moderatorNav = [
   {
-    items: [{ icon: LayoutDashboard, label: 'Centro de control', to: '/moderator', end: true }],
+    items: [{ icon: LayoutDashboard, label: 'Inicio de mi zona', to: '/moderator', end: true }],
   },
   {
-    title: 'Requiere atención',
+    title: 'Conductores',
     items: [
-      { icon: Siren, label: 'Emergencias', to: '/moderator/emergencies' },
-      { icon: Gavel, label: 'Cierres por resolver', to: '/moderator/cierres' },
-      { icon: LifeBuoy, label: 'Tickets de soporte', to: '/moderator/tickets' },
+      { icon: Truck, label: 'Directorio', to: '/moderator/conductores' },
+      { icon: BadgeCheck, label: 'Por verificar', to: '/moderator/drivers', end: true },
+      { icon: BedDouble, label: 'Inactivos', to: '/moderator/drivers/inactive' },
+    ],
+  },
+  {
+    title: 'Casos',
+    items: [
+      { icon: Siren, label: 'SOS', to: '/moderator/emergencies' },
+      { icon: Gavel, label: 'Cierres', to: '/moderator/cierres' },
       { icon: Scale, label: 'Disputas', to: '/moderator/disputes' },
+      { icon: LifeBuoy, label: 'Tickets', to: '/moderator/tickets' },
+      { icon: MessagesSquare, label: 'Conversaciones', to: '/moderator/conversations' },
     ],
   },
   {
@@ -90,32 +97,33 @@ export const moderatorNav = [
     items: [
       { icon: Route, label: 'Viajes', to: '/moderator/trips' },
       { icon: CalendarClock, label: 'Reservas', to: '/moderator/reservations' },
-    ],
-  },
-  {
-    title: 'Conductores',
-    items: [
-      { icon: Truck, label: 'Directorio de conductores', to: '/moderator/conductores' },
-      { icon: BadgeCheck, label: 'Verificación de conductores', to: '/moderator/drivers', end: true },
-      { icon: BedDouble, label: 'Conductores inactivos', to: '/moderator/drivers/inactive' },
-      { icon: Flag, label: 'Mis reportes', to: '/moderator/reports' },
+      { icon: MapPinned, label: 'Mapa en vivo', to: '/moderator/mapa' },
     ],
   },
   {
     title: 'Comunicación',
     items: [
-      { icon: MessagesSquare, label: 'Conversatorio', to: '/moderator/conversations' },
-      { icon: UsersRound, label: 'Equipo', to: '/moderator/companeros' },
-      { icon: Pin, label: 'Avisos', to: '/moderator/avisos' },
       { icon: Megaphone, label: 'Comunicados', to: '/moderator/comunicados' },
+      { icon: Pin, label: 'Avisos', to: '/moderator/avisos' },
       { icon: ChartColumn, label: 'Encuestas', to: '/moderator/encuestas' },
+      { icon: UsersRound, label: 'Equipo', to: '/moderator/companeros' },
     ],
   },
   {
     title: 'Cuenta',
-    items: [{ icon: UserRound, label: 'Mi perfil', to: '/moderator/profile' }],
+    items: [
+      { icon: Flag, label: 'Mis reportes', to: '/moderator/reports' },
+      { icon: UserRound, label: 'Mi perfil', to: '/moderator/profile' },
+    ],
   },
 ];
+
+/** Perfiles navegables (/{area}/drivers/:id y /{area}/clients/:id): no están en el menú. */
+export function tituloPerfil(pathname) {
+  if (/^\/(admin|moderator)\/drivers\/\d+/.test(pathname)) return { group: 'Conductores', label: 'Perfil del conductor' };
+  if (/^\/(admin|moderator)\/clients\/\d+/.test(pathname)) return { group: 'Clientes', label: 'Perfil del cliente' };
+  return null;
+}
 
 /** Devuelve { group, label } de la ruta actual según la navegación. */
 export function findNavEntry(nav, pathname) {

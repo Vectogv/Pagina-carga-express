@@ -6,12 +6,13 @@ import { errorMessage, formatCurrency, fullName, toList } from '../../utils/form
 import {
   Alert, Avatar, Badge, Button, ConfirmDialog, DataTable, PageHeader, Pagination, SearchInput, SegmentedFilter, StatusBadge,
 } from '../../components/ui';
+import { FiltroZona, TarjetaPersona } from '../../components/panel';
 import RoleBadge from './users/RoleBadge';
 import EditUserModal from './users/EditUserModal';
 import AddUserModal from './users/AddUserModal';
 import ModeratorModal from './users/ModeratorModal';
 import ResetPasswordModal from './users/ResetPasswordModal';
-import { userId, getZonaModerador } from './users/constants';
+import { userId, getZonaModerador, paginacionDe } from './users/constants';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 
 const LIMIT = 15;
@@ -61,21 +62,6 @@ const debtLabel = (u) => {
   return info.monto > 0 ? `Debe ${formatCurrency(info.monto)}` : 'Cuenta no activa';
 };
 
-/**
- * Paginación desde las cabeceras X-Total-Count / X-Last-Page (cuerpo = array).
- * Si no llegan, se habilita "siguiente" cuando la página vino llena.
- */
-function readPagination(headers, listLength, page) {
-  const total = Number(headers?.['x-total-count']);
-  const lastPage = Number(headers?.['x-last-page']);
-  const hasTotal = headers?.['x-total-count'] != null && Number.isFinite(total);
-  if (headers?.['x-last-page'] != null && Number.isFinite(lastPage) && lastPage > 0) {
-    return { total: hasTotal ? total : undefined, totalPages: lastPage };
-  }
-  if (hasTotal) return { total, totalPages: Math.max(1, Math.ceil(total / LIMIT)) };
-  return { total: undefined, totalPages: listLength >= LIMIT ? page + 1 : page };
-}
-
 export default function UsersPage() {
   const zonas = useZonas();
   const [users, setUsers] = useState([]);
@@ -84,6 +70,7 @@ export default function UsersPage() {
   const [notice, setNotice] = useState(null);
   const [search, setSearch] = useState('');
   const [rolFilter, setRolFilter] = useState('all');
+  const [zona, setZona] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: undefined, totalPages: 1 });
 
@@ -104,17 +91,19 @@ export default function UsersPage() {
         limit: LIMIT,
         search: search.trim() || undefined,
         rol: rolFilter === 'all' ? undefined : rolFilter,
+        // ?zona=: moderadores de la zona y conductores cuya ciudad cae en ella (los clientes no tienen zona).
+        zona: zona || undefined,
       });
       const raw = toList(res.data, 'users');
       // Respaldo: si el backend ignora `rol`, se filtra en cliente (solo afecta a la página actual).
       setUsers(raw.filter((u) => matchesRole(u, rolFilter)));
-      setPagination(readPagination(res.headers, raw.length, page));
+      setPagination(paginacionDe(res.headers, raw.length, page, LIMIT));
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar usuarios'));
     } finally {
       setLoading(false);
     }
-  }, [page, search, rolFilter]);
+  }, [page, search, rolFilter, zona]);
 
   useEffect(() => {
     const t = setTimeout(fetchUsers, 300);
@@ -129,6 +118,7 @@ export default function UsersPage() {
 
   const handleSearch = (val) => { setSearch(val); setPage(1); };
   const handleRole = (val) => { setRolFilter(val); setPage(1); };
+  const handleZona = (val) => { setZona(val); setPage(1); };
 
   const handleSuspend = async () => {
     const u = suspendTarget;
@@ -203,15 +193,19 @@ export default function UsersPage() {
     {
       key: 'nombre',
       label: 'Usuario',
-      render: (_, u) => (
-        <div className="cell-user">
-          <Avatar src={u.avatar} name={fullName(u)} />
-          <div className="cell-user__text">
-            <span className="cell-user__name">{fullName(u)}</span>
-            <span className="cell-user__meta">{u.email || '—'}</span>
+      // Cliente: enlace a su perfil. Conductor: el listado de usuarios no trae el id del
+      // perfil de conductor (solo el de usuario), así que no hay enlace; se abre desde Conductores.
+      render: (_, u) => (getRolUsuario(u) === 'cliente'
+        ? <TarjetaPersona persona={u} tipo="cliente" area="admin" />
+        : (
+          <div className="cell-user">
+            <Avatar src={u.avatar} name={fullName(u)} />
+            <div className="cell-user__text">
+              <span className="cell-user__name">{fullName(u)}</span>
+              <span className="cell-user__meta">{u.email || '—'}</span>
+            </div>
           </div>
-        </div>
-      ),
+        )),
     },
     { key: 'telefono', label: 'Teléfono', render: (_, u) => u.telefono || u.phone || '—' },
     { key: 'rol', label: 'Rol', render: (_, u) => <RoleBadge user={u} /> },
@@ -306,6 +300,7 @@ export default function UsersPage() {
       <div className="toolbar">
         <SearchInput value={search} onChange={handleSearch} placeholder="Buscar por nombre, correo o teléfono" />
         <SegmentedFilter options={ROLE_FILTERS} value={rolFilter} onChange={handleRole} ariaLabel="Filtrar por rol" />
+        <FiltroZona value={zona} onChange={handleZona} />
       </div>
 
       {!loading && users.length > 0 && (

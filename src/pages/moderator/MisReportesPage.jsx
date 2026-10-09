@@ -3,8 +3,9 @@ import { getMyReports } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { errorMessage, formatDateTime, toList } from '../../utils/format';
 import { PageHeader, DataTable, StatusBadge } from '../../components/ui';
+import { TarjetaPersona } from '../../components/panel';
 
-export default function NotificacionesPage() {
+export default function MisReportesPage() {
   const { ciudadParams } = useModeratorCity();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,12 +35,7 @@ export default function NotificacionesPage() {
     {
       key: 'conductorNombre',
       label: 'Conductor',
-      render: (v, r) => (
-        <div className="cell-user__text">
-          <span className="cell-user__name">{v || '—'}</span>
-          {r.placa && <span className="cell-user__meta text-mono">{r.placa}</span>}
-        </div>
-      ),
+      render: (v, r) => <TarjetaPersona persona={{ id: r.conductorId, nombre: v || '—', placa: r.placa }} tipo="conductor" area="moderator" />,
     },
     { key: 'descripcion', label: 'Descripción', render: (v) => <span className="text-secondary">{v || '—'}</span> },
     { key: 'estado', label: 'Estado', render: (v, r) => <StatusBadge status={v || 'pendiente'} label={r.estadoLabel} /> },

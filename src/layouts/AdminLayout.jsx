@@ -3,12 +3,12 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import '../components/layout/Layout.css';
-import { adminNav, findNavEntry } from '../components/layout/sidebarContent';
+import { adminNav, findNavEntry, tituloPerfil } from '../components/layout/sidebarContent';
 
 export default function AdminLayout() {
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { group, label } = findNavEntry(adminNav, pathname);
+  const { group, label } = tituloPerfil(pathname) || findNavEntry(adminNav, pathname);
 
   return (
     <div className="app-shell">

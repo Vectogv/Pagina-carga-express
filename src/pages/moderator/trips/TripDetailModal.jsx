@@ -7,47 +7,25 @@ import { Textarea } from '../../../components/ui/Input/Input';
 import ServiceStatusTimeline from '../../../components/moderator/ServiceStatusTimeline';
 import { errorMessage, formatCurrency, formatDateTime, fullName } from '../../../utils/format';
 import { resolveStorageUrl } from '../../../utils/storage';
+import { MapaRecorrido } from '../../../components/panel';
 import {
   Modal, Avatar, Badge, Button, StatusBadge, LoadingState,
 } from '../../../components/ui';
 
-// Mapbox Static API exige colores hex en la URL (no admite variables CSS). Equivalen a --success / --danger.
-const PIN_ORIGIN = '22c55e';
-const PIN_DESTINATION = 'ef4444';
-
-function staticMapUrl(origen, destino, token) {
-  const pins = `pin-s-a+${PIN_ORIGIN}(${origen.lng},${origen.lat}),pin-s-b+${PIN_DESTINATION}(${destino.lng},${destino.lat})`;
-  return `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/${pins}/${origen.lng},${origen.lat},11,0/500x200?access_token=${token}`;
-}
-
-function RouteMap({ origen, destino, mapboxToken }) {
-  const [failed, setFailed] = useState(false);
-  const canShowMap = mapboxToken && origen?.lat && destino?.lat && !failed;
+/** Ruta planeada (azul) y recorrido real (rojo) desde GET /api/moderator/trips/:id/recorrido. */
+function RouteMap({ viajeId, origen, destino, marcaSos }) {
   return (
     <section className="trip-detail__section">
       <h4 className="section-title">Ruta</h4>
-      {canShowMap && (
-        <img
-          className="trip-detail__map"
-          src={staticMapUrl(origen, destino, mapboxToken)}
-          alt="Mapa de la ruta"
-          onError={() => setFailed(true)}
-        />
-      )}
+      <MapaRecorrido area="moderator" viajeId={viajeId} alturaPx={280} marcaSos={marcaSos} />
       <div className="trip-detail__route">
         <div className="trip-detail__stop">
           <MapPin size={14} className="text-success" />
-          <span>
-            <span className="text-strong">Origen: </span>{origen?.direccion || '—'}
-            {!canShowMap && <span className="text-muted text-mono"> ({origen?.lat || '—'}, {origen?.lng || '—'})</span>}
-          </span>
+          <span><span className="text-strong">Origen: </span>{origen?.direccion || '—'}</span>
         </div>
         <div className="trip-detail__stop">
           <MapPin size={14} className="text-danger" />
-          <span>
-            <span className="text-strong">Destino: </span>{destino?.direccion || '—'}
-            {!canShowMap && <span className="text-muted text-mono"> ({destino?.lat || '—'}, {destino?.lng || '—'})</span>}
-          </span>
+          <span><span className="text-strong">Destino: </span>{destino?.direccion || '—'}</span>
         </div>
       </div>
     </section>
@@ -124,7 +102,7 @@ function EmergencyItem({ alerta, onChanged }) {
 }
 
 export default function TripDetailModal({
-  isOpen, onClose, detail, loading, error, mapboxToken, emergencies, onEmergencyChanged,
+  isOpen, onClose, detail, loading, error, emergencies, onEmergencyChanged,
 }) {
   const title = detail ? `Viaje #${String(detail.id).slice(0, 8)}` : 'Detalle del viaje';
   const alertas = detail?.alertas?.length
@@ -133,6 +111,9 @@ export default function TripDetailModal({
   const ganancia = detail?.ganancias?.[0];
   const conductor = detail?.conductor;
   const cliente = detail?.cliente;
+  // Punto del SOS más reciente del viaje (si lo hay) para marcarlo en el mapa.
+  const sos = alertas.find((a) => a.lat != null && a.lng != null);
+  const marcaSos = sos ? { lat: sos.lat, lng: sos.lng, at: sos.createdAt } : null;
 
   return (
     <Modal
@@ -156,7 +137,7 @@ export default function TripDetailModal({
             )}
           </section>
 
-          <RouteMap key={detail.id} origen={detail.origen} destino={detail.destino} mapboxToken={mapboxToken} />
+          <RouteMap key={detail.id} viajeId={detail.id} origen={detail.origen} destino={detail.destino} marcaSos={marcaSos} />
 
           <div className="two-col">
             <section className="trip-detail__card">
@@ -177,6 +158,11 @@ export default function TripDetailModal({
                   )}
                 </div>
               </div>
+              {cliente?.id && (
+                <div className="row">
+                  <Link className="btn btn--soft-primary btn--sm" to={`/moderator/clients/${cliente.id}`}>Ver perfil</Link>
+                </div>
+              )}
             </section>
 
             <section className="trip-detail__card">

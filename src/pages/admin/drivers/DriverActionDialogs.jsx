@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { ConfirmDialog, Textarea } from '../../../components/ui';
 import { errorMessage } from '../../../utils/format';
 import {
-  approveVerification, rejectVerification, notifyDriver, reportDriver, deleteUser, suspendUser, setLeader,
+  approveVerification, rejectVerification, reportDriver, deleteUser, suspendUser, setLeader,
 } from '../../../api/admin';
 import { driverName, driverUserId } from './driverUtils';
 
 /**
  * Diálogos de confirmación de acciones sobre un conductor.
- * action = { type: approve|reject|notify|report|delete|suspend|leader, driver }
+ * action = { type: approve|reject|report|delete|suspend|leader, driver }
  * onDone(message, { refresh }) / onError(message)
  */
 export default function DriverActionDialogs({ action, onClose, onDone, onError }) {
@@ -37,7 +37,6 @@ export default function DriverActionDialogs({ action, onClose, onDone, onError }
       'Verificación rechazada',
       'Error al rechazar',
     ),
-    notify: () => run(() => notifyDriver(driver.id), 'Notificación enviada', 'Requiere FCM', false),
     report: () => run(() => reportDriver(driver.id, { descripcion: nota.trim() }), 'Reporte guardado en Reportes de moderadores', 'Error al reportar', false),
     delete: () => run(() => deleteUser(driverUserId(driver)), 'Conductor eliminado', 'Error al eliminar'),
     suspend: () => run(
@@ -54,7 +53,6 @@ export default function DriverActionDialogs({ action, onClose, onDone, onError }
   const config = {
     approve: { title: 'Aprobar conductor', message: `¿Aprobar la verificación de ${name}?`, confirmText: 'Aprobar' },
     reject: { title: 'Rechazar verificación', message: `Indica el motivo del rechazo para ${name}.`, confirmText: 'Rechazar', danger: true },
-    notify: { title: 'Notificar conductor', message: `¿Enviar una notificación a ${u.email || name}?`, confirmText: 'Notificar' },
     report: { title: 'Reportar conductor', message: `Describe el motivo del reporte de ${name}.`, confirmText: 'Reportar', danger: true },
     delete: {
       title: 'Eliminar conductor',

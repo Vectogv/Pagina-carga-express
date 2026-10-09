@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { direccionCorta } from '../../utils/direccion';
 import { getModeratorReservations } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { errorMessage, formatCurrency, formatDate, fullName, toList } from '../../utils/format';
+import { errorMessage, formatCurrency, formatDate, toList } from '../../utils/format';
 import {
   PageHeader, SegmentedFilter, DataTable, Pagination, StatusBadge,
 } from '../../components/ui';
+import { TarjetaPersona } from '../../components/panel';
 
 const LIMIT = 20;
 
@@ -61,24 +62,16 @@ export default function ModeratorReservationsPage() {
     {
       key: 'cliente',
       label: 'Cliente',
-      render: (_, r) => (r.cliente ? (
-        <div className="cell-user__text">
-          <span className="cell-user__name">{fullName(r.cliente)}</span>
-          <span className="cell-user__meta">{r.cliente.telefono || '—'}</span>
-        </div>
-      ) : '—'),
+      render: (_, r) => (r.cliente
+        ? <TarjetaPersona persona={{ ...r.cliente, contactoVisible: r.contactoVisible === true }} tipo="cliente" area="moderator" />
+        : '—'),
     },
     {
       key: 'conductor',
       label: 'Conductor',
-      render: (_, r) => (r.conductor ? (
-        <div className="cell-user__text">
-          {r.conductor.id ? (
-            <Link className="cell-user__name" to={`/moderator/drivers/${r.conductor.id}`}>{r.conductor.nombre || r.conductor.telefono || '—'}</Link>
-          ) : <span className="cell-user__name">{r.conductor.nombre || r.conductor.telefono || '—'}</span>}
-          {r.conductor.placa && <span className="cell-user__meta text-mono">{r.conductor.placa}</span>}
-        </div>
-      ) : <span className="text-muted">Sin asignar</span>),
+      render: (_, r) => (r.conductor
+        ? <TarjetaPersona persona={r.conductor} tipo="conductor" area="moderator" />
+        : <span className="text-muted">Sin asignar</span>),
     },
     {
       key: 'precio',

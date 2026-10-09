@@ -43,6 +43,7 @@ export const getDrivers = (params) => api.get(`${BASE}/drivers`, { params })
 
 // Trips
 export const getTrips = (params) => api.get(`${BASE}/trips`, { params })
+export const getTripRecorrido = (id) => api.get(`${BASE}/trips/${id}/recorrido`)
 
 // Earnings
 export const getEarnings = (params) => api.get(`${BASE}/earnings`, { params })

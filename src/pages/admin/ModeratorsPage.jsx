@@ -3,13 +3,15 @@ import { Pencil, Search, UserMinus, UserPlus } from 'lucide-react';
 import { getUsers, setModerator } from '../../api/admin';
 import { errorMessage, fullName, toList } from '../../utils/format';
 import {
-  Alert, Avatar, Badge, Button, Card, ConfirmDialog, DataTable, Input, Modal, PageHeader, SegmentedFilter, Select,
+  Alert, Avatar, Badge, Button, Card, ConfirmDialog, DataTable, Input, Modal, PageHeader, Pagination, Select,
 } from '../../components/ui';
-import { getZonaModerador, userId } from './users/constants';
+import { FiltroZona } from '../../components/panel';
+import { getZonaModerador, paginacionDe, userId } from './users/constants';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import './users/users.css';
 
 const isModerador = (u) => u.esModerador || u.es_moderador;
+const LIMIT = 20;
 
 export default function ModeratorsPage() {
   const ZONAS = useZonas();
@@ -18,7 +20,9 @@ export default function ModeratorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
-  const [zonaFilter, setZonaFilter] = useState('all');
+  const [zonaFilter, setZonaFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: undefined, totalPages: 1 });
   const [removeTarget, setRemoveTarget] = useState(null);
 
   // Buscador para agregar moderadores
@@ -39,15 +43,17 @@ export default function ModeratorsPage() {
     setLoading(true);
     setError(null);
     try {
-      // Se piden hasta 100 y se filtra también en cliente (respaldo si el backend ignora `rol`).
-      const res = await getUsers({ page: 1, limit: 100, rol: 'moderador' });
-      setMods(toList(res.data, 'users').filter(isModerador));
+      // GET /api/admin/users filtra `rol=moderador` y `zona` en el servidor y pagina con X-Total-Count.
+      const res = await getUsers({ page, limit: LIMIT, rol: 'moderador', zona: zonaFilter || undefined });
+      const rows = toList(res.data, 'users');
+      setMods(rows.filter(isModerador));
+      setPagination(paginacionDe(res.headers, rows.length, page, LIMIT));
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar moderadores'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, zonaFilter]);
 
   useEffect(() => { fetchMods(); }, [fetchMods]);
 
@@ -118,13 +124,6 @@ export default function ModeratorsPage() {
       setError(errorMessage(err, 'Error al asignar'));
     }
   };
-
-  const zonaOf = (u) => getZonaModerador(u).toLowerCase();
-  const filteredMods = zonaFilter === 'all' ? mods : mods.filter((u) => zonaOf(u) === zonaFilter);
-  const zonaOptions = [
-    { value: 'all', label: 'Todas', count: mods.length },
-    ...ZONAS.map((z) => ({ value: z.value, label: z.label, count: mods.filter((u) => zonaOf(u) === z.value).length })),
-  ];
 
   const columns = [
     {
@@ -205,7 +204,7 @@ export default function ModeratorsPage() {
       </Card>
 
       <div className="toolbar">
-        <SegmentedFilter options={zonaOptions} value={zonaFilter} onChange={setZonaFilter} ariaLabel="Filtrar por zona" />
+        <FiltroZona value={zonaFilter} onChange={(v) => { setZonaFilter(v); setPage(1); }} />
       </div>
 
       {notice && <Alert variant="success" onClose={() => setNotice(null)}>{notice}</Alert>}
@@ -213,9 +212,10 @@ export default function ModeratorsPage() {
 
       <DataTable
         columns={columns}
-        data={filteredMods}
+        data={mods}
         loading={loading}
-        emptyMessage={zonaFilter !== 'all' ? `No hay moderadores en ${zonaLabel(zonaFilter)}` : 'No hay moderadores'}
+        emptyMessage={zonaFilter ? `No hay moderadores en ${zonaLabel(zonaFilter)}` : 'No hay moderadores'}
+        footer={<Pagination page={page} totalPages={pagination.totalPages} total={pagination.total} onChange={setPage} />}
       />
 
       <ConfirmDialog

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ConfirmDialog, Textarea } from '../../components/ui';
-import { DOCUMENTOS_CONDUCTOR } from '../../utils/documentos';
+import useDocumentosConductor from '../../hooks/useDocumentosConductor';
 
 // Notificar al conductor qué documentos le faltan (vienen marcados los que
 // faltan). Sin nada marcado se envía el recordatorio de actividad de siempre.
 // Móntalo solo mientras está abierto: así arranca con los faltantes de ese conductor.
 export default function NotificarDocumentosDialog({ onClose, faltantes, destinatario, onEnviar }) {
+  const { documentos } = useDocumentosConductor();
   const [marcados, setMarcados] = useState(faltantes);
   const [mensaje, setMensaje] = useState('');
   const toggle = (k) => setMarcados((m) => (m.includes(k) ? m.filter((x) => x !== k) : [...m, k]));
@@ -20,9 +21,9 @@ export default function NotificarDocumentosDialog({ onClose, faltantes, destinat
       confirmText="Enviar"
     >
       <div className="stack">
-        {DOCUMENTOS_CONDUCTOR.map(([k, label]) => (
-          <label key={k} className="row">
-            <input type="checkbox" checked={marcados.includes(k)} onChange={() => toggle(k)} /> {label}
+        {documentos.map(({ clave, etiqueta }) => (
+          <label key={clave} className="row">
+            <input type="checkbox" checked={marcados.includes(clave)} onChange={() => toggle(clave)} /> {etiqueta}
           </label>
         ))}
         <Textarea label="Nota para el conductor (opcional)" value={mensaje} onChange={(e) => setMensaje(e.target.value)} rows={2} maxLength={500} />

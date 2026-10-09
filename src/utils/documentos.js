@@ -1,5 +1,7 @@
 // Documentos que el servidor exige para aprobar a un conductor
 // (Conductor.documentosFaltantes en el backend). La foto de la cédula ya no cuenta.
+// Esta lista local es SOLO respaldo: la fuente es GET /api/config/documentos-conductor
+// (hook useDocumentosConductor).
 export const DOCUMENTOS_CONDUCTOR = [
   ['licencia', 'Licencia de conducción'],
   ['soat', 'SOAT'],

@@ -5,12 +5,15 @@ import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import { resolveStorageUrl } from '../../utils/storage';
-import { CeldaConductor, CeldaVehiculo } from './driverCells';
+import { CeldaVehiculo } from './driverCells';
+import { TarjetaPersona } from '../../components/panel';
+import useDocumentosConductor from '../../hooks/useDocumentosConductor';
+import { textoCanales } from '../../utils/canales';
 import { faltantesDe, textoFaltantes } from '../../utils/documentos';
 import NotificarDocumentosDialog from './NotificarDocumentosDialog';
 import {
   PageHeader, SearchInput, SegmentedFilter, DataTable, ConfirmDialog, Modal, Button, StatusBadge,
-  Textarea, Toast, ToastContainer,
+  Textarea, Toast, ToastContainer, Pagination, Badge,
 } from '../../components/ui';
 
 const TABS = [
@@ -20,12 +23,17 @@ const TABS = [
   ['todos', 'Todos'],
 ];
 
-const ESTADOS = ['pendiente', 'aprobado', 'rechazado'];
-const EMPTY_BY_ESTADO = { pendiente: [], aprobado: [], rechazado: [] };
+const LIMIT = 20;
+// Clave del documento (GET /api/config/documentos-conductor) -> campo con la foto en la fila del listado.
+// SOAT, tecnomecánica y tarjeta de propiedad solo vienen en la ficha; aquí se muestra si falta o no.
+const CAMPO_FOTO = {
+  licencia: 'fotoLicencia',
+  foto_vehiculo: 'fotoVehiculo',
+  foto_conductor: 'fotoConductor',
+};
 
 const driverName = (r) => fullName(r.usuario || r);
 const driverId = (r) => r.id || r.usuarioId;
-const byNewest = (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
 
 function Photo({ label, path }) {
   const url = resolveStorageUrl(path);
@@ -55,10 +63,10 @@ function Detail({ label, children }) {
 export default function ModeratorDriversPage() {
   const { ciudadParams } = useModeratorCity();
   const zonas = useZonas();
-  // Una petición por estado: así cada pestaña tiene su propio conteo aunque se
-  // esté viendo otra (el backend filtra y pagina por estado; el conteo sale de `total`).
-  const [byEstado, setByEstado] = useState(EMPTY_BY_ESTADO);
-  const [totales, setTotales] = useState({});
+  const { documentos } = useDocumentosConductor();
+  const [drivers, setDrivers] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [action, setAction] = useState(null);
@@ -73,33 +81,36 @@ export default function ModeratorDriversPage() {
     setLoading(true);
     setError(null);
     try {
-      const responses = await Promise.all(
-        ESTADOS.map((estado) => getModeratorDrivers({ page: 1, limit: 100, estado, ...ciudadParams })),
-      );
-      const next = {};
-      const tot = {};
-      ESTADOS.forEach((estado, i) => {
-        next[estado] = toList(responses[i].data, 'drivers');
-        tot[estado] = responses[i].data?.total ?? next[estado].length;
+      // Filtro, búsqueda y paginación en el servidor (?estado=&buscar=&page=&limit=).
+      const res = await getModeratorDrivers({
+        page, limit: LIMIT, estado: tab === 'todos' ? undefined : tab, buscar: filter.trim() || undefined, ...ciudadParams,
       });
-      setByEstado(next);
-      setTotales(tot);
+      setDrivers(toList(res.data, 'drivers'));
+      setTotal(res.data?.total ?? 0);
     } catch (err) {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
       else setError(errorMessage(err, 'Error al cargar conductores'));
     } finally {
       setLoading(false);
     }
-  }, [ciudadParams]);
+  }, [page, tab, filter, ciudadParams]);
 
-  useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
+  useEffect(() => {
+    const id = setTimeout(fetchDrivers, filter ? 350 : 0);
+    return () => clearTimeout(id);
+  }, [fetchDrivers, filter]);
+  const cambiarFiltro = (v) => { setFilter(v); setPage(1); };
+  const cambiarTab = (v) => { setTab(v); setPage(1); };
 
   const showToast = (message, ok = true) => setToast({ message, variant: ok ? 'success' : 'danger' });
   const openAction = (type, r) => { setDocs(null); setNota(''); setAction({ type, ...r }); };
   const closeAction = () => { setAction(null); setNota(''); };
 
   const handleNotify = async (data) => {
-    try { await notifyDriver(driverId(action), data); showToast('Notificación enviada'); } catch (err) { showToast(errorMessage(err, 'Error al notificar'), false); }
+    try {
+      const res = await notifyDriver(driverId(action), data);
+      showToast(textoCanales(res.data?.canales));
+    } catch (err) { showToast(errorMessage(err, 'Error al notificar'), false); }
   };
   const handleReport = async () => {
     try {
@@ -126,7 +137,7 @@ export default function ModeratorDriversPage() {
     {
       key: 'nombre',
       label: 'Conductor',
-      render: (_, r) => <CeldaConductor r={r} name={driverName(r)} to={`/moderator/drivers/${r.id}`} />,
+      render: (_, r) => <TarjetaPersona persona={r} tipo="conductor" area="moderator" size={40} />,
     },
     { key: 'placa', label: 'Vehículo', render: (_, r) => <CeldaVehiculo r={r} /> },
     { key: 'telefono', label: 'Contacto', render: (_, r) => r.usuario?.telefono || '—' },
@@ -168,26 +179,9 @@ export default function ModeratorDriversPage() {
     },
   ];
 
-  const drivers = tab === 'todos'
-    ? ESTADOS.flatMap((e) => byEstado[e]).sort(byNewest)
-    : byEstado[tab] || [];
-  const counts = {
-    pendiente: totales.pendiente ?? 0,
-    aprobado: totales.aprobado ?? 0,
-    rechazado: totales.rechazado ?? 0,
-    todos: ESTADOS.reduce((acc, e) => acc + (totales[e] ?? 0), 0),
-  };
-  const tabOptions = TABS.map(([value, label]) => ({ value, label, count: counts[value] }));
-
-  const filtered = drivers.filter((d) => {
-    if (!filter.trim()) return true;
-    const q = filter.toLowerCase();
-    const u = d.usuario || {};
-    return `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase().includes(q)
-      || (u.email || '').toLowerCase().includes(q)
-      || (u.telefono || '').includes(q)
-      || (d.placa || '').toLowerCase().includes(q);
-  });
+  const tabOptions = TABS.map(([value, label]) => ({ value, label, count: value === tab ? total : undefined }));
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+  const faltanDocs = docs ? faltantesDe(docs) : [];
 
   const actionEmail = action?.usuario?.email || '';
 
@@ -196,17 +190,18 @@ export default function ModeratorDriversPage() {
       <PageHeader title="Verificación de conductores" description="Verifica, notifica y reporta a los conductores de tu ciudad. Toca el nombre para abrir la ficha completa." />
 
       <div className="toolbar">
-        <SearchInput value={filter} onChange={setFilter} placeholder="Buscar por nombre, placa, correo o teléfono" />
-        <SegmentedFilter options={tabOptions} value={tab} onChange={setTab} ariaLabel="Estado de verificación" />
+        <SearchInput value={filter} onChange={cambiarFiltro} placeholder="Buscar por nombre, cédula o placa" />
+        <SegmentedFilter options={tabOptions} value={tab} onChange={cambiarTab} ariaLabel="Estado de verificación" />
       </div>
 
       {error && <div className="page-error" role="alert">{error}</div>}
 
       <DataTable
         columns={columns}
-        data={filtered}
+        data={drivers}
         loading={loading}
         emptyMessage={filter ? `Sin resultados para “${filter}”` : (tab === 'pendiente' ? 'Sin conductores pendientes' : 'No hay conductores en tu ciudad')}
+        footer={totalPages > 1 ? <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} /> : null}
       />
 
       <Modal
@@ -254,9 +249,16 @@ export default function ModeratorDriversPage() {
             <hr className="divider" />
             <h3 className="section-title">Documentos cargados</h3>
             <div className="form-grid">
-              <Photo label="Foto del conductor" path={docs.fotoConductor} />
-              <Photo label="Vehículo" path={docs.fotoVehiculo} />
-              <Photo label="Licencia" path={docs.fotoLicencia} />
+              {documentos.filter((d) => d.clave !== 'numero_cedula').map((d) => (CAMPO_FOTO[d.clave]
+                ? <Photo key={d.clave} label={d.etiqueta} path={docs[CAMPO_FOTO[d.clave]]} />
+                : (
+                  <div key={d.clave} className="stack">
+                    <span className="detail-list__label">{d.etiqueta}</span>
+                    <Badge variant={faltanDocs.includes(d.clave) ? 'warning' : 'success'} size="sm">
+                      {faltanDocs.includes(d.clave) ? 'Falta' : 'Cargado'}
+                    </Badge>
+                  </div>
+                )))}
               {/* La foto de la cédula ya no se exige; se muestra solo si la subió antes. */}
               {docs.fotoCedula && <Photo label="Cédula (ya no se exige)" path={docs.fotoCedula} />}
             </div>

@@ -3,6 +3,7 @@ import { LogOut, Truck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Avatar from '../ui/Avatar/Avatar';
 import { fullName } from '../../utils/format';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import './Sidebar.css';
 
 const isItemActive = (item, pathname) =>
@@ -11,9 +12,12 @@ const isItemActive = (item, pathname) =>
 export default function Sidebar({ nav = [], title = 'Carga Express', subtitle = '', badges = {}, open = false, onClose }) {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
+  const zonas = useZonas();
 
   const displayName = fullName(user);
-  const roleLabel = user?.rol === 'admin' ? 'Administrador' : user?.esModerador ? 'Moderador' : 'Usuario';
+  const esModerador = user?.rol !== 'admin' && user?.esModerador;
+  const zona = esModerador && user?.zonaModerador ? ` · ${zonaLabelFrom(zonas, user.zonaModerador)}` : '';
+  const roleLabel = user?.rol === 'admin' ? 'Administrador' : esModerador ? `Moderador${zona}` : 'Usuario';
 
   return (
     <>

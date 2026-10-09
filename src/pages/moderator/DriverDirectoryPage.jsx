@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getModeratorDrivers } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { errorMessage, fullName, toList } from '../../utils/format';
+import { errorMessage, toList } from '../../utils/format';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import {
   PageHeader, SearchInput, SegmentedFilter, DataTable, Badge, StatusBadge, Pagination,
 } from '../../components/ui';
-import { CeldaConductor, CeldaVehiculo } from './driverCells';
+import { CeldaVehiculo } from './driverCells';
+import { TarjetaPersona } from '../../components/panel';
 
 const LIMIT = 50;
 const ESTADOS = [
@@ -17,7 +18,10 @@ const ESTADOS = [
   { value: 'rechazado', label: 'Rechazados' },
 ];
 
-const driverName = (r) => fullName(r.usuario || r);
+const CONEXION = [
+  { value: '', label: 'Todos' },
+  { value: '1', label: 'Conectados' },
+];
 
 export default function DriverDirectoryPage() {
   const navigate = useNavigate();
@@ -29,6 +33,7 @@ export default function DriverDirectoryPage() {
   const [error, setError] = useState(null);
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('');
+  const [online, setOnline] = useState('');
   const [page, setPage] = useState(1);
 
   const fetchDrivers = useCallback(async () => {
@@ -36,7 +41,7 @@ export default function DriverDirectoryPage() {
     setError(null);
     try {
       const res = await getModeratorDrivers({
-        page, limit: LIMIT, estado: estado || undefined, buscar: q.trim() || undefined, ...ciudadParams,
+        page, limit: LIMIT, estado: estado || undefined, buscar: q.trim() || undefined, online: online || undefined, ...ciudadParams,
       });
       setDrivers(toList(res.data, 'drivers'));
       setTotal(res.data?.total ?? 0);
@@ -46,7 +51,7 @@ export default function DriverDirectoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, estado, q, ciudadParams]);
+  }, [page, estado, online, q, ciudadParams]);
 
   useEffect(() => {
     const id = setTimeout(fetchDrivers, q ? 350 : 0);
@@ -55,12 +60,13 @@ export default function DriverDirectoryPage() {
 
   const cambiarBusqueda = (v) => { setQ(v); setPage(1); };
   const cambiarEstado = (v) => { setEstado(v); setPage(1); };
+  const cambiarOnline = (v) => { setOnline(v); setPage(1); };
 
   const columns = [
     {
       key: 'nombre',
       label: 'Conductor',
-      render: (_, r) => <CeldaConductor r={r} name={driverName(r)} />,
+      render: (_, r) => <TarjetaPersona persona={r} tipo="conductor" area="moderator" size={40} />,
     },
     { key: 'placa', label: 'Vehículo', render: (_, r) => <CeldaVehiculo r={r} /> },
     { key: 'telefono', label: 'Contacto', render: (_, r) => r.usuario?.telefono || '—' },
@@ -88,6 +94,7 @@ export default function DriverDirectoryPage() {
       <div className="toolbar">
         <SearchInput value={q} onChange={cambiarBusqueda} placeholder="Buscar por nombre, cédula o placa" />
         <SegmentedFilter options={ESTADOS} value={estado} onChange={cambiarEstado} ariaLabel="Estado de verificación" />
+        <SegmentedFilter options={CONEXION} value={online} onChange={cambiarOnline} ariaLabel="Conexión" />
       </div>
 
       {error && <div className="page-error" role="alert">{error}</div>}
@@ -97,7 +104,7 @@ export default function DriverDirectoryPage() {
         data={drivers}
         loading={loading}
         onRowClick={(r) => navigate(`/moderator/drivers/${r.id}`)}
-        emptyMessage={q ? `Sin resultados para “${q}”` : 'No hay conductores en tu zona'}
+        emptyMessage={q ? `Sin resultados para “${q}”` : (online ? 'No hay conductores conectados en tu zona' : 'No hay conductores en tu zona')}
       />
 
       {totalPages > 1 && <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} />}

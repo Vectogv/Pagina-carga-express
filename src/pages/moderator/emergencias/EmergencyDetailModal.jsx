@@ -5,6 +5,7 @@ import {
 } from '../../../components/ui';
 import RouteMap from '../../../components/maps/RouteMap';
 import { sosRouteProps, hasRoutePoints } from '../../../components/maps/sosRoute';
+import { MapaRecorrido } from '../../../components/panel';
 import EmergencyChat from './EmergencyChat';
 
 const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
@@ -27,6 +28,9 @@ export default function EmergencyDetailModal({
   const conductor = tripDetail?.conductor;
   const hasLocation = selected.lat && selected.lng;
   const mapa = sosRouteProps(selected, tripDetail);
+  // Con viaje: ruta planeada (azul), recorrido real (rojo) y el punto del SOS. Sin viaje: solo el punto.
+  const viajeId = selected.viajeId || selected.tripId || selected.viaje?.id || tripDetail?.id || null;
+  const marcaSos = hasLocation ? { lat: selected.lat, lng: selected.lng, at: selected.createdAt } : null;
   const busy = actionLoading === selected.id;
   const chatTitle = solicitante?.nombre ? `Chat con ${solicitante.nombre}` : 'Chat de emergencia';
 
@@ -73,7 +77,12 @@ export default function EmergencyDetailModal({
           </p>
         </section>
 
-        {hasRoutePoints(mapa) && (
+        {viajeId ? (
+          <section className="em-card">
+            <h4 className="section-title">Mapa del SOS</h4>
+            <MapaRecorrido key={viajeId} area="moderator" viajeId={viajeId} alturaPx={280} marcaSos={marcaSos} />
+          </section>
+        ) : hasRoutePoints(mapa) && (
           <section className="em-card">
             <h4 className="section-title">Mapa del SOS</h4>
             <RouteMap {...mapa} alto={280} />

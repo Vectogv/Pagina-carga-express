@@ -6,7 +6,6 @@ import { direccionCorta } from '../../utils/direccion';
 import {
   getModeratorTrips, getModeratorTripDetail, getModeratorEmergencies,
 } from '../../api/moderator';
-import { loadMapboxToken } from '../../components/maps/useMapboxToken';
 import { tokenStore } from '../../api/axios';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { SOCKET_URL } from '../../config';
@@ -67,7 +66,6 @@ export default function ModeratorTripsPage() {
   const [detailError, setDetailError] = useState(null);
   const [emergencies, setEmergencies] = useState([]);
   const [socketStatus, setSocketStatus] = useState('desconectado');
-  const [mapboxToken, setMapboxToken] = useState(null);
   const selectedIdRef = useRef(null);
 
   const fetchTrips = useCallback(async () => {
@@ -116,14 +114,6 @@ export default function ModeratorTripsPage() {
     selectedIdRef.current = selectedId;
     if (selectedId) fetchDetail(selectedId);
   }, [selectedId, fetchDetail]);
-
-  // Mismo cargador que el resto de los mapas: una sola petición por sesión y el
-  // nombre del campo (mapboxAccessToken) en un único sitio.
-  useEffect(() => {
-    let vivo = true;
-    loadMapboxToken().then((t) => { if (vivo) setMapboxToken(t || null); });
-    return () => { vivo = false; };
-  }, []);
 
   useEffect(() => {
     const token = tokenStore.access;
@@ -298,7 +288,6 @@ export default function ModeratorTripsPage() {
         detail={detail}
         loading={detailLoading}
         error={detailError}
-        mapboxToken={mapboxToken}
         emergencies={emergencies}
         onEmergencyChanged={refreshAfterEmergencyAction}
       />

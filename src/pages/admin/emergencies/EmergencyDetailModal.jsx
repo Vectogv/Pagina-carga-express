@@ -2,6 +2,7 @@ import { MapPin, Siren } from 'lucide-react';
 import { Modal, StatusBadge } from '../../../components/ui';
 import RouteMap from '../../../components/maps/RouteMap';
 import { sosRouteProps, hasRoutePoints } from '../../../components/maps/sosRoute';
+import { MapaRecorrido } from '../../../components/panel';
 import { formatCurrency, formatDateTime } from '../../../utils/format';
 import EmergencyChat from './EmergencyChat';
 import { shortId, userName, ruta, coords, mapsUrl, emergencyBadge, attendedBy } from './emergencyUtils';
@@ -84,6 +85,11 @@ function TripSection({ emergency, trip }) {
 
 export default function EmergencyDetailModal({ emergency, trip, chat, onClose }) {
   const mapa = sosRouteProps(emergency, trip);
+  // Con viaje: ruta planeada (azul), recorrido real (rojo) y el punto del SOS. Sin viaje: solo el punto.
+  const viajeId = emergency?.viajeId || emergency?.viaje?.id || trip?.id || null;
+  const marcaSos = emergency?.lat && emergency?.lng
+    ? { lat: emergency.lat, lng: emergency.lng, at: emergency.createdAt }
+    : null;
 
   return (
     <Modal
@@ -116,7 +122,12 @@ export default function EmergencyDetailModal({ emergency, trip, chat, onClose })
             </div>
           </section>
 
-          {hasRoutePoints(mapa) && (
+          {viajeId ? (
+            <section className="stack">
+              <h3 className="section-title">Mapa del SOS</h3>
+              <MapaRecorrido key={viajeId} area="admin" viajeId={viajeId} alturaPx={280} marcaSos={marcaSos} />
+            </section>
+          ) : hasRoutePoints(mapa) && (
             <section className="stack">
               <h3 className="section-title">Mapa del SOS</h3>
               <RouteMap {...mapa} alto={280} />

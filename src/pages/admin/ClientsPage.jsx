@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Ban, CircleCheck, Trash2 } from 'lucide-react';
 import { getUsers, suspendUser, deleteUser } from '../../api/admin';
 import { getRolUsuario } from '../../utils/roles';
 import { errorMessage, fullName, toList } from '../../utils/format';
 import {
-  PageHeader, SearchInput, DataTable, ConfirmDialog, Avatar, StatusBadge, Button, Pagination,
+  PageHeader, SearchInput, DataTable, ConfirmDialog, StatusBadge, Button, Pagination,
 } from '../../components/ui';
+import { TarjetaPersona } from '../../components/panel';
+import { paginacionDe } from './users/constants';
 
 const LIMIT = 20;
 
 export default function ClientsPage() {
+  const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,12 +31,7 @@ export default function ClientsPage() {
       const res = await getUsers({ page, limit: LIMIT, search: search.trim() || undefined, rol: 'cliente' });
       const list = toList(res.data, 'users');
       setClients(list.filter((u) => getRolUsuario(u) === 'cliente'));
-      const total = Number(res.headers?.['x-total-count']);
-      const lastPage = Number(res.headers?.['x-last-page']);
-      setPagination({
-        total: Number.isFinite(total) && res.headers?.['x-total-count'] != null ? total : undefined,
-        totalPages: Number.isFinite(lastPage) && lastPage > 0 ? lastPage : (list.length >= LIMIT ? page + 1 : page),
-      });
+      setPagination(paginacionDe(res.headers, list.length, page, LIMIT));
     } catch (err) {
       setError(errorMessage(err, 'Error al cargar clientes'));
     } finally {
@@ -71,17 +70,8 @@ export default function ClientsPage() {
     {
       key: 'nombre',
       label: 'Cliente',
-      render: (_, u) => (
-        <div className="cell-user">
-          <Avatar src={u.avatar} name={fullName(u)} />
-          <div className="cell-user__text">
-            <span className="cell-user__name">{fullName(u)}</span>
-            <span className="cell-user__meta">{u.email || '—'}</span>
-          </div>
-        </div>
-      ),
+      render: (_, u) => <TarjetaPersona persona={u} tipo="cliente" area="admin" />,
     },
-    { key: 'telefono', label: 'Teléfono', render: (v) => v || '—' },
     { key: 'estado', label: 'Estado', render: (_, u) => <StatusBadge status={u.suspendido ? 'suspendido' : 'activo'} /> },
     {
       key: 'acciones',
@@ -93,11 +83,11 @@ export default function ClientsPage() {
             size="sm"
             variant={u.suspendido ? 'soft-success' : 'soft-warning'}
             icon={u.suspendido ? <CircleCheck size={14} /> : <Ban size={14} />}
-            onClick={() => setSuspendTarget(u)}
+            onClick={(e) => { e.stopPropagation(); setSuspendTarget(u); }}
           >
             {u.suspendido ? 'Activar' : 'Suspender'}
           </Button>
-          <Button size="icon" variant="ghost" onClick={() => setConfirm(u)} aria-label={`Eliminar a ${fullName(u)}`}>
+          <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); setConfirm(u); }} aria-label={`Eliminar a ${fullName(u)}`}>
             <Trash2 size={15} />
           </Button>
         </div>
@@ -109,7 +99,7 @@ export default function ClientsPage() {
     <div className="page">
       <PageHeader
         title="Clientes"
-        description="Personas que piden servicios de carga desde la app. Para editar datos, cambiar contraseña o liberar una deuda, usa Usuarios."
+        description="Personas que piden servicios de carga desde la app. Toca el nombre o la fila para abrir su perfil; para editar datos, cambiar contraseña o liberar una deuda, usa Usuarios."
       />
 
       <div className="toolbar">
@@ -122,6 +112,7 @@ export default function ClientsPage() {
         columns={columns}
         data={clients}
         loading={loading}
+        onRowClick={(u) => navigate(`/admin/clients/${u.id}`)}
         emptyMessage={search ? `Sin resultados para “${search}”` : 'Aún no hay clientes'}
         footer={<Pagination page={page} totalPages={pagination.totalPages} total={pagination.total} onChange={setPage} />}
       />

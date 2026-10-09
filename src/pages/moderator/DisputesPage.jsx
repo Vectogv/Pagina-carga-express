@@ -7,6 +7,7 @@ import { resolveStorageUrl } from '../../utils/storage';
 import {
   PageHeader, SegmentedFilter, DataTable, Modal, Button, StatusBadge, Pagination,
 } from '../../components/ui';
+import { TarjetaPersona } from '../../components/panel';
 
 const LIMIT = 20;
 const FILTROS = [
@@ -34,7 +35,7 @@ export default function ModeratorDisputesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getModeratorDisputes({ page, limit: LIMIT, estado: estado || undefined, ...ciudadParams });
+      const res = await getModeratorDisputes({ page, limit: LIMIT, estado: estado || undefined, viaje: viajeParam || undefined, ...ciudadParams });
       setDisputes(toList(res.data, 'data', 'disputes'));
       setTotal(res.data?.total ?? 0);
     } catch (err) {
@@ -44,7 +45,7 @@ export default function ModeratorDisputesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, estado, ciudadParams]);
+  }, [page, estado, viajeParam, ciudadParams]);
 
   useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
 
@@ -67,11 +68,10 @@ export default function ModeratorDisputesPage() {
     {
       key: 'conductor',
       label: 'Conductor',
-      render: (c) => (c?.id
-        ? <Link className="cell-user__name" to={`/moderator/drivers/${c.id}`} onClick={(e) => e.stopPropagation()}>{c.nombre || '—'}</Link>
-        : c?.nombre || '—'),
+      render: (c) => (c ? <TarjetaPersona persona={c} tipo="conductor" area="moderator" /> : '—'),
     },
-    { key: 'cliente', label: 'Cliente', render: (c) => (c ? `${c.nombre || '—'}${c.telefono ? ` · ${c.telefono}` : ''}` : '—') },
+    // Una disputa es un caso: el servidor ya manda el teléfono solo cuando corresponde.
+    { key: 'cliente', label: 'Cliente', render: (c) => (c ? <TarjetaPersona persona={c} tipo="cliente" area="moderator" /> : '—') },
     { key: 'createdAt', label: 'Fecha', render: (v) => <span className="nowrap text-muted">{formatDate(v)}</span> },
   ];
 
@@ -132,12 +132,12 @@ export default function ModeratorDisputesPage() {
               <div className="detail-list__item"><span className="detail-list__label">Descripción</span><span className="detail-list__value">{d.descripcion || '—'}</span></div>
               <div className="detail-list__item">
                 <span className="detail-list__label">Conductor</span>
-                <span className="detail-list__value">
-                  {d.conductor?.id ? <Link to={`/moderator/drivers/${d.conductor.id}`}>{d.conductor.nombre}</Link> : d.conductor?.nombre || '—'}
-                  {d.conductor?.placa && <span className="text-mono"> · {d.conductor.placa}</span>}
-                </span>
+                <span className="detail-list__value">{d.conductor ? <TarjetaPersona persona={d.conductor} tipo="conductor" area="moderator" /> : '—'}</span>
               </div>
-              <div className="detail-list__item"><span className="detail-list__label">Cliente</span><span className="detail-list__value">{d.cliente?.nombre || '—'}{d.cliente?.telefono ? ` · ${d.cliente.telefono}` : ''}</span></div>
+              <div className="detail-list__item">
+                <span className="detail-list__label">Cliente</span>
+                <span className="detail-list__value">{d.cliente ? <TarjetaPersona persona={d.cliente} tipo="cliente" area="moderator" /> : '—'}</span>
+              </div>
               <div className="detail-list__item"><span className="detail-list__label">Ruta</span><span className="detail-list__value">{d.viaje?.origen || '—'} → {d.viaje?.destino || '—'}</span></div>
               <div className="detail-list__item"><span className="detail-list__label">Monto</span><span className="detail-list__value">{d.viaje?.montoFinal != null ? formatCurrency(d.viaje.montoFinal) : '—'}</span></div>
             </div>

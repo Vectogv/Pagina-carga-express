@@ -36,7 +36,7 @@ export default function CompanerosPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getContactableUsers({ q: q.trim() || undefined, limit: 100, ...ciudadParams });
+      const res = await getContactableUsers({ q: q.trim() || undefined, rol: roleFilter || undefined, limit: 100, ...ciudadParams });
       // Defensa: si un backend viejo aún manda clientes, no se muestran.
       setContacts(toList(res.data, 'users', 'contactableUsers').filter((c) => (c.rol || '') !== 'cliente'));
     } catch (err) {
@@ -45,18 +45,12 @@ export default function CompanerosPage() {
     } finally {
       setLoading(false);
     }
-  }, [q, ciudadParams]);
+  }, [q, roleFilter, ciudadParams]);
 
   useEffect(() => {
     const id = setTimeout(fetchContacts, q ? 350 : 0);
     return () => clearTimeout(id);
   }, [fetchContacts, q]);
-
-  const filtered = contacts.filter((c) => {
-    if (!roleFilter) return true;
-    if (roleFilter === 'moderador') return !!c.esModerador;
-    return (c.rol || '') === roleFilter;
-  });
 
   const columns = [
     {
@@ -96,7 +90,7 @@ export default function CompanerosPage() {
 
       <DataTable
         columns={columns}
-        data={filtered}
+        data={contacts}
         loading={loading}
         emptyMessage={q ? `Sin resultados para “${q}”` : 'No hay contactos para mostrar'}
       />

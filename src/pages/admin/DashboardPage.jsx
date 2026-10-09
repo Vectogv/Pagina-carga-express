@@ -1,17 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Users, Truck, ShieldCheck, Route, Wallet, Siren, FileCheck, Scale, CreditCard, Percent,
   TriangleAlert, Ban, Megaphone, ClipboardList, Settings, DatabaseBackup, UserRound,
-  Wifi, Moon, Pin, ChevronRight, PackageCheck,
+  Wifi, Moon, ChevronRight, PackageCheck, CircleCheck, ListChecks,
 } from 'lucide-react';
-import {
-  getDashboard, getUsers, getEmergencies, getVerifications, getDisputes, getPendingPayments,
-} from '../../api/admin';
+import { getDashboard, getUsers, getPendientes } from '../../api/admin';
 import { getModeratorDashboard } from '../../api/moderator';
-import { useZonas } from '../../hooks/useZonas';
-import { errorMessage, formatCurrency, toList } from '../../utils/format';
-import { PageHeader, StatCard, Card, Select, SkeletonCard } from '../../components/ui';
+import useSocketPanel from '../../hooks/useSocketPanel';
+import { errorMessage, formatCurrency, formatDate } from '../../utils/format';
+import { PageHeader, StatCard, Card, EmptyState, SkeletonCard, Button } from '../../components/ui';
+import { FiltroZona } from '../../components/panel';
 import './DashboardPage.css';
 
 const ICON = 18;
@@ -27,123 +26,87 @@ const SHORTCUTS = [
   { title: 'Mi perfil', icon: <UserRound size={16} />, to: '/admin/profile' },
 ];
 
-// Los listados de pendientes se piden con limit=100 (tope del backend): si llegan
-// 100 exactos puede haber más, así que se muestra "100+" en vez de un número recortado.
-const LIMIT = 100;
-const countOf = (res) => {
-  const n = toList(res.data).length;
-  return n >= LIMIT ? `${LIMIT}+` : n;
+// Pantalla donde se resuelve cada categoría de GET /api/admin/pendientes (gerencia_controller.ts).
+const DESTINO = {
+  verificaciones: '/admin/verifications',
+  soat: '/admin/verifications',
+  disputas: '/admin/disputes',
+  cierres: '/admin/trips',
+  cancelaciones: '/admin/cancellation-requests',
+  tickets: '/admin/tickets',
+  emergencias: '/admin/emergencies',
+  reportes: '/admin/reports',
+  comunicados: '/admin/comunicados',
+  pagos: '/admin/payments',
 };
+
 // GET /api/admin/users manda el total real en la cabecera X-Total-Count.
 const totalOf = (res) => {
   const raw = res?.headers?.['x-total-count'];
   const total = Number(raw);
-  return raw != null && Number.isFinite(total) ? total : toList(res?.data, 'users').length;
+  return raw != null && Number.isFinite(total) ? total : undefined;
 };
 
 function DashboardPage() {
-  const ZONAS = useZonas();
+  const socket = useSocketPanel();
+  const navigate = useNavigate();
+  const [zona, setZona] = useState('');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [userStats, setUserStats] = useState(null);
-  const [pending, setPending] = useState(null);
-  const [ciudad, setCiudad] = useState('todas');
-  const [ciudadStats, setCiudadStats] = useState(null);
-  const [ciudadError, setCiudadError] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    if (ciudad === 'todas') return () => { cancelled = true; };
-    (async () => {
-      try {
-        const res = await getModeratorDashboard(ciudad);
-        if (!cancelled) setCiudadStats(res.data?.data || res.data);
-      } catch (err) {
-        if (!cancelled) setCiudadError({ ciudad, msg: errorMessage(err, 'Error al cargar métricas de la ciudad') });
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [ciudad]);
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Los conteos de la zona salen de /moderator/dashboard (el admin sin ciudad = todas las zonas)
+      // y los pendientes de /admin/pendientes, que ya filtra por zona y cuenta solo lo sin resolver.
+      // Los clientes no tienen zona: su total es siempre el de toda la plataforma.
+      const [general, zonaRes, pendRes, cRes, mRes] = await Promise.all([
+        zona ? null : getDashboard(),
+        getModeratorDashboard(zona || null),
+        getPendientes(zona ? { zona } : undefined),
+        getUsers({ page: 1, limit: 1, rol: 'cliente' }),
+        getUsers({ page: 1, limit: 1, rol: 'moderador', zona: zona || undefined }),
+      ]);
+      setData({
+        general: general ? (general.data?.data || general.data) : null,
+        zona: zonaRes.data?.data || zonaRes.data,
+        categorias: pendRes.data?.categorias || [],
+        clientes: totalOf(cRes),
+        moderadores: totalOf(mRes),
+      });
+    } catch (err) {
+      if (err?.response?.status === 403) setError('Acceso denegado (403): tu cuenta es moderador, ve a /moderator. Solo admin ve este dashboard.');
+      else setError(errorMessage(err, 'Error al cargar el dashboard'));
+    } finally {
+      setLoading(false);
+    }
+  }, [zona]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await getDashboard();
-        if (!cancelled) setData(res.data?.data || res.data);
-      } catch (err) {
-        if (!cancelled) {
-          if (err?.response?.status === 403) setError('Acceso denegado (403): tu cuenta es moderador, ve a /moderator. Solo admin ve este dashboard.');
-          else setError(errorMessage(err, 'Error al cargar el dashboard'));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  useEffect(() => { cargar(); }, [cargar]);
 
+  // Lo que llega en vivo a la sala "admin" y cambia los pendientes (report_controller#avisarAdmin, SOS).
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        // Antes se contaban a mano los primeros 100 usuarios, así que con más de 100
-        // cuentas los números salían recortados. Se usa el total del backend por rol.
-        const [cRes, mRes] = await Promise.all([
-          getUsers({ page: 1, limit: 1, rol: 'cliente' }),
-          getUsers({ page: 1, limit: 1, rol: 'moderador' }),
-        ]);
-        if (cancelled) return;
-        setUserStats({ clientes: totalOf(cRes), moderadores: totalOf(mRes) });
-      } catch {
-        // Las métricas por rol son complementarias: si fallan, las tarjetas muestran "—".
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  // El dashboard (admin_controller.ts#dashboard) no trae conteos de pendientes;
-  // se piden aparte a los mismos endpoints que ya filtran "pendiente" en el
-  // backend, así el número es real y no un campo inventado.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [emRes, verRes, dispRes, payRes] = await Promise.all([
-          getEmergencies({ page: 1, limit: LIMIT }),
-          getVerifications({ page: 1, limit: LIMIT }),
-          getDisputes({ page: 1, limit: LIMIT }),
-          getPendingPayments(),
-        ]);
-        if (cancelled) return;
-        setPending({
-          emergencies: countOf(emRes),
-          verifications: countOf(verRes),
-          disputes: countOf(dispRes),
-          payments: toList(payRes.data).length,
-        });
-      } catch {
-        // Complementario: si falla, las tarjetas muestran "—".
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    if (!socket) return undefined;
+    const refrescar = () => cargar();
+    socket.on('emergency:alert', refrescar);
+    socket.on('report:new', refrescar);
+    return () => {
+      socket.off('emergency:alert', refrescar);
+      socket.off('report:new', refrescar);
+    };
+  }, [socket, cargar]);
 
   const header = (
     <PageHeader
       title="Resumen general"
       description="Cifras clave de la plataforma y lo que está esperando una acción tuya. Toca una tarjeta para ir a esa sección."
-      actions={(
-        <Select value={ciudad} onChange={(e) => setCiudad(e.target.value)} aria-label="Ciudad" className="dashboard__city">
-          <option value="todas">Todas las ciudades</option>
-          {ZONAS.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
-        </Select>
-      )}
+      actions={<FiltroZona value={zona} onChange={setZona} />}
     />
   );
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="page">
         {header}
@@ -154,7 +117,7 @@ function DashboardPage() {
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="page">
         {header}
@@ -163,56 +126,77 @@ function DashboardPage() {
     );
   }
 
+  const z = data.zona || {};
+  const cat = (clave) => data.categorias.find((c) => c.clave === clave)?.total;
+  const urgentes = data.categorias.filter((c) => c.total > 0);
+  const alcance = zona ? 'En esta zona' : undefined;
+
   const stats = [
-    { title: 'Clientes', value: userStats?.clientes ?? '—', icon: <Users size={ICON} />, color: 'var(--success)', to: '/admin/clients' },
-    { title: 'Conductores', value: data?.totalDrivers ?? '—', icon: <Truck size={ICON} />, color: 'var(--accent-violet)', to: '/admin/drivers' },
-    { title: 'Moderadores', value: userStats?.moderadores ?? '—', icon: <ShieldCheck size={ICON} />, color: 'var(--warning)', to: '/admin/moderators' },
-    // activeVehicles = conductores con online=true (admin_controller.ts#dashboard).
-    { title: 'Conductores en línea', value: data?.activeVehicles ?? '—', icon: <Route size={ICON} />, color: 'var(--primary)', to: '/admin/drivers' },
-    // todayShipments = viajes creados hoy que ya están en estado 'finalizado'.
-    { title: 'Viajes finalizados hoy', value: data?.todayShipments ?? '—', icon: <PackageCheck size={ICON} />, color: 'var(--info)', to: '/admin/trips' },
-    // totalEarnings suma ganancias.monto = neto del conductor (90 %), no el ingreso de la plataforma.
-    { title: 'Ganancias netas de conductores', value: formatCurrency(data?.totalEarnings ?? 0), icon: <Wallet size={ICON} />, color: 'var(--success)', to: '/admin/earnings' },
-    { title: 'Emergencias pendientes', value: pending?.emergencies ?? '—', icon: <Siren size={ICON} />, color: 'var(--danger)', to: '/admin/emergencies' },
-    { title: 'Verificaciones pendientes', value: pending?.verifications ?? '—', icon: <FileCheck size={ICON} />, color: 'var(--info)', to: '/admin/verifications' },
-    { title: 'Disputas abiertas', value: pending?.disputes ?? '—', icon: <Scale size={ICON} />, color: 'var(--warning)', to: '/admin/disputes' },
-    { title: 'Pagos pendientes', value: pending?.payments ?? '—', icon: <CreditCard size={ICON} />, color: 'var(--accent-violet)', to: '/admin/payments' },
+    { title: 'Clientes', value: data.clientes, icon: <Users size={ICON} />, color: 'var(--success)', to: '/admin/clients', subtitle: zona ? 'Toda la plataforma' : undefined },
+    { title: 'Conductores', value: z.totalDrivers, icon: <Truck size={ICON} />, color: 'var(--accent-violet)', to: '/admin/drivers', subtitle: alcance },
+    { title: 'Moderadores', value: data.moderadores, icon: <ShieldCheck size={ICON} />, color: 'var(--warning)', to: '/admin/moderators', subtitle: alcance },
+    { title: 'Conductores en línea', value: z.onlineDrivers, icon: <Wifi size={ICON} />, color: 'var(--primary)', to: '/admin/drivers' },
+    // inactiveDrivers = sin viajes en los días de inactividad configurados (Configuración → General).
+    { title: 'Conductores inactivos', value: z.inactiveDrivers, icon: <Moon size={ICON} />, color: 'var(--text-muted)', to: '/admin/drivers' },
+    { title: 'Viajes activos', value: z.viajesActivos, icon: <Route size={ICON} />, color: 'var(--info)', to: '/admin/trips', subtitle: z.enCurso != null ? `${z.enCurso} en curso` : undefined },
+    ...(data.general ? [
+      // todayShipments = viajes creados hoy que ya están en estado 'finalizado'.
+      { title: 'Viajes finalizados hoy', value: data.general.todayShipments, icon: <PackageCheck size={ICON} />, color: 'var(--info)', to: '/admin/trips' },
+      // totalEarnings suma ganancias.monto = neto del conductor, no el ingreso de la plataforma.
+      { title: 'Ganancias netas de conductores', value: formatCurrency(data.general.totalEarnings ?? 0), icon: <Wallet size={ICON} />, color: 'var(--success)', to: '/admin/earnings' },
+    ] : []),
+    // emergenciasPendientes no cuenta las ya atendidas por un moderador.
+    { title: 'Emergencias sin atender', value: z.emergenciasPendientes, icon: <Siren size={ICON} />, color: 'var(--danger)', to: '/admin/emergencies' },
+    { title: 'Verificaciones pendientes', value: cat('verificaciones'), icon: <FileCheck size={ICON} />, color: 'var(--info)', to: '/admin/verifications' },
+    { title: 'Disputas abiertas', value: cat('disputas'), icon: <Scale size={ICON} />, color: 'var(--warning)', to: '/admin/disputes' },
+    { title: 'Reportes pendientes', value: cat('reportes'), icon: <TriangleAlert size={ICON} />, color: 'var(--warning)', to: '/admin/reports' },
+    { title: 'Pagos por confirmar', value: cat('pagos'), icon: <CreditCard size={ICON} />, color: 'var(--accent-violet)', to: '/admin/payments' },
   ];
-
-  const cityReady = ciudadStats && ciudadStats.ciudad === ciudad;
-  // moderator_controller.ts#dashboard: totalComunicados y totalReports cuentan los del
-  // usuario que consulta (el admin), no los de la ciudad, así que no se muestran aquí.
-  const cityStats = cityReady ? [
-    { title: 'Conductores', value: ciudadStats.totalDrivers ?? '—', icon: <Truck size={ICON} />, color: 'var(--accent-violet)', to: '/admin/drivers' },
-    { title: 'Conductores en línea', value: ciudadStats.onlineDrivers ?? '—', icon: <Wifi size={ICON} />, color: 'var(--success)', to: '/admin/drivers' },
-    { title: 'Sin viajes en 7 días', value: ciudadStats.inactiveDrivers ?? '—', icon: <Moon size={ICON} />, color: 'var(--danger)', to: '/admin/drivers' },
-    { title: 'Avisos de la ciudad', value: ciudadStats.totalAvisos ?? '—', icon: <Pin size={ICON} />, color: 'var(--warning)', to: '/admin/avisos' },
-  ] : [];
-
-  const showCityError = ciudad !== 'todas' && ciudadError?.ciudad === ciudad;
 
   return (
     <div className="page">
       {header}
 
-      {ciudad === 'todas' ? (
-        <div className="stats-grid">
-          {stats.map((s) => <StatCard key={s.title} {...s} />)}
-        </div>
-      ) : (
-        <>
-          <p className="text-sm text-muted">Conductores y avisos de esta ciudad.</p>
-          {showCityError ? (
-            <div className="page-error" role="alert">{ciudadError.msg}</div>
-          ) : (
-            <div className="stats-grid">
-              {cityReady
-                ? cityStats.map((s) => <StatCard key={s.title} {...s} />)
-                : Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
-            </div>
-          )}
-        </>
-      )}
+      {error && <div className="page-error" role="alert">{error}</div>}
+
+      <div className="stats-grid">
+        {stats.map((s) => <StatCard key={s.title} {...s} />)}
+      </div>
+
+      <Card
+        title="Pendientes urgentes"
+        description="Lo que más tiempo lleva esperando, por categoría."
+        actions={<Button variant="secondary" size="sm" icon={<ListChecks size={14} />} onClick={() => navigate('/admin/pendientes')}>Ver todos</Button>}
+      >
+        {urgentes.length === 0 ? (
+          <EmptyState
+            icon={<CircleCheck size={22} />}
+            title="Nada pendiente"
+            description={zona ? 'En esta zona no hay nada esperando revisión.' : 'No hay nada esperando revisión.'}
+          />
+        ) : (
+          <div className="dashboard__panels">
+            {urgentes.map((c) => (
+              <div key={c.clave} className="stack" style={{ gap: 'var(--space-2)' }}>
+                <Link to={DESTINO[c.clave] || '/admin/pendientes'} className="dashboard__card-title">
+                  <span className="dashboard__card-icon"><ChevronRight size={14} /></span>
+                  <strong>{c.titulo}</strong>
+                  <span className="text-muted">· {c.total}</span>
+                </Link>
+                <ul className="dashboard__list">
+                  {c.items.map((i) => (
+                    <li key={`${c.clave}-${i.id}`} className="dashboard__list-item row" style={{ justifyContent: 'space-between' }}>
+                      <span>{i.titulo}</span>
+                      {i.createdAt && <span className="text-muted nowrap">{formatDate(i.createdAt)}</span>}
+                    </li>
+                  ))}
+                  {c.total > c.items.length && <li className="dashboard__list-item text-muted">y {c.total - c.items.length} más</li>}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <Card title="Accesos directos" description="Otras secciones del panel.">
         <nav className="dashboard__shortcuts" aria-label="Accesos directos">

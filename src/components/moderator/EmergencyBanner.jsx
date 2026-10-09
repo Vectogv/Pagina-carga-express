@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import { ChevronRight, CircleCheck, Siren } from 'lucide-react';
-import api, { tokenStore } from '../../api/axios';
+import api from '../../api/axios';
+import useSocketPanel from '../../hooks/useSocketPanel';
 import { getModeratorEmergencies } from '../../api/moderator';
-import { SOCKET_URL } from '../../config';
 import { toList } from '../../utils/format';
 import { ALERT_SOUND } from '../../utils/aviso';
 import './EmergencyBanner.css';
@@ -55,14 +54,9 @@ export default function EmergencyBanner() {
 
   useEffect(() => { fetchPendientes(); }, [fetchPendientes]);
 
+  const socket = useSocketPanel();
   useEffect(() => {
-    const token = tokenStore.access;
-    if (!token) return undefined;
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-      auth: { token: `Bearer ${token}` },
-      query: { token: `Bearer ${token}` },
-    });
+    if (!socket) return undefined;
     const timers = [];
     const flagNew = () => {
       setIsNew(true);
@@ -77,7 +71,7 @@ export default function EmergencyBanner() {
       }
     };
 
-    socket.on('moderator:emergency:update', (p) => {
+    const onUpdate = (p) => {
       setLastEstado(p.estado);
       if (p.estado === 'pendiente') {
         setCount((c) => c + 1);
@@ -96,21 +90,25 @@ export default function EmergencyBanner() {
       } else {
         fetchPendientes();
       }
-    });
-    socket.on('emergency:alert', (p) => {
+    };
+    const onAlert = (p) => {
       setLastEstado('pendiente');
       setHasActiva(true);
       flagNew();
       fetchPendientes();
       playSound();
       notify(p.motivo || 'Emergencia');
-    });
+    };
+    socket.on('moderator:emergency:update', onUpdate);
+    socket.on('emergency:alert', onAlert);
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
+    // Socket compartido (useSocketPanel): se quitan los listeners, no se desconecta.
     return () => {
       timers.forEach(clearTimeout);
-      socket.disconnect();
+      socket.off('moderator:emergency:update', onUpdate);
+      socket.off('emergency:alert', onAlert);
     };
-  }, [fetchPendientes]);
+  }, [socket, fetchPendientes]);
 
   if (count === 0 && !hasActiva && !isNew) return null;
 

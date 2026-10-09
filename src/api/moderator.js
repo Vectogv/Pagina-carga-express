@@ -8,6 +8,7 @@ export const getModeratorDrivers = (params) => api.get('/api/moderator/drivers',
 export const getInactiveDrivers = (params) => api.get('/api/moderator/drivers/inactive', { params })
 // Ficha completa (datos, vehículo, documentos firmados, últimos viajes, reportes y disputas). 403 si no es de su zona.
 export const getModeratorDriver = (id) => api.get(`/api/moderator/drivers/${id}`)
+export const getClientProfile = (id) => api.get(`/api/moderator/clients/${id}`)
 // Disputas de los conductores de la zona, solo lectura. { total, page, data } — params: page, limit, estado (coma)
 export const getModeratorDisputes = (params) => api.get('/api/moderator/disputes', { params })
 // data opcional: { documentos: [...], mensaje } → aviso de documentos faltantes; sin cuerpo, recordatorio de actividad.
@@ -39,6 +40,7 @@ export const getModeratorDashboard = (ciudad) => api.get('/api/moderator/dashboa
 // Viajes — nuevo GET /api/moderator/trips filtrado por ciudad del moderador
 export const getModeratorTrips = (params) => api.get('/api/moderator/trips', { params })
 export const getModeratorTripDetail = (id) => api.get(`/api/moderator/trips/${id}`)
+export const getTripRecorrido = (id) => api.get(`/api/moderator/trips/${id}/recorrido`)
 // H1: el cliente tuvo 10 min para confirmar/rechazar el cierre y no respondió;
 // el moderador de la zona decide. data: { resolucion: 'finalizar' | 'disputa', nota (>=10 caracteres) }
 export const resolveClose = (id, data) => api.post(`/api/moderator/trips/${id}/resolve-close`, data)
@@ -68,3 +70,7 @@ export const getContactableUsers = (params) => api.get('/api/moderator/contactab
 
 // Perfil (usa mismo endpoint que admin/users/profile pero con rol moderador)
 export const getModeratorProfile = () => api.get('/api/users/profile')
+
+// Conteos para las insignias (aceptan ?ciudad= cuando el admin elige una zona)
+export const getEmergencyCount = (params) => api.get('/api/moderator/emergency/count', { params })
+export const getTicketsCount = (params) => api.get('/api/moderator/tickets/count', { params })

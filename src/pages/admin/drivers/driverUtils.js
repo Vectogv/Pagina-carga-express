@@ -26,4 +26,3 @@ export const CONNECTION = {
 };
 
 export const connectionLabel = (d) => CONNECTION[connectionKey(d)][0];
-
