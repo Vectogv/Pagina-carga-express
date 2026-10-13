@@ -21,5 +21,10 @@ export const clienteApi = {
   // Cuentas de empresa (solo el dueño). mes = 'YYYY-MM'
   empresa: () => api.get('/api/empresas/mia'),
   empresaResumen: (mes) => api.get('/api/empresas/resumen', { params: { mes } }),
+  empresaMiembros: () => api.get('/api/empresas/miembros'),
+  empresaAprobar: (id) => api.put(`/api/empresas/miembros/${id}/aprobar`),
+  empresaRechazar: (id) => api.put(`/api/empresas/miembros/${id}/rechazar`),
+  empresaCodigoNuevo: () => api.post('/api/empresas/codigo/regenerar'),
+  empresaViajesActivos: () => api.get('/api/empresas/viajes-activos'),
   empresaReporte: (mes) => api.get('/api/empresas/reporte', { params: { mes }, responseType: 'blob' }),
 }
