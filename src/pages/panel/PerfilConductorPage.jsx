@@ -10,6 +10,7 @@ import { faltantesDe, textoFaltantes } from '../../utils/documentos';
 import { textoCanales } from '../../utils/canales';
 import useDocumentosConductor from '../../hooks/useDocumentosConductor';
 import NotificarDocumentosDialog from '../moderator/NotificarDocumentosDialog';
+import { ConnectionBadge } from '../admin/drivers/DriverBadges';
 import { TarjetaPersona, Encuadre, posicionDe } from '../../components/panel';
 import {
   PageHeader, Card, DataTable, ConfirmDialog, Avatar, Button, Badge, StatusBadge, LoadingState,
@@ -156,7 +157,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
               <StatusBadge status={driver.estadoVerificacion || 'pendiente'} />
               {(u.estadoCuenta === 'suspendida' || u.suspendido)
                 ? <Badge variant="danger">Cuenta suspendida</Badge>
-                : <Badge variant={driver.online ? 'success' : 'neutral'}>{driver.online ? 'Conectado' : 'Desconectado'}</Badge>}
+                : <ConnectionBadge driver={driver} />}
               {u.tieneDeudaActiva && <Badge variant="warning">Deuda {formatCurrency(u.montoDeuda || 0)}</Badge>}
             </div>
             <span className="text-sm text-muted">

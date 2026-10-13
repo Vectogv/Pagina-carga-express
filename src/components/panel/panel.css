@@ -31,6 +31,7 @@
 }
 .panel-pin--on { background: #16a34a; }
 .panel-pin--off { background: #94a3b8; }
+.panel-pin--sin-senal { background: #eab308; }
 .panel-pin--fin { background: #dc2626; }
 .panel-pin--letra { width: 26px; height: 26px; }
 .panel-pin--ultimo { width: 16px; height: 16px; background: #EF4444; }

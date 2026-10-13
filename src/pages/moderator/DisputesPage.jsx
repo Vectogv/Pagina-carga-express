@@ -7,7 +7,7 @@ import { resolveStorageUrl } from '../../utils/storage';
 import {
   PageHeader, SegmentedFilter, DataTable, Modal, Button, StatusBadge, Pagination,
 } from '../../components/ui';
-import { MapaRecorrido, TarjetaPersona } from '../../components/panel';
+import { MapaRecorrido, TarjetaPersona, ResumenCierreSos } from '../../components/panel';
 
 const LIMIT = 20;
 const FILTROS = [
@@ -165,11 +165,13 @@ export default function ModeratorDisputesPage() {
               </>
             )}
             {d.estado === 'resuelta' && (
+              <>
               <div className="detail-list">
                 <div className="detail-list__item"><span className="detail-list__label">Resultado</span><span className="detail-list__value">{RESULTADO[d.resultado] || d.resultado || '—'}</span></div>
                 {d.comentarioAdmin && <div className="detail-list__item"><span className="detail-list__label">Comentario del admin</span><span className="detail-list__value">{d.comentarioAdmin}</span></div>}
-                {d.resueltaAt && <div className="detail-list__item"><span className="detail-list__label">Resuelta</span><span className="detail-list__value">{formatDateTime(d.resueltaAt)}</span></div>}
               </div>
+              <ResumenCierreSos alerta={d} labelTipo="Tipo de resolución" />
+              </>
             )}
           </div>
         )}

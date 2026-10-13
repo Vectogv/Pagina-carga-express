@@ -14,7 +14,19 @@ function statusOf(current) {
 
 const EMPTY_FORM = {
   nequiNumero: '', nequiNombre: '', soporteTelefono: '', soporteEmail: '', inactividadDias: '',
+  senalIntervaloSeg: '', sinSenalMin: '', desconexionMin: '',
 };
+
+// Conductor "fantasma": mismos rangos que senal_conductor_service.ts (validarSenal).
+const SENAL = [
+  { name: 'senalIntervaloSeg', label: 'Intervalo de señal del conductor', unidad: 'segundos', min: 10, max: 300, def: 30,
+    ayuda: 'Cada cuánto manda su ubicación la app mientras está Conectado' },
+  { name: 'sinSenalMin', label: 'Minutos para marcar "Sin señal"', unidad: 'minutos', min: 1, max: 60, def: 2,
+    ayuda: 'Sin ubicación durante este tiempo se ve en amarillo en el panel' },
+  { name: 'desconexionMin', label: 'Minutos para desconectarlo solo', unidad: 'minutos', min: 1, max: 240, def: 10,
+    ayuda: 'Debe ser mayor que los minutos sin señal' },
+];
+const enRango = (v, { min, max }) => /^\d+$/.test(v) && Number(v) >= min && Number(v) <= max;
 
 // Mismo rango que valida el servidor (admin_controller.ts updateConfig: entero 1–365).
 const DIAS_MIN = 1;
@@ -46,6 +58,7 @@ export default function GeneralConfig({ notify }) {
         soporteTelefono: data.soporteTelefono || '',
         soporteEmail: data.soporteEmail || '',
         inactividadDias: data.inactividadDias != null ? String(data.inactividadDias) : '',
+        ...Object.fromEntries(SENAL.map(({ name }) => [name, data[name] != null ? String(data[name]) : ''])),
       };
       setCurrent(next);
       // El formulario arranca con los valores publicados para editar solo lo necesario.
@@ -69,12 +82,22 @@ export default function GeneralConfig({ notify }) {
   const dias = String(form.inactividadDias ?? '').trim();
   const diasCambiaron = !!current && dias !== current.inactividadDias;
   const diasError = diasCambiaron && dias && !diasValidos(dias) ? `Entre ${DIAS_MIN} y ${DIAS_MAX} días` : '';
+  const senal = Object.fromEntries(SENAL.map(({ name }) => [name, String(form[name] ?? '').trim()]));
+  const senalCambio = SENAL.filter(({ name }) => current && senal[name] && senal[name] !== current[name]);
+  const senalErrores = Object.fromEntries(senalCambio
+    .filter((c) => !enRango(senal[c.name], c))
+    .map((c) => [c.name, `Entre ${c.min} y ${c.max} ${c.unidad}`]));
+  if (!senalErrores.desconexionMin && senalCambio.length
+    && Number(senal.desconexionMin) <= Number(senal.sinSenalMin)) {
+    senalErrores.desconexionMin = 'Debe ser mayor que los minutos sin señal';
+  }
   const dirty = !current
     || numero !== current.nequiNumero
     || nombre !== current.nequiNombre
     || telefono !== current.soporteTelefono
     || email !== current.soporteEmail
-    || diasCambiaron;
+    || diasCambiaron
+    || senalCambio.length > 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,6 +112,14 @@ export default function GeneralConfig({ notify }) {
         return;
       }
       payload.inactividadDias = Number(dias);
+    }
+    if (senalCambio.length) {
+      const error = Object.values(senalErrores)[0];
+      if (error) {
+        notify(`Tiempos de señal: ${error.toLowerCase()}`, 'danger');
+        return;
+      }
+      senalCambio.forEach(({ name }) => { payload[name] = Number(senal[name]); });
     }
     if (!Object.keys(payload).length) {
       notify('Ingresa al menos un campo', 'danger');
@@ -170,6 +201,12 @@ export default function GeneralConfig({ notify }) {
                 ? <span className="config__value">{current.inactividadDias} días sin actividad</span>
                 : <span className="config__value config__value--empty">7 días (valor por defecto)</span>}
             </div>
+            {SENAL.map((c) => (
+              <div className="config__value-box" key={c.name}>
+                <span className="config__value-label">{c.label}</span>
+                <span className="config__value">{current[c.name] || c.def} {c.unidad}</span>
+              </div>
+            ))}
           </div>
         )}
       </Card>
@@ -235,6 +272,23 @@ export default function GeneralConfig({ notify }) {
               error={diasError}
               helperText={diasError ? undefined : `Sin conectarse ni hacer viajes durante estos días aparece en "Inactivos". Entre ${DIAS_MIN} y ${DIAS_MAX}`}
             />
+            {SENAL.map((c) => (
+              <Input
+                key={c.name}
+                label={`${c.label} (${c.unidad})`}
+                name={c.name}
+                type="number"
+                inputMode="numeric"
+                min={c.min}
+                max={c.max}
+                autoComplete="off"
+                value={form[c.name]}
+                onChange={handleChange}
+                placeholder={`Ej: ${c.def}`}
+                error={senalErrores[c.name]}
+                helperText={senalErrores[c.name] ? undefined : `${c.ayuda}. Entre ${c.min} y ${c.max}`}
+              />
+            ))}
           </div>
           <div className="config__footer">
             {current && !dirty && <span className="config__footer-note">Sin cambios pendientes</span>}

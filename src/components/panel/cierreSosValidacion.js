@@ -9,3 +9,7 @@ export const cierreSosValido = (c) => {
 };
 
 export const cuerpoCierreSos = (c) => ({ tipoCierre: c.tipoCierre, observacion: c.observacion.trim() });
+
+// Listas de tipos del servidor: cierre de SOS y resolución de disputas.
+export const TIPOS_SOS = '/api/config/tipos-cierre-sos';
+export const TIPOS_DISPUTA = '/api/config/tipos-resolucion-disputa';

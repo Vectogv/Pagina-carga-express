@@ -9,4 +9,4 @@ export { default as Encuadre } from './mapaBase';
 export { posicionDe, POPAYAN, puntosDeEmergencia, tieneMapaEmergencia } from './geo';
 export { default as FiltroZona } from './FiltroZona';
 export { FormularioCierreSos, ResumenCierreSos } from './CierreSos';
-export { CIERRE_VACIO, cierreSosValido, cuerpoCierreSos } from './cierreSosValidacion';
+export { CIERRE_VACIO, cierreSosValido, cuerpoCierreSos, TIPOS_DISPUTA } from './cierreSosValidacion';

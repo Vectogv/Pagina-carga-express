@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, Select, Input } from '../../../components/ui';
 import { errorMessage } from '../../../utils/format';
+import { FormularioCierreSos, TIPOS_DISPUTA, CIERRE_VACIO, cierreSosValido } from '../../../components/panel';
 import { DisputeSummary } from './DisputeParts';
 import { money } from './disputeUtils';
 
 /**
  * Formulario de resolución. PUT /api/admin/disputes/:id/resolve espera exactamente
- * {resultado:"favor_conductor"|"favor_cliente", acuerdoDePago?, montoDeuda?}
+ * {resultado:"favor_conductor"|"favor_cliente", tipoResolucion, observacion (20-1000), acuerdoDePago?, montoDeuda?}
  * (admin_controller.ts#resolveDispute). El acuerdo de pago y el monto de deuda solo
  * aplican cuando el resultado es a favor del conductor.
  * Se monta con `key` distinto por disputa, así el formulario arranca limpio cada vez.
@@ -15,6 +16,7 @@ export default function ResolveDisputeModal({ dispute, onClose, onSubmit }) {
   const [resultado, setResultado] = useState('favor_conductor');
   const [acuerdoDePago, setAcuerdoDePago] = useState(false);
   const [montoDeuda, setMontoDeuda] = useState('');
+  const [cierre, setCierre] = useState(CIERRE_VACIO);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -37,7 +39,7 @@ export default function ResolveDisputeModal({ dispute, onClose, onSubmit }) {
   };
 
   const handleSubmit = async () => {
-    const payload = { resultado };
+    const payload = { resultado, tipoResolucion: cierre.tipoCierre, observacion: cierre.observacion.trim() };
     if (resultado === 'favor_conductor' && acuerdoDePago) {
       // Igual que la app: el acuerdo de pago necesita un monto real (si no, la deuda queda en null).
       const monto = Number(montoDeuda);
@@ -69,7 +71,7 @@ export default function ResolveDisputeModal({ dispute, onClose, onSubmit }) {
       footer={(
         <>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>Cancelar</Button>
-          <Button onClick={handleSubmit} loading={submitting}>Confirmar resolución</Button>
+          <Button onClick={handleSubmit} loading={submitting} disabled={!cierreSosValido(cierre)}>Confirmar resolución</Button>
         </>
       )}
     >
@@ -103,6 +105,15 @@ export default function ResolveDisputeModal({ dispute, onClose, onSubmit }) {
                 )}
               </>
             )}
+            <div className="form-grid__full">
+              <FormularioCierreSos
+                valor={cierre}
+                onChange={setCierre}
+                disabled={submitting}
+                tiposUrl={TIPOS_DISPUTA}
+                labelTipo="Tipo de resolución"
+              />
+            </div>
           </div>
         </div>
       )}

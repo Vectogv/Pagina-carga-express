@@ -8,6 +8,7 @@ import {
   PageHeader, SearchInput, SegmentedFilter, DataTable, Badge, StatusBadge, Pagination,
 } from '../../components/ui';
 import { CeldaVehiculo } from './driverCells';
+import { ConnectionBadge } from '../admin/drivers/DriverBadges';
 import { TarjetaPersona } from '../../components/panel';
 
 const LIMIT = 50;
@@ -78,7 +79,7 @@ export default function DriverDirectoryPage() {
       align: 'right',
       render: (v, r) => (r.usuario?.estadoCuenta === 'suspendida' || r.usuario?.suspendido
         ? <Badge variant="danger">Suspendido</Badge>
-        : <Badge variant={v ? 'success' : 'neutral'}>{v ? 'Conectado' : 'Desconectado'}</Badge>),
+        : <ConnectionBadge driver={r} />),
     },
   ];
 
