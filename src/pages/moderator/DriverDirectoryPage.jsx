@@ -24,6 +24,11 @@ const CONEXION = [
   { value: '1', label: 'Conectados' },
 ];
 
+const OBSERVACION = [
+  { value: '', label: 'Todos' },
+  { value: '1', label: 'En observación' },
+];
+
 export default function DriverDirectoryPage() {
   const navigate = useNavigate();
   const { ciudadParams } = useModeratorCity();
@@ -35,6 +40,7 @@ export default function DriverDirectoryPage() {
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('');
   const [online, setOnline] = useState('');
+  const [observacion, setObservacion] = useState('');
   const [page, setPage] = useState(1);
 
   const fetchDrivers = useCallback(async () => {
@@ -42,7 +48,7 @@ export default function DriverDirectoryPage() {
     setError(null);
     try {
       const res = await getModeratorDrivers({
-        page, limit: LIMIT, estado: estado || undefined, buscar: q.trim() || undefined, online: online || undefined, ...ciudadParams,
+        page, limit: LIMIT, estado: estado || undefined, buscar: q.trim() || undefined, online: online || undefined, observacion: observacion || undefined, ...ciudadParams,
       });
       setDrivers(toList(res.data, 'drivers'));
       setTotal(res.data?.total ?? 0);
@@ -52,7 +58,7 @@ export default function DriverDirectoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, estado, online, q, ciudadParams]);
+  }, [page, estado, online, observacion, q, ciudadParams]);
 
   useEffect(() => {
     const id = setTimeout(fetchDrivers, q ? 350 : 0);
@@ -62,6 +68,7 @@ export default function DriverDirectoryPage() {
   const cambiarBusqueda = (v) => { setQ(v); setPage(1); };
   const cambiarEstado = (v) => { setEstado(v); setPage(1); };
   const cambiarOnline = (v) => { setOnline(v); setPage(1); };
+  const cambiarObservacion = (v) => { setObservacion(v); setPage(1); };
 
   const columns = [
     {
@@ -96,6 +103,7 @@ export default function DriverDirectoryPage() {
         <SearchInput value={q} onChange={cambiarBusqueda} placeholder="Buscar nombre, cédula, placa" />
         <SegmentedFilter options={ESTADOS} value={estado} onChange={cambiarEstado} ariaLabel="Estado de verificación" />
         <SegmentedFilter options={CONEXION} value={online} onChange={cambiarOnline} ariaLabel="Conexión" />
+        <SegmentedFilter options={OBSERVACION} value={observacion} onChange={cambiarObservacion} ariaLabel="Observación" />
       </div>
 
       {error && <div className="page-error" role="alert">{error}</div>}

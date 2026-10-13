@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Eye } from 'lucide-react';
 import { Avatar } from '../ui';
 import { fullName } from '../../utils/format';
 
@@ -27,6 +28,9 @@ export default function TarjetaPersona({ persona, tipo = 'conductor', area = 'mo
       <Avatar src={foto} name={nombre} size={size} />
       <div className="cell-user__text">
         {to ? <Link to={to} className="cell-user__name">{nombre}</Link> : <span className="cell-user__name">{nombre}</span>}
+        {tipo === 'conductor' && persona.enObservacion === true && (
+          <Eye size={14} className="text-warning" style={{ marginLeft: 6, verticalAlign: 'middle' }} title="En observación: cobra el máximo de ayuda" aria-label="En observación: cobra el máximo de ayuda" />
+        )}
         {meta && !compacta && <span className="cell-user__meta">{meta}</span>}
       </div>
     </div>

@@ -29,6 +29,7 @@ const LIMIT = 20;
 const STATUS_FILTERS = [
   { value: 'all', label: 'Todos los estados' },
   { value: 'conectado', label: 'Conectado' },
+  { value: 'observacion', label: 'En observación' },
   { value: 'pendiente', label: 'Verificación pendiente' },
   { value: 'aprobado', label: 'Verificado' },
   { value: 'rechazado', label: 'Verificación rechazada' },
@@ -63,6 +64,7 @@ export default function DriversPage() {
         search: search.trim() || undefined,
         zona: zona || undefined,
         online: filterStatus === 'conectado' ? 1 : undefined,
+        observacion: filterStatus === 'observacion' ? 1 : undefined,
         estado: ['pendiente', 'aprobado', 'rechazado'].includes(filterStatus) ? filterStatus : undefined,
       });
       const rows = toList(res.data, 'drivers');

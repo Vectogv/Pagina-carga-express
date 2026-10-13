@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import L from 'leaflet';
 import { MapContainer, Marker, TileLayer } from 'react-leaflet';
-import { ArrowLeft, BellRing, Check, Flag, MessageSquare, X } from 'lucide-react';
+import { ArrowLeft, Eye, BellRing, Check, Flag, MessageSquare, X } from 'lucide-react';
 import { getModeratorDriver, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
 import { errorMessage, formatCurrency, formatDate, formatDateTime, fullName } from '../../utils/format';
 import { resolveStorageUrl } from '../../utils/storage';
@@ -147,6 +147,18 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
         actions={<Link className="btn btn--secondary btn--sm" to={volverA}><ArrowLeft size={14} /> Volver</Link>}
       />
 
+      {driver.enObservacion === true && (
+        <Card>
+          <div className="detail-list">
+            <Detail label={<><Eye size={14} /> En observación</>}>
+              Cobra el máximo de ayuda.
+              {driver.tarifaAyuda && ` Tarifa por piso: ${[1, 2, 3, 4].map((n) => `${n}: ${formatCurrency(driver.tarifaAyuda[`piso${n}`] || 0)}`).join(' · ')}. `}
+              <a href="#viajes-conductor">Ver sus viajes</a>
+            </Detail>
+          </div>
+        </Card>
+      )}
+
       <Card>
         <div className="perfil-cab">
           <Avatar src={foto} name={nombre} size={112} className="perfil-cab__foto" />
@@ -276,6 +288,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
         </div>
       </Card>
 
+      <div id="viajes-conductor" />
       <Card title="Últimos viajes">
         <DataTable columns={viajeCols} data={viajes} emptyMessage="Sin viajes todavía" rowKey="id" />
       </Card>

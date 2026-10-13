@@ -10,7 +10,7 @@ const DEFAULTS = {
   etapas: { ampliar: true, sugerencia: true, cierre: true },
   tarifaKm: { piaggio: 0, furgon: 0, camioneta: 0, default: 0 },
   arranque: { piaggio: 0, furgon: 0, camioneta: 0, default: 0 },
-  ayuda: { porDefecto: { piso1: 0, piso2: 0, piso3: 0, piso4: 0 }, min: 0, max: 100000 },
+  ayuda: { porDefecto: { piso1: 0, piso2: 0, piso3: 0, piso4: 0 }, min: 1000, max: 30000 },
 };
 const NUM_KEYS = Object.keys(DEFAULTS).filter((k) => k !== 'etapas' && k !== 'tarifaKm' && k !== 'arranque' && k !== 'ayuda');
 const TARIFAS = [['piaggio', 'Piaggio'], ['furgon', 'Furgón sellado'], ['camioneta', 'Camioneta'], ['default', 'Por defecto (otros vehículos)']];
@@ -225,7 +225,7 @@ export default function EscaleraConfig({ notify }) {
           <Card title="Ayuda del conductor" description="Cada conductor pone su propia tarifa en la app; esta es la que usa si no la ha puesto. La ayuda no paga comisión.">
             <div className="form-grid">
               <Input label="Mínimo ($)" name="min" type="number" inputMode="numeric" min="0" max={MAX_ARRANQUE} step="1" value={f.ayuda.min} onChange={handleAyuda} helperText="Lo menos que un conductor puede cobrar por ayuda." />
-              <Input label="Máximo ($)" name="max" type="number" inputMode="numeric" min="0" max={MAX_ARRANQUE} step="1" value={f.ayuda.max} onChange={handleAyuda} helperText="Lo más que un conductor puede cobrar por ayuda." />
+              <Input label="Máximo ($)" name="max" type="number" inputMode="numeric" min="0" max={MAX_ARRANQUE} step="1" value={f.ayuda.max} onChange={handleAyuda} helperText="Lo más que un conductor puede cobrar por ayuda. Los conductores que ponen el máximo quedan en observación." />
               {PISOS.map(([k, label]) => (
                 <Input key={k} label={`Por defecto: ${label} ($)`} name={k} type="number" inputMode="numeric" min="0" max={MAX_ARRANQUE} step="1" value={f.ayuda.porDefecto[k]} onChange={handlePiso} helperText="Debe estar entre el mínimo y el máximo." />
               ))}
