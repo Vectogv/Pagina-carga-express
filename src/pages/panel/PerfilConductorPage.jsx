@@ -151,7 +151,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
         <Card>
           <div className="detail-list">
             <Detail label={<><Eye size={14} /> En observación</>}>
-              Cobra el máximo de ayuda.
+              {driver.motivoObservacion === 'oferta' ? 'En los últimos 30 días ofertó una ayuda de 2 veces el máximo o más.' : 'Cobra el máximo de ayuda.'}
               {driver.tarifaAyuda && ` Tarifa por piso: ${[1, 2, 3, 4].map((n) => `${n}: ${formatCurrency(driver.tarifaAyuda[`piso${n}`] || 0)}`).join(' · ')}. `}
               <a href="#viajes-conductor">Ver sus viajes</a>
             </Detail>

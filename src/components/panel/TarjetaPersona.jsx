@@ -29,7 +29,7 @@ export default function TarjetaPersona({ persona, tipo = 'conductor', area = 'mo
       <div className="cell-user__text">
         {to ? <Link to={to} className="cell-user__name">{nombre}</Link> : <span className="cell-user__name">{nombre}</span>}
         {tipo === 'conductor' && persona.enObservacion === true && (
-          <Eye size={14} className="text-warning" style={{ marginLeft: 6, verticalAlign: 'middle' }} title="En observación: cobra el máximo de ayuda" aria-label="En observación: cobra el máximo de ayuda" />
+          <Eye size={14} className="text-warning" style={{ marginLeft: 6, verticalAlign: 'middle' }} title={persona.motivoObservacion === 'oferta' ? 'En observación: ofertó una ayuda muy alta' : 'En observación: cobra el máximo de ayuda'} aria-label="En observación" />
         )}
         {meta && !compacta && <span className="cell-user__meta">{meta}</span>}
       </div>
