@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Phone, Star } from 'lucide-react';
-import { Modal, StatusBadge } from '../../../components/ui';
+import { Modal, StatusBadge, Badge } from '../../../components/ui';
 import { formatDate, formatDateTime, ayudaTexto, precioConAyuda } from '../../../utils/format';
 import { resolveStorageUrl } from '../../../utils/storage';
 import { getTripById } from '../../../api/admin';
@@ -115,7 +115,12 @@ export default function TripDetailModal({ trip, onClose, onResolved }) {
       isOpen={!!trip}
       onClose={onClose}
       title={trip ? `Viaje #${shortId(trip)}` : 'Detalle del viaje'}
-      description={trip ? <StatusBadge status={status} /> : 'Detalle del servicio, participantes y pago.'}
+      description={trip ? (
+        <>
+          <StatusBadge status={status} />
+          {pick('intermunicipal') && <Badge variant="info" size="sm">Intermunicipal</Badge>}
+        </>
+      ) : 'Detalle del servicio, participantes y pago.'}
       size="lg"
     >
       {trip && (
@@ -200,6 +205,9 @@ export default function TripDetailModal({ trip, onClose, onResolved }) {
               </Detail>
               {precioEstimado != null && <Detail label="Precio estimado">{money(precioEstimado)}</Detail>}
               {ayuda && <Detail label="Ayuda del conductor">{ayuda}</Detail>}
+              {pick('intermunicipal') && Number(pick('recargoRegreso')) > 0 && (
+                <Detail label="Recargo por regreso (intermunicipal)">{money(pick('recargoRegreso'))}</Detail>
+              )}
               {precioFinal != null && <Detail label="Precio final">{precioConAyuda(precioFinal, montoAyuda)}</Detail>}
               {comision != null && (
                 <>

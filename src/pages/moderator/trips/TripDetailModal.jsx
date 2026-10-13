@@ -117,7 +117,12 @@ export default function TripDetailModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
-      description={detail ? <StatusBadge status={detail.estado} label={detail.estadoLabel} /> : undefined}
+      description={detail ? (
+        <>
+          <StatusBadge status={detail.estado} label={detail.estadoLabel} />
+          {detail.intermunicipal && <Badge variant="info" size="sm">Intermunicipal</Badge>}
+        </>
+      ) : undefined}
       size="lg"
     >
       {loading && !detail && <LoadingState message="Cargando detalle…" />}
@@ -217,6 +222,12 @@ export default function TripDetailModal({
                 <div className="detail-list__item">
                   <span className="detail-list__label">Ayuda del conductor</span>
                   <span className="detail-list__value">{ayudaTexto({ ...detail.dinero, ...detail })}</span>
+                </div>
+              )}
+              {detail.intermunicipal && Number(detail.recargoRegreso) > 0 && (
+                <div className="detail-list__item">
+                  <span className="detail-list__label">Recargo por regreso (intermunicipal)</span>
+                  <span className="detail-list__value">{formatCurrency(detail.recargoRegreso)}</span>
                 </div>
               )}
               <div className="detail-list__item">
