@@ -230,8 +230,6 @@ export default function VerificationsPage() {
             <hr className="divider" />
             <h3 className="section-title">Documentos cargados</h3>
             <div className="form-grid">
-              <Photo label="Cédula (frente, ya no se exige)" path={selected.fotoCedula} />
-              <Photo label="Cédula (reverso)" path={selected.fotoCedulaReverso} />
               <Photo label="Licencia" path={selected.fotoLicencia} />
               <Photo label="Vehículo" path={selected.fotoVehiculo} />
               <Photo label="Tarjeta de propiedad" path={selected.fotoTarjetaPropiedad} />

@@ -190,7 +190,7 @@ export default function ModeratorDriversPage() {
       <PageHeader title="Verificación de conductores" description="Verifica, notifica y reporta a los conductores de tu ciudad. Toca el nombre para abrir la ficha completa." />
 
       <div className="toolbar">
-        <SearchInput value={filter} onChange={cambiarFiltro} placeholder="Buscar por nombre, cédula o placa" />
+        <SearchInput value={filter} onChange={cambiarFiltro} placeholder="Buscar nombre, cédula, placa" />
         <SegmentedFilter options={tabOptions} value={tab} onChange={cambiarTab} ariaLabel="Estado de verificación" />
       </div>
 
@@ -259,8 +259,6 @@ export default function ModeratorDriversPage() {
                     </Badge>
                   </div>
                 )))}
-              {/* La foto de la cédula ya no se exige; se muestra solo si la subió antes. */}
-              {docs.fotoCedula && <Photo label="Cédula (ya no se exige)" path={docs.fotoCedula} />}
             </div>
           </div>
         )}

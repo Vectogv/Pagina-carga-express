@@ -313,16 +313,24 @@ export default function ModeratorDashboard() {
           ) : (
             <ul className="ccop-list">
               {tripsToShow.map((t) => (
-                <li className="ccop-item" key={t.id}>
-                  <span className={`ccop-item__icon ${t.estado === 'sos' ? 'ccop-item__icon--danger' : ''}`}><Truck size={16} /></span>
-                  <div className="ccop-item__body">
-                    <p className="ccop-item__title">{tripRoute(t)}</p>
-                    <p className="ccop-item__sub">{tripConductor(t) || 'Sin conductor asignado'} · #{String(t.id).slice(0, 8)}</p>
-                  </div>
-                  <div className="ccop-item__extra">
-                    <StatusBadge status={t.estado} label={t.estadoLabel} size="sm" />
-                    <span className="ccop-item__time">{formatTime(t.createdAt)}</span>
-                  </div>
+                <li className="ccop-item ccop-item--tocable" key={t.id}>
+                  {/* Un SOS lleva al caso en Emergencias; cualquier otro estado, al detalle del viaje. */}
+                  <button
+                    type="button"
+                    className="ccop-item__link"
+                    onClick={() => navigate(t.estado === 'sos' ? `/moderator/emergencies?viaje=${t.id}` : `/moderator/trips?viaje=${t.id}`)}
+                    aria-label={`${t.estado === 'sos' ? 'Abrir el caso SOS del viaje' : 'Ver el viaje'} #${String(t.id).slice(0, 8)}`}
+                  >
+                    <span className={`ccop-item__icon ${t.estado === 'sos' ? 'ccop-item__icon--danger' : ''}`}><Truck size={16} /></span>
+                    <span className="ccop-item__body">
+                      <span className="ccop-item__title">{tripRoute(t)}</span>
+                      <span className="ccop-item__sub">{tripConductor(t) || 'Sin conductor asignado'} · #{String(t.id).slice(0, 8)}</span>
+                    </span>
+                    <span className="ccop-item__extra">
+                      <StatusBadge status={t.estado} label={t.estadoLabel} size="sm" />
+                      <span className="ccop-item__time">{formatTime(t.createdAt)}</span>
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -332,8 +340,9 @@ export default function ModeratorDashboard() {
 
       <div className="two-col">
         <Card
+          className={emeToShow.length ? 'ccop-card--alerta' : ''}
           title="Emergencias activas"
-          description={(stats.emergenciasActivas ?? activeEmergencies.length) > 0 ? `${stats.emergenciasActivas ?? activeEmergencies.length} caso(s) activo(s)` : 'Casos que requieren atención'}
+          description={(stats.emergenciasActivas ?? activeEmergencies.length) > 0 ? `${stats.emergenciasActivas ?? activeEmergencies.length} caso(s) activo(s) · toca uno para atenderlo` : 'Casos que requieren atención'}
           actions={<SeeAll to="/moderator/emergencies" />}
         >
           {emeToShow.length === 0 ? (
@@ -341,20 +350,27 @@ export default function ModeratorDashboard() {
           ) : (
             <ul className="ccop-list">
               {emeToShow.map((e) => {
-                const coord = e.lat && e.lng ? `${Number(e.lat).toFixed(3)}, ${Number(e.lng).toFixed(3)}` : null;
-                const who = e.usuario?.nombre ? `${e.usuario.nombre}${e.usuario.telefono ? ` · ${e.usuario.telefono}` : ''}` : null;
-                const subParts = [who, coord, e.usuario?.nombre ? null : `Caso #${String(e.id).slice(0, 8)}`, timeAgo(e.createdAt)].filter(Boolean);
+                const who = e.usuario?.nombre ? `${e.usuario.nombre}${e.usuario.telefono ? ` · ${e.usuario.telefono}` : ''}` : `Caso #${String(e.id).slice(0, 8)}`;
+                const sub = [who, e.viajeId ? `Viaje #${e.viajeId}` : null].filter(Boolean).join(' · ');
                 return (
-                  <li className="ccop-item" key={e.id}>
-                    <span className="ccop-item__icon ccop-item__icon--danger"><Siren size={16} /></span>
-                    <div className="ccop-item__body">
-                      <p className="ccop-item__title">{e.motivo || `Caso #${String(e.id).slice(0, 8)}`}</p>
-                      <p className="ccop-item__sub">{subParts.join(' · ')}</p>
-                    </div>
-                    <div className="ccop-item__extra">
-                      <StatusBadge status={e.estado} label={e.estadoLabel} size="sm" />
-                      <Button variant="soft-danger" size="sm" onClick={() => navigate('/moderator/emergencies')}>Atender</Button>
-                    </div>
+                  <li className="ccop-item ccop-item--tocable" key={e.id}>
+                    {/* Toda la fila abre el caso en Emergencias; el estado y el tiempo transcurrido se ven de un vistazo. */}
+                    <button
+                      type="button"
+                      className="ccop-item__link ccop-item__link--alerta"
+                      onClick={() => navigate(`/moderator/emergencies?id=${e.id}`)}
+                      aria-label={`Atender el caso ${e.motivo || `#${String(e.id).slice(0, 8)}`}`}
+                    >
+                      <span className="ccop-item__icon ccop-item__icon--danger"><Siren size={16} /></span>
+                      <span className="ccop-item__body">
+                        <span className="ccop-item__title">{e.motivo || `Caso #${String(e.id).slice(0, 8)}`}</span>
+                        <span className="ccop-item__sub">{sub}</span>
+                      </span>
+                      <span className="ccop-item__extra">
+                        <StatusBadge status={e.estado} label={e.estadoLabel} size="sm" />
+                        <span className="ccop-item__time ccop-item__time--alerta">{timeAgo(e.createdAt)}</span>
+                      </span>
+                    </button>
                   </li>
                 );
               })}

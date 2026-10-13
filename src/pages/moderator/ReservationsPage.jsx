@@ -14,6 +14,7 @@ const LIMIT = 20;
 const TABS = [
   { value: 'proximas', label: 'Próximas' },
   { value: 'todas', label: 'Todas' },
+  { value: 'canceladas', label: 'Canceladas' },
 ];
 
 export default function ModeratorReservationsPage() {
@@ -33,6 +34,8 @@ export default function ModeratorReservationsPage() {
     try {
       const params = { page, limit: LIMIT, ...ciudadParams };
       if (tab === 'proximas') params.proximas = true;
+      // El servidor lista solo `reservado` por defecto; las canceladas quedan archivadas y se piden aparte.
+      if (tab === 'canceladas') params.estado = 'cancelado';
       const res = await getModeratorReservations(params);
       const d = res.data || {};
       setReservations(toList(d, 'data'));
@@ -98,7 +101,7 @@ export default function ModeratorReservationsPage() {
         columns={columns}
         data={reservations}
         loading={loading}
-        emptyMessage={tab === 'proximas' ? 'No hay reservas próximas en tu ciudad' : 'No hay reservas en tu ciudad'}
+        emptyMessage={tab === 'proximas' ? 'No hay reservas próximas en tu ciudad' : tab === 'canceladas' ? 'No hay reservas canceladas en tu ciudad' : 'No hay reservas activas en tu ciudad'}
         footer={totalPages > 1 ? <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} /> : null}
       />
     </div>

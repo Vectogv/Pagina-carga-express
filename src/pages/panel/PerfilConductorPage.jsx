@@ -148,7 +148,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
 
       <Card>
         <div className="perfil-cab">
-          {foto ? <img src={foto} alt={nombre} className="perfil-cab__foto" /> : <Avatar name={nombre} size={112} />}
+          <Avatar src={foto} name={nombre} size={112} className="perfil-cab__foto" />
           <div className="perfil-cab__info">
             <h2 className="perfil-cab__nombre">{nombre}</h2>
             <span className="text-muted">{[driver.placa, driver.tipoVehiculo, driver.ciudad].filter(Boolean).join(' · ') || 'Conductor'}</span>
@@ -272,8 +272,6 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
               />
             );
           })}
-          {/* La foto de la cédula ya no se exige; se muestra solo si la subió antes. */}
-          {docUrl(docs.fotoCedula) && <Documento label="Cédula (ya no se exige)" path={docUrl(docs.fotoCedula)} />}
         </div>
       </Card>
 

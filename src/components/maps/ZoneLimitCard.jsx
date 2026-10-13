@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Maximize2, MapPin, Ruler, TriangleAlert } from 'lucide-react';
-import { Badge, Button, Card } from '../ui';
+import { Alert, Badge, Button, Card } from '../ui';
 import { useZonasCompletas } from '../../hooks/useZonas';
 import OperationsMapOverlay from './OperationsMapOverlay';
+import './ZoneLimitCard.css';
 
 const numero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 });
 const coord = (n) => Number(n).toFixed(5);
@@ -21,6 +22,10 @@ const tamanoRect = (z) => ({
   alto: (z.norte - z.sur) * KM_POR_GRADO,
   ancho: (z.este - z.oeste) * KM_POR_GRADO * Math.cos((((z.norte + z.sur) / 2) * Math.PI) / 180),
 });
+
+const Dato = ({ label, children }) => (
+  <div className="zona-datos__item"><dt>{label}</dt><dd>{children}</dd></div>
+);
 
 /**
  * Límite de la zona donde opera quien mira (solo lectura).
@@ -46,10 +51,9 @@ export default function ZoneLimitCard({ zonaClave, title = 'Tu zona de operació
     cuerpo = <p className="text-sm text-muted">Cargando la zona…</p>;
   } else if (!clave || clave === 'general') {
     cuerpo = (
-      <p className="text-sm text-muted">
-        Tu cuenta no tiene una ciudad asignada, así que ves la operación completa. Si esto no es lo que esperabas,
-        pídele al administrador que te asigne una zona.
-      </p>
+      <Alert variant="danger" title="Todavía no puedes operar">
+        Tu cuenta no tiene una zona asignada. Comunícate con el administrador para que te asigne una zona.
+      </Alert>
     );
   } else if (zonas.length === 0) {
     cuerpo = (
@@ -68,47 +72,20 @@ export default function ZoneLimitCard({ zonaClave, title = 'Tu zona de operació
   } else if (esCirculo) {
     const area = Math.PI * zona.radio * zona.radio;
     cuerpo = (
-      <dl className="detail-list">
-        <div className="detail-list__item">
-          <span className="detail-list__label">Centro</span>
-          <span className="detail-list__value text-mono">{coord(zona.lat)}, {coord(zona.lng)}</span>
-        </div>
-        <div className="detail-list__item">
-          <span className="detail-list__label">Radio</span>
-          <span className="detail-list__value text-mono">{numero.format(zona.radio)} km</span>
-        </div>
-        <div className="detail-list__item">
-          <span className="detail-list__label">Distancia cubierta</span>
-          <span className="detail-list__value text-mono">{numero.format(zona.radio * 2)} km de diámetro</span>
-        </div>
-        <div className="detail-list__item">
-          <span className="detail-list__label">Área aproximada</span>
-          <span className="detail-list__value text-mono">{numero.format(area)} km²</span>
-        </div>
+      <dl className="zona-datos">
+        <Dato label="Radio">{numero.format(zona.radio)} km</Dato>
+        <Dato label="Diámetro">{numero.format(zona.radio * 2)} km</Dato>
+        <Dato label="Área aproximada">{numero.format(area)} km²</Dato>
+        <Dato label="Centro"><small>{coord(zona.lat)}, {coord(zona.lng)}</small></Dato>
       </dl>
     );
   } else {
     const t = tamanoRect(zona);
     cuerpo = (
-      <dl className="detail-list">
-        <div className="detail-list__item">
-          <span className="detail-list__label">Límites</span>
-          <span className="detail-list__value text-mono">
-            N {coord(zona.norte)} · S {coord(zona.sur)}
-          </span>
-        </div>
-        <div className="detail-list__item">
-          <span className="detail-list__label" />
-          <span className="detail-list__value text-mono">
-            O {coord(zona.oeste)} · E {coord(zona.este)}
-          </span>
-        </div>
-        <div className="detail-list__item">
-          <span className="detail-list__label">Tamaño</span>
-          <span className="detail-list__value text-mono">
-            {t.ancho.toFixed(1)} km × {t.alto.toFixed(1)} km
-          </span>
-        </div>
+      <dl className="zona-datos">
+        <Dato label="Tamaño">{t.ancho.toFixed(1)} km × {t.alto.toFixed(1)} km</Dato>
+        <Dato label="Norte · Sur"><small>{coord(zona.norte)} · {coord(zona.sur)}</small></Dato>
+        <Dato label="Oeste · Este"><small>{coord(zona.oeste)} · {coord(zona.este)}</small></Dato>
       </dl>
     );
   }
@@ -139,8 +116,8 @@ export default function ZoneLimitCard({ zonaClave, title = 'Tu zona de operació
         )}
       >
         <div className="stack">
-          <p className="row text-sm text-secondary">
-            {zona ? <MapPin size={14} aria-hidden="true" /> : <Ruler size={14} aria-hidden="true" />}
+          <p className="zona-nombre">
+            {zona ? <MapPin size={18} aria-hidden="true" /> : <Ruler size={18} aria-hidden="true" />}
             <span>{zona?.nombre || 'Sin zona'}</span>
           </p>
           {cuerpo}
