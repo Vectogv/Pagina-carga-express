@@ -13,6 +13,8 @@ const DEFAULTS = {
   ayuda: { porDefecto: { piso1: 0, piso2: 0, piso3: 0, piso4: 0 }, min: 1000, max: 30000 },
 };
 const NUM_KEYS = Object.keys(DEFAULTS).filter((k) => k !== 'etapas' && k !== 'tarifaKm' && k !== 'arranque' && k !== 'ayuda');
+// Llamado a conductores desconectados: va aparte en PUT /api/admin/config {llamado}.
+const normalizeLlamado = (l) => ({ activo: l?.activo ?? true, intervaloMin: l?.intervaloMin ?? 10 });
 const TARIFAS = [['piaggio', 'Piaggio'], ['furgon', 'Furgón sellado'], ['camioneta', 'Camioneta'], ['default', 'Por defecto (otros vehículos)']];
 const MAX_TARIFA = 100000;
 const MAX_ARRANQUE = 2000000;
@@ -57,6 +59,8 @@ function validate(f) {
   if (![min, max, ...PISOS.map(([k]) => porDefecto[k])].every(ok)) return `La ayuda del conductor debe ser en enteros entre 0 y ${MAX_ARRANQUE}.`;
   if (Number(min) > Number(max)) return 'El mínimo de la ayuda no puede ser mayor que el máximo.';
   if (PISOS.some(([k]) => Number(porDefecto[k]) < Number(min) || Number(porDefecto[k]) > Number(max))) return 'La tarifa de ayuda por piso debe estar entre el mínimo y el máximo.';
+  const iv = Number(f.llamado.intervaloMin);
+  if (f.llamado.intervaloMin === '' || !Number.isInteger(iv) || iv < 1 || iv > 120) return 'Los minutos entre llamados deben ser un entero entre 1 y 120.';
   if (!(n('minAmpliar') < n('minSugerencia') && n('minSugerencia') < n('minCierre'))) {
     return 'Los tiempos deben ir en orden: ampliar < sugerencia < cierre.';
   }
@@ -70,7 +74,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
  * GET/PUT /api/admin/config {escalera:{...}}.
  */
 export default function EscaleraConfig({ notify }) {
-  const [form, setForm] = useState(normalize(null));
+  const [form, setForm] = useState({ ...normalize(null), llamado: normalizeLlamado(null) });
   const [current, setCurrent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -82,7 +86,7 @@ export default function EscaleraConfig({ notify }) {
     try {
       const res = await getConfig();
       const data = res.data?.data || res.data || {};
-      const next = normalize(data.escalera);
+      const next = { ...normalize(data.escalera), llamado: normalizeLlamado(data.llamado) };
       setCurrent(next);
       setForm(next);
     } catch (err) {
@@ -99,6 +103,10 @@ export default function EscaleraConfig({ notify }) {
   const handleArranque = (e) => setForm((p) => ({ ...p, arranque: { ...p.arranque, [e.target.name]: e.target.value } }));
   const handleAyuda = (e) => setForm((p) => ({ ...p, ayuda: { ...p.ayuda, [e.target.name]: e.target.value } }));
   const handlePiso = (e) => setForm((p) => ({ ...p, ayuda: { ...p.ayuda, porDefecto: { ...p.ayuda.porDefecto, [e.target.name]: e.target.value } } }));
+  const handleLlamado = (e) => {
+    const { name, type, checked, value } = e.target;
+    setForm((p) => ({ ...p, llamado: { ...p.llamado, [name]: type === 'checkbox' ? checked : value } }));
+  };
   const handleStage = (e) => setForm((p) => ({ ...p, etapas: { ...p.etapas, [e.target.name]: e.target.checked } }));
 
   const error = validate(form);
@@ -114,7 +122,7 @@ export default function EscaleraConfig({ notify }) {
     NUM_KEYS.forEach((k) => { escalera[k] = Number(form[k]); });
     setSaving(true);
     try {
-      await updateConfig({ escalera });
+      await updateConfig({ escalera, llamado: { activo: form.llamado.activo, intervaloMin: Number(form.llamado.intervaloMin) } });
       notify('Búsqueda actualizada correctamente');
       fetchCurrent();
     } catch (err) {
@@ -229,6 +237,27 @@ export default function EscaleraConfig({ notify }) {
               {PISOS.map(([k, label]) => (
                 <Input key={k} label={`Por defecto: ${label} ($)`} name={k} type="number" inputMode="numeric" min="0" max={MAX_ARRANQUE} step="1" value={f.ayuda.porDefecto[k]} onChange={handlePiso} helperText="Debe estar entre el mínimo y el máximo." />
               ))}
+            </div>
+          </Card>
+
+          <Card title="Llamar a conductores desconectados" description="Cuando entra un servicio, mandamos una notificación a los conductores aprobados de la zona que están desconectados, para que se conecten a ofertar.">
+            <div className="form-grid">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 40 }}>
+                <input type="checkbox" name="activo" checked={!!f.llamado.activo} onChange={handleLlamado} />
+                <span>Llamar a conductores desconectados</span>
+              </label>
+              <Input
+                label="Minutos entre llamados (min)"
+                name="intervaloMin"
+                type="number"
+                inputMode="numeric"
+                min="1"
+                max="120"
+                step="1"
+                value={f.llamado.intervaloMin}
+                onChange={handleLlamado}
+                helperText={`A un mismo conductor lo llamamos como máximo una vez cada ${f.llamado.intervaloMin} min.`}
+              />
             </div>
           </Card>
 

@@ -37,6 +37,7 @@ export const getModeratorTripDetail = (id) => api.get(`/api/moderator/trips/${id
 export const getTripRecorrido = (id) => api.get(`/api/moderator/trips/${id}/recorrido`)
 // H1: el cliente tuvo 10 min para confirmar/rechazar el cierre y no respondió;
 // el moderador de la zona decide. data: { resolucion: 'finalizar' | 'disputa', nota (>=10 caracteres) }
+export const llamarConductores = (id) => api.post(`/api/moderator/trips/${id}/llamar-conductores`)
 export const resolveClose = (id, data) => api.post(`/api/moderator/trips/${id}/resolve-close`, data)
 
 // Reservas — viajes programados con anticipación en la ciudad del moderador (sin conductor asignado aún o ya en curso)

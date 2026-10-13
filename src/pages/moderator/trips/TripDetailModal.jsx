@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Car, CheckCheck, CircleCheck, MapPin, Phone, Siren, Star } from 'lucide-react';
 import { acknowledgeEmergency, resolveEmergency } from '../../../api/moderator';
+import DespertarConductores from '../../../components/moderator/DespertarConductores';
 import PendingCloseResolver from '../../../components/moderator/PendingCloseResolver';
 import ServiceStatusTimeline from '../../../components/moderator/ServiceStatusTimeline';
 import { errorMessage, formatCurrency, formatDateTime, fullName, ayudaTexto, precioConAyuda } from '../../../utils/format';
@@ -132,6 +133,7 @@ export default function TripDetailModal({
           <section className="trip-detail__section">
             <h4 className="section-title">Seguimiento</h4>
             <ServiceStatusTimeline estado={detail.estado} />
+            {detail.estado === 'buscando_conductor' && <DespertarConductores viajeId={detail.id} />}
             {detail.disputa && (
               <div className="row">
                 <Link className="btn btn--soft-danger btn--sm" to={`/moderator/disputes?viaje=${detail.id}`}>Ver disputa</Link>
