@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { clienteApi } from '../../api/cliente';
 import { descargarBlob, descargarCsv } from '../../utils/csv';
+import EmpresaGestion from './EmpresaGestion';
 import { errorMessage, formatDate } from '../../utils/format';
 
 const pesos = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`;
@@ -72,6 +73,8 @@ export default function Empresa() {
         <h1>{user.empresa.nombre}</h1>
         <span>Gastos de la empresa</span>
       </div>
+
+      <EmpresaGestion />
 
       <div className="cli-emp__barra">
         <label>Mes <input type="month" value={mes} max={mesActual()} onChange={(e) => setMes(e.target.value)} /></label>
