@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Users, Truck, ShieldCheck, Route, Wallet, Siren, FileCheck, Scale, CreditCard, Percent,
-  TriangleAlert, Ban, Megaphone, ClipboardList, Settings, DatabaseBackup, UserRound,
+  TriangleAlert, Ban, Megaphone, Settings, DatabaseBackup, UserRound,
   Wifi, Moon, ChevronRight, PackageCheck, CircleCheck, ListChecks,
 } from 'lucide-react';
 import { getDashboard, getUsers, getPendientes } from '../../api/admin';
@@ -20,7 +20,6 @@ const SHORTCUTS = [
   { title: 'Reportes entre usuarios', icon: <TriangleAlert size={16} />, to: '/admin/reports' },
   { title: 'Solicitudes de cancelación', icon: <Ban size={16} />, to: '/admin/cancellation-requests' },
   { title: 'Comunicados', icon: <Megaphone size={16} />, to: '/admin/comunicados' },
-  { title: 'Encuestas', icon: <ClipboardList size={16} />, to: '/admin/encuestas' },
   { title: 'Configuración', icon: <Settings size={16} />, to: '/admin/config' },
   { title: 'Backups', icon: <DatabaseBackup size={16} />, to: '/admin/backups' },
   { title: 'Mi perfil', icon: <UserRound size={16} />, to: '/admin/profile' },

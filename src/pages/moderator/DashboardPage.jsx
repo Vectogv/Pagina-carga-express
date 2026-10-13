@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  ArrowRight, BadgeCheck, ClipboardList, Clock, Gavel, Inbox, LifeBuoy, MapPin, Megaphone, MessageSquare, Navigation, RefreshCw, Siren, Truck,
+  ArrowRight, BadgeCheck, Clock, Gavel, Inbox, LifeBuoy, MapPin, Megaphone, MessageSquare, Navigation, RefreshCw, Siren, Truck,
 } from 'lucide-react';
 import {
   getModeratorDashboard,
@@ -442,7 +442,6 @@ export default function ModeratorDashboard() {
             <Button variant="secondary" icon={<Truck size={15} />} onClick={() => navigate('/moderator/drivers')}>Ver conductores</Button>
             <Button variant="secondary" icon={<Navigation size={15} />} onClick={() => navigate('/moderator/trips')}>Ver viajes</Button>
             <Button variant="secondary" icon={<Megaphone size={15} />} onClick={() => navigate('/moderator/comunicados')}>Comunicados</Button>
-            <Button variant="secondary" icon={<ClipboardList size={15} />} onClick={() => navigate('/moderator/encuestas')}>Encuestas</Button>
           </div>
         </Card>
       </div>

@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, TrendingUp, BadgeCheck,
-  Flag, Scale, Siren, CircleX, CreditCard, Megaphone, ChartColumn, Pin, MessagesSquare,
+  Flag, Scale, Siren, CircleX, CreditCard, Megaphone, Pin, MessagesSquare,
   ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, LifeBuoy,
   CalendarClock, Gavel, ChartLine, Send, ListChecks, MapPinned, Gift, Building2,
 } from 'lucide-react';
@@ -57,7 +57,6 @@ export const adminNav = [
       { icon: Pin, label: 'Avisos', to: '/admin/avisos' },
       { icon: Send, label: 'Enviar comunicación', to: '/admin/comunicacion' },
       { icon: Megaphone, label: 'Comunicados', to: '/admin/comunicados' },
-      { icon: ChartColumn, label: 'Encuestas', to: '/admin/encuestas' },
     ],
   },
   {
@@ -105,7 +104,6 @@ export const moderatorNav = [
     items: [
       { icon: Megaphone, label: 'Comunicados', to: '/moderator/comunicados' },
       { icon: Pin, label: 'Avisos', to: '/moderator/avisos' },
-      { icon: ChartColumn, label: 'Encuestas', to: '/moderator/encuestas' },
       { icon: UsersRound, label: 'Equipo', to: '/moderator/companeros' },
     ],
   },

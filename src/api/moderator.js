@@ -21,10 +21,6 @@ export const rejectDriver = (id, data) => api.post(`/api/moderator/drivers/${id}
 export const createComunicado = (data) => api.post('/api/moderator/comunicados', data)
 export const getModeratorComunicados = (params) => api.get('/api/moderator/comunicados', { params })
 
-// Encuestas
-export const createEncuesta = (data) => api.post('/api/moderator/encuestas', data)
-export const getEncuestaResults = (id) => api.get(`/api/moderator/encuestas/${id}/results`)
-
 // Avisos — doc §17 (también accesible como moderador)
 export const getAvisos = (params) => api.get('/api/avisos', { params })
 export const createAviso = (data) => api.post('/api/avisos', data)
@@ -32,7 +28,6 @@ export const pinAviso = (id) => api.put(`/api/avisos/${id}/pin`)
 export const deleteAviso = (id) => api.delete(`/api/avisos/${id}`)
 
 // Nuevos — requieren backend con los 3 bloques que pegaste
-export const getMyEncuestas = (params) => api.get('/api/moderator/encuestas', { params })
 export const getMyReports = (params) => api.get('/api/moderator/reports', { params })
 export const getModeratorDashboard = (ciudad) => api.get('/api/moderator/dashboard', { params: ciudad ? { ciudad } : {} })
 

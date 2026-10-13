@@ -122,10 +122,9 @@ export const updateBanner = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 
-// Comunicados & Encuestas - doc: approve sin body, reject {notaRechazo?}
+// Comunicados - doc: approve sin body, reject {notaRechazo?}
 export const approveComunicado = (id) => api.put(`${BASE}/comunicados/${id}/approve`)
 export const rejectComunicado = (id, data) => api.put(`${BASE}/comunicados/${id}/reject`, data)
-export const approveEncuesta = (id) => api.put(`${BASE}/encuestas/${id}/approve`)
 
 // Moderator Reports - doc: page/limit
 export const getModeratorReports = (params) => api.get(`${BASE}/moderator-reports`, { params })
@@ -142,9 +141,8 @@ export const rejectCancellation = (id) => api.post(`${BASE}/cancellation-request
 // Auth
 export const registerUser = (data) => api.post('/api/auth/register', data)
 
-// Listados dedicados de comunicados y encuestas (params: page, limit). Respuesta: array plano.
+// Listado dedicado de comunicados (params: page, limit). Respuesta: array plano.
 export const getAdminComunicados = (params) => api.get(`${BASE}/comunicados`, { params })
-export const getAdminEncuestas = (params) => api.get(`${BASE}/encuestas`, { params })
 
 // Gerencia: pendientes de moderadores por categoria/zona (?zona=) y comunicacion propia {titulo, mensaje, destino: conductores|moderadores, zona?}
 export const getPendientes = (params) => api.get(`${BASE}/pendientes`, { params })
