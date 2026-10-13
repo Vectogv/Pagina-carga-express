@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   // En desarrollo /api se reenvía al backend. Por defecto producción; para uno
   // local: VITE_BACKEND_URL=http://127.0.0.1:3333 npm run dev
-  const target = env.VITE_BACKEND_URL || 'https://bakend-cargaexpress-production.up.railway.app'
+  const target = env.VITE_BACKEND_URL || 'https://bakend-cargaexpress-production-5dd5.up.railway.app'
 
   return {
     plugins: [react()],
