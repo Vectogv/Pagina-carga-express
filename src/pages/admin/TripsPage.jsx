@@ -242,7 +242,7 @@ export default function TripsPage() {
 
       <div className="trips-filters">
         <div className="toolbar">
-          <SearchInput value={search} onChange={withReset(setSearch)} placeholder="Buscar por cliente, conductor, dirección, carga o #" />
+          <SearchInput value={search} onChange={withReset(setSearch)} placeholder="Buscar cliente, conductor, dirección o #" />
           <Select className="inline-select" value={statusFilter} onChange={(e) => withReset(setStatusFilter)(e.target.value)} aria-label="Filtrar por estado">
             <option value="all">Todos los estados</option>
             {STATUS_GROUPS.map((g) => (

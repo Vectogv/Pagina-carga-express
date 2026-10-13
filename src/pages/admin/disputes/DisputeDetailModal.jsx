@@ -4,6 +4,7 @@ import { getTripById } from '../../../api/admin';
 import { Modal, StatusBadge, LoadingState } from '../../../components/ui';
 import { resolveStorageUrl } from '../../../utils/storage';
 import { errorMessage, formatDateTime } from '../../../utils/format';
+import { MapaRecorrido, ResumenCierreSos } from '../../../components/panel';
 import { DisputeSummary } from './DisputeParts';
 
 function Photo({ label, path }) {
@@ -68,6 +69,8 @@ export default function DisputeDetailModal({ dispute, onClose }) {
               <span><span className="text-strong">Origen: </span>{origen || '—'}</span>
               <span><span className="text-strong">Destino: </span>{destino || '—'}</span>
             </div>
+            {/* Recorrido real (rojo), planeada (azul) y dónde cerró el conductor: lo que importa en una disputa. */}
+            <MapaRecorrido key={dispute.viajeId} area="admin" viajeId={dispute.viajeId} alturaPx={260} modo="disputa" />
           </section>
 
           <div className="two-col">
@@ -155,6 +158,7 @@ export default function DisputeDetailModal({ dispute, onClose }) {
                   {dispute.resultado === 'favor_conductor' ? 'A favor del conductor' : 'A favor del cliente'}
                 </span>
               </p>
+              <ResumenCierreSos alerta={dispute} labelTipo="Tipo de resolución" />
             </section>
           )}
 

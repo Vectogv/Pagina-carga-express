@@ -118,7 +118,7 @@ export default function AvisosBoard({ variante = 'ciudad' }) {
       label: '',
       align: 'right',
       render: (_, r) => (
-        <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
+        <div className="acciones-tabla">
           <Button
             size="sm"
             variant="soft-warning"
@@ -127,7 +127,8 @@ export default function AvisosBoard({ variante = 'ciudad' }) {
           >
             {r.fijado ? 'Desfijar' : 'Fijar'}
           </Button>
-          <Button size="icon" variant="ghost" onClick={() => setAction({ type: 'delete', ...r })} aria-label="Eliminar aviso">
+          <span className="acciones-tabla__sep" aria-hidden="true" />
+          <Button size="icon" variant="soft-danger" onClick={() => setAction({ type: 'delete', ...r })} aria-label="Eliminar aviso" title="Eliminar">
             <Trash2 size={15} />
           </Button>
         </div>

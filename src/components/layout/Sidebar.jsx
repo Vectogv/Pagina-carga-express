@@ -1,8 +1,9 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LogOut, Truck } from 'lucide-react';
+import { LogOut, Truck, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Avatar from '../ui/Avatar/Avatar';
 import { fullName } from '../../utils/format';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import './Sidebar.css';
 
 const isItemActive = (item, pathname) =>
@@ -11,9 +12,12 @@ const isItemActive = (item, pathname) =>
 export default function Sidebar({ nav = [], title = 'Carga Express', subtitle = '', badges = {}, open = false, onClose }) {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
+  const zonas = useZonas();
 
   const displayName = fullName(user);
-  const roleLabel = user?.rol === 'admin' ? 'Administrador' : user?.esModerador ? 'Moderador' : 'Usuario';
+  const esModerador = user?.rol !== 'admin' && user?.esModerador;
+  const zona = esModerador && user?.zonaModerador ? ` · ${zonaLabelFrom(zonas, user.zonaModerador)}` : '';
+  const roleLabel = user?.rol === 'admin' ? 'Administrador' : esModerador ? `Moderador${zona}` : 'Usuario';
 
   return (
     <>
@@ -25,6 +29,9 @@ export default function Sidebar({ nav = [], title = 'Carga Express', subtitle = 
             <span className="sidebar__title">{title}</span>
             {subtitle && <span className="sidebar__subtitle">{subtitle}</span>}
           </div>
+          <button type="button" className="sidebar__close" onClick={onClose} aria-label="Cerrar menú">
+            <X size={20} />
+          </button>
         </div>
 
         <nav className="sidebar__nav">

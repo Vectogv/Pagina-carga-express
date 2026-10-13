@@ -1,26 +1,16 @@
 import { CheckCheck, ExternalLink, Phone, Siren, Star } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '../../../utils/format';
 import {
-  Modal, Badge, Button, StatusBadge, Textarea,
+  Modal, Badge, Button, StatusBadge,
 } from '../../../components/ui';
-import RouteMap from '../../../components/maps/RouteMap';
-import { sosRouteProps, hasRoutePoints } from '../../../components/maps/sosRoute';
+import {
+  MapaEmergencia, tieneMapaEmergencia, cierreSosValido, FormularioCierreSos, ResumenCierreSos,
+} from '../../../components/panel';
 import EmergencyChat from './EmergencyChat';
 
 const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
 
-/** Determina quién activó el SOS (conductor o cliente) comparando con los datos del viaje. */
-function resolveParties(alerta, viaje) {
-  if (!viaje) return null;
-  const esConductor = (viaje.conductor?.telefono && alerta.usuario?.telefono && viaje.conductor.telefono === alerta.usuario.telefono)
-    || viaje.conductor?.nombre === alerta.usuario?.nombre;
-  return {
-    solicitante: esConductor ? viaje.conductor : viaje.cliente,
-    contraparte: esConductor ? viaje.cliente : viaje.conductor,
-    solicitanteRol: esConductor ? 'Conductor' : 'Cliente',
-    contraparteRol: esConductor ? 'Cliente' : 'Conductor',
-  };
-}
+const ROL_LABEL = { conductor: 'Conductor', cliente: 'Cliente' };
 
 function PhoneLink({ value }) {
   if (!value) return null;
@@ -29,18 +19,18 @@ function PhoneLink({ value }) {
 
 export default function EmergencyDetailModal({
   selected, tripDetail, onClose,
-  chat, observacion, onObservacionChange,
+  chat, cierre, onCierreChange,
   actionLoading, onAcknowledge, onResolve,
 }) {
   if (!selected) return null;
-  const parties = resolveParties(selected, tripDetail);
+  // El servidor manda en `usuario` a quien activó el SOS (con su rol); no hay que adivinarlo.
+  const solicitante = selected.usuario;
   const conductor = tripDetail?.conductor;
   const hasLocation = selected.lat && selected.lng;
-  const mapa = sosRouteProps(selected, tripDetail);
+  // Con viaje: A, B, el "!" del SOS, rojo A→SOS y azul SOS→B (OpenStreetMap). Sin viaje: solo los puntos.
+  const conMapa = tieneMapaEmergencia(selected);
   const busy = actionLoading === selected.id;
-  const chatTitle = parties?.solicitante
-    ? `Chat con ${parties.solicitante.nombre || selected.usuario?.nombre || 'solicitante'}`
-    : 'Chat de emergencia';
+  const chatTitle = solicitante?.nombre ? `Chat con ${solicitante.nombre}` : 'Chat de emergencia';
 
   let footer = null;
   if (selected.estado === 'pendiente') {
@@ -51,7 +41,7 @@ export default function EmergencyDetailModal({
     );
   } else if (selected.estado === 'atendida') {
     footer = (
-      <Button variant="success" icon={<CheckCheck size={15} />} loading={busy} disabled={!observacion.trim()} onClick={onResolve}>
+      <Button variant="success" icon={<CheckCheck size={15} />} loading={busy} disabled={!cierreSosValido(cierre)} onClick={onResolve}>
         Resolver
       </Button>
     );
@@ -85,42 +75,25 @@ export default function EmergencyDetailModal({
           </p>
         </section>
 
-        {hasRoutePoints(mapa) && (
+        {conMapa && (
           <section className="em-card">
             <h4 className="section-title">Mapa del SOS</h4>
-            <RouteMap {...mapa} alto={280} />
+            <MapaEmergencia area="moderator" emergencia={selected} viaje={tripDetail} alturaPx={280} />
           </section>
         )}
 
-        {parties && (
-          <div className="two-col">
-            <section className="em-card em-card--danger">
-              <h4 className="section-title em-card__danger-title"><Siren size={13} /> Solicitante · quien activó el SOS</h4>
-              <div className="em-person">
-                <span className="em-person__name">
-                  {parties.solicitante?.nombre || selected.usuario?.nombre || '—'}
-                  <Badge variant="danger" size="sm">{parties.solicitanteRol}</Badge>
-                </span>
-                <PhoneLink value={parties.solicitante?.telefono || selected.usuario?.telefono} />
-                {parties.solicitante?.email && <span className="text-sm text-muted">{parties.solicitante.email}</span>}
-                {parties.solicitante?.placa && (
-                  <span className="text-sm text-muted em-inline">
-                    Placa {parties.solicitante.placa} · {parties.solicitante.tipoVehiculo || '—'} · <Star size={12} /> {parties.solicitante.calificacion || '0.0'}
-                  </span>
-                )}
-              </div>
-            </section>
-            <section className="em-card">
-              <h4 className="section-title">Contraparte · {parties.contraparteRol}</h4>
-              <div className="em-person">
-                <span className="em-person__name">{parties.contraparte?.nombre || '—'}</span>
-                <PhoneLink value={parties.contraparte?.telefono} />
-                {parties.contraparte?.placa && (
-                  <span className="text-sm text-muted">Placa {parties.contraparte.placa} · {parties.contraparte.tipoVehiculo || '—'}</span>
-                )}
-              </div>
-            </section>
-          </div>
+        {solicitante && (
+          <section className="em-card em-card--danger">
+            <h4 className="section-title em-card__danger-title"><Siren size={13} /> Solicitante · quien activó el SOS</h4>
+            <div className="em-person">
+              <span className="em-person__name">
+                {solicitante.nombre || '—'}
+                {ROL_LABEL[solicitante.rol] && <Badge variant="danger" size="sm">{ROL_LABEL[solicitante.rol]}</Badge>}
+              </span>
+              <PhoneLink value={solicitante.telefono} />
+              {solicitante.email && <span className="text-sm text-muted">{solicitante.email}</span>}
+            </div>
+          </section>
         )}
 
         {tripDetail && (
@@ -155,27 +128,17 @@ export default function EmergencyDetailModal({
             <p className="text-sm text-muted">
               Atendido por {selected.administrador || selected.atendidoPor || '—'}{selected.atendidaAt ? ` · ${formatDateTime(selected.atendidaAt)}` : ''}
             </p>
-            <Textarea
-              label="Observación / gestión realizada"
-              required
-              value={observacion}
-              onChange={(e) => onObservacionChange(e.target.value)}
-              placeholder="Describe la gestión realizada…"
-              rows={3}
-            />
+            <FormularioCierreSos valor={cierre} onChange={onCierreChange} disabled={busy} />
           </section>
         )}
 
         {selected.estado === 'resuelta' && (
           <section className="em-card em-card--success">
             <h4 className="section-title em-card__success-title"><CheckCheck size={13} /> Resuelta</h4>
-            <p className="text-secondary">{selected.observacion || 'Sin observación'}</p>
             <p className="text-sm text-muted">
               Atendido por {selected.administrador || selected.atendidoPor || '—'}{selected.atendidaAt ? ` · ${formatDateTime(selected.atendidaAt)}` : ''}
             </p>
-            <p className="text-sm text-muted">
-              Resuelto por {selected.resueltoPor || '—'}{selected.resueltaAt ? ` · ${formatDateTime(selected.resueltaAt)}` : ''}
-            </p>
+            <ResumenCierreSos alerta={selected} />
           </section>
         )}
       </div>

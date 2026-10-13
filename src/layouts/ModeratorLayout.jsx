@@ -4,16 +4,23 @@ import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import EmergencyBanner from '../components/moderator/EmergencyBanner';
 import '../components/layout/Layout.css';
-import { moderatorNav, findNavEntry } from '../components/layout/sidebarContent';
+import { moderatorNav, findNavEntry, tituloPerfil } from '../components/layout/sidebarContent';
+import { useZonas, zonaLabelFrom } from '../hooks/useZonas';
+import '../components/panel/panel.css';
 import { ModeratorBadgesProvider, useModeratorBadges } from '../contexts/ModeratorBadgesContext';
 import { ModeratorCityProvider, useModeratorCity } from '../contexts/ModeratorCityContext';
 import { useAuth } from '../contexts/AuthContext';
 
+// Admin: elige la ciudad. Moderador real: ve su zona fija (el backend la impone).
 function CitySelector() {
   const { user } = useAuth();
   const isAdmin = user?.rol === 'admin' || user?.role === 'admin';
   const { ciudad, setCiudad, zonas } = useModeratorCity();
-  if (!isAdmin) return null;
+  const todasZonas = useZonas();
+  if (!isAdmin) {
+    if (!user?.zonaModerador) return null;
+    return <span className="topbar__zona">Zona: {zonaLabelFrom(todasZonas, user.zonaModerador)}</span>;
+  }
   return (
     <select
       className="topbar__select"
@@ -32,7 +39,7 @@ function CitySelector() {
 function ModeratorShell() {
   const location = useLocation();
   const {
-    emergencyBadge, closuresBadge, unreadBadge, ticketBadge, clearUnread,
+    emergencyBadge, closuresBadge, unreadBadge, ticketBadge, pendingDriversBadge, clearUnread,
   } = useModeratorBadges();
   const { isAdmin, ciudadLabel } = useModeratorCity();
   const { user } = useAuth();
@@ -55,9 +62,11 @@ function ModeratorShell() {
     '/moderator/conversations': unreadBadge,
     // Tickets abiertos sin atender: baja solo cuando alguien los toma (el backend manda).
     '/moderator/tickets': ticketBadge,
+    // Conductores pendientes de verificar en la zona.
+    '/moderator/drivers': pendingDriversBadge,
   };
 
-  const { group, label } = findNavEntry(moderatorNav, location.pathname);
+  const { group, label } = tituloPerfil(location.pathname) || findNavEntry(moderatorNav, location.pathname);
 
   return (
     <div className="app-shell">

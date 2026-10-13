@@ -1,52 +1,32 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Car, CheckCheck, CircleCheck, MapPin, Phone, Siren, Star } from 'lucide-react';
 import { acknowledgeEmergency, resolveEmergency } from '../../../api/moderator';
 import PendingCloseResolver from '../../../components/moderator/PendingCloseResolver';
-import { Textarea } from '../../../components/ui/Input/Input';
 import ServiceStatusTimeline from '../../../components/moderator/ServiceStatusTimeline';
 import { errorMessage, formatCurrency, formatDateTime, fullName } from '../../../utils/format';
 import { resolveStorageUrl } from '../../../utils/storage';
 import {
+  MapaRecorrido, CIERRE_VACIO, cierreSosValido, cuerpoCierreSos, FormularioCierreSos, ResumenCierreSos,
+} from '../../../components/panel';
+import {
   Modal, Avatar, Badge, Button, StatusBadge, LoadingState,
 } from '../../../components/ui';
 
-// Mapbox Static API exige colores hex en la URL (no admite variables CSS). Equivalen a --success / --danger.
-const PIN_ORIGIN = '22c55e';
-const PIN_DESTINATION = 'ef4444';
-
-function staticMapUrl(origen, destino, token) {
-  const pins = `pin-s-a+${PIN_ORIGIN}(${origen.lng},${origen.lat}),pin-s-b+${PIN_DESTINATION}(${destino.lng},${destino.lat})`;
-  return `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/${pins}/${origen.lng},${origen.lat},11,0/500x200?access_token=${token}`;
-}
-
-function RouteMap({ origen, destino, mapboxToken }) {
-  const [failed, setFailed] = useState(false);
-  const canShowMap = mapboxToken && origen?.lat && destino?.lat && !failed;
+/** Ruta planeada (azul), recorrido real (rojo) y el SOS del viaje si lo hubo: GET /api/moderator/trips/:id/recorrido. */
+function MapaViaje({ viajeId, origen, destino, marcaSos }) {
   return (
     <section className="trip-detail__section">
       <h4 className="section-title">Ruta</h4>
-      {canShowMap && (
-        <img
-          className="trip-detail__map"
-          src={staticMapUrl(origen, destino, mapboxToken)}
-          alt="Mapa de la ruta"
-          onError={() => setFailed(true)}
-        />
-      )}
+      <MapaRecorrido area="moderator" viajeId={viajeId} alturaPx={280} modo="viaje" marcaSos={marcaSos} />
       <div className="trip-detail__route">
         <div className="trip-detail__stop">
           <MapPin size={14} className="text-success" />
-          <span>
-            <span className="text-strong">Origen: </span>{origen?.direccion || '—'}
-            {!canShowMap && <span className="text-muted text-mono"> ({origen?.lat || '—'}, {origen?.lng || '—'})</span>}
-          </span>
+          <span><span className="text-strong">Origen: </span>{origen?.direccion || '—'}</span>
         </div>
         <div className="trip-detail__stop">
           <MapPin size={14} className="text-danger" />
-          <span>
-            <span className="text-strong">Destino: </span>{destino?.direccion || '—'}
-            {!canShowMap && <span className="text-muted text-mono"> ({destino?.lat || '—'}, {destino?.lng || '—'})</span>}
-          </span>
+          <span><span className="text-strong">Destino: </span>{destino?.direccion || '—'}</span>
         </div>
       </div>
     </section>
@@ -55,7 +35,7 @@ function RouteMap({ origen, destino, mapboxToken }) {
 
 function EmergencyItem({ alerta, onChanged }) {
   const [busy, setBusy] = useState(false);
-  const [observacion, setObservacion] = useState('');
+  const [cierre, setCierre] = useState(CIERRE_VACIO);
   const [error, setError] = useState(null);
 
   const run = async (fn) => {
@@ -97,33 +77,29 @@ function EmergencyItem({ alerta, onChanged }) {
       )}
       {alerta.estado === 'atendida' && (
         <>
-          {/* Misma regla que Emergencias: resolver exige dejar constancia de la gestión. */}
-          <Textarea
-            label="Observación / gestión realizada"
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-            disabled={busy}
-          />
+          {/* Misma regla que Emergencias: resolver exige tipo de caso y gestión realizada. */}
+          <FormularioCierreSos valor={cierre} onChange={setCierre} disabled={busy} />
           <div>
             <Button
               size="sm"
               variant="success"
               icon={<CheckCheck size={14} />}
               loading={busy}
-              disabled={!observacion.trim()}
-              onClick={() => run((id) => resolveEmergency(id, { observacion: observacion.trim() }))}
+              disabled={!cierreSosValido(cierre)}
+              onClick={() => run((id) => resolveEmergency(id, cuerpoCierreSos(cierre)))}
             >
               Resolver
             </Button>
           </div>
         </>
       )}
+      {alerta.estado === 'resuelta' && <ResumenCierreSos alerta={alerta} />}
     </div>
   );
 }
 
 export default function TripDetailModal({
-  isOpen, onClose, detail, loading, error, mapboxToken, emergencies, onEmergencyChanged,
+  isOpen, onClose, detail, loading, error, emergencies, onEmergencyChanged,
 }) {
   const title = detail ? `Viaje #${String(detail.id).slice(0, 8)}` : 'Detalle del viaje';
   const alertas = detail?.alertas?.length
@@ -132,6 +108,9 @@ export default function TripDetailModal({
   const ganancia = detail?.ganancias?.[0];
   const conductor = detail?.conductor;
   const cliente = detail?.cliente;
+  // Punto del SOS más reciente del viaje (si lo hay) para marcarlo en el mapa.
+  const sos = alertas.find((a) => a.lat != null && a.lng != null);
+  const marcaSos = sos ? { id: sos.id, lat: sos.lat, lng: sos.lng, at: sos.createdAt } : null;
 
   return (
     <Modal
@@ -148,9 +127,14 @@ export default function TripDetailModal({
           <section className="trip-detail__section">
             <h4 className="section-title">Seguimiento</h4>
             <ServiceStatusTimeline estado={detail.estado} />
+            {detail.disputa && (
+              <div className="row">
+                <Link className="btn btn--soft-danger btn--sm" to={`/moderator/disputes?viaje=${detail.id}`}>Ver disputa</Link>
+              </div>
+            )}
           </section>
 
-          <RouteMap key={detail.id} origen={detail.origen} destino={detail.destino} mapboxToken={mapboxToken} />
+          <MapaViaje key={detail.id} viajeId={detail.id} origen={detail.origen} destino={detail.destino} marcaSos={marcaSos} />
 
           <div className="two-col">
             <section className="trip-detail__card">
@@ -159,12 +143,23 @@ export default function TripDetailModal({
                 <Avatar src={cliente?.avatar} name={fullName(cliente)} size={40} />
                 <div className="cell-user__text">
                   <span className="cell-user__name">{cliente?.nombre || '—'}</span>
-                  {cliente?.telefono && (
-                    <a className="trip-detail__link" href={`tel:${cliente.telefono}`}><Phone size={12} /> {cliente.telefono}</a>
+                  {detail.contactoVisible === false ? (
+                    <span className="cell-user__meta">Contacto reservado: solo con ticket, SOS o disputa</span>
+                  ) : (
+                    <>
+                      {cliente?.telefono && (
+                        <a className="trip-detail__link" href={`tel:${cliente.telefono}`}><Phone size={12} /> {cliente.telefono}</a>
+                      )}
+                      {cliente?.email && <span className="cell-user__meta">{cliente.email}</span>}
+                    </>
                   )}
-                  {cliente?.email && <span className="cell-user__meta">{cliente.email}</span>}
                 </div>
               </div>
+              {cliente?.id && (
+                <div className="row">
+                  <Link className="btn btn--soft-primary btn--sm" to={`/moderator/clients/${cliente.id}`}>Ver perfil</Link>
+                </div>
+              )}
             </section>
 
             <section className="trip-detail__card">
@@ -190,6 +185,16 @@ export default function TripDetailModal({
                   )}
                 </div>
               </div>
+              {(conductor?.id || conductor?.usuarioId) && (
+                <div className="row">
+                  {conductor.id && (
+                    <Link className="btn btn--soft-primary btn--sm" to={`/moderator/drivers/${conductor.id}`}>Ver perfil</Link>
+                  )}
+                  {conductor.usuarioId && (
+                    <Link className="btn btn--soft-primary btn--sm" to={`/moderator/conversations?usuario=${conductor.usuarioId}`}>Chat con conductor</Link>
+                  )}
+                </div>
+              )}
             </section>
           </div>
 
@@ -216,7 +221,7 @@ export default function TripDetailModal({
             {ganancia && (
               <div className="trip-detail__earning">
                 <span className="text-muted">Ganancia conductor:</span>
-                <span>{formatCurrency(ganancia.montoBruto)} bruto · {formatCurrency(ganancia.montoNeto)} neto · Comisión 10%: {formatCurrency(ganancia.comision)}</span>
+                <span>{formatCurrency(ganancia.montoBruto)} bruto · {formatCurrency(ganancia.montoNeto)} neto · Comisión: {formatCurrency(ganancia.comision)}</span>
                 <Badge variant={ganancia.comisionPagada ? 'success' : 'warning'} size="sm">
                   {ganancia.comisionPagada ? 'Pagada' : 'Pendiente'}
                 </Badge>

@@ -1,7 +1,6 @@
 import { MapPin, Siren } from 'lucide-react';
 import { Modal, StatusBadge } from '../../../components/ui';
-import RouteMap from '../../../components/maps/RouteMap';
-import { sosRouteProps, hasRoutePoints } from '../../../components/maps/sosRoute';
+import { MapaEmergencia, tieneMapaEmergencia, ResumenCierreSos } from '../../../components/panel';
 import { formatCurrency, formatDateTime } from '../../../utils/format';
 import EmergencyChat from './EmergencyChat';
 import { shortId, userName, ruta, coords, mapsUrl, emergencyBadge, attendedBy } from './emergencyUtils';
@@ -83,7 +82,8 @@ function TripSection({ emergency, trip }) {
 }
 
 export default function EmergencyDetailModal({ emergency, trip, chat, onClose }) {
-  const mapa = sosRouteProps(emergency, trip);
+  // Con viaje: A, B, el "!" del SOS, rojo A→SOS y azul SOS→B (OpenStreetMap). Sin viaje: solo los puntos.
+  const conMapa = tieneMapaEmergencia(emergency);
 
   return (
     <Modal
@@ -116,10 +116,10 @@ export default function EmergencyDetailModal({ emergency, trip, chat, onClose })
             </div>
           </section>
 
-          {hasRoutePoints(mapa) && (
+          {conMapa && (
             <section className="stack">
               <h3 className="section-title">Mapa del SOS</h3>
-              <RouteMap {...mapa} alto={280} />
+              <MapaEmergencia area="admin" emergencia={emergency} viaje={trip} alturaPx={280} />
             </section>
           )}
 
@@ -130,10 +130,10 @@ export default function EmergencyDetailModal({ emergency, trip, chat, onClose })
             </section>
           )}
 
-          {emergency.notes && (
+          {(emergency.estado === 'resuelta' || emergency.status === 'resolved') && (
             <section className="stack">
-              <h3 className="section-title">Notas de resolución</h3>
-              <p>{emergency.notes}</p>
+              <h3 className="section-title">Cierre del caso</h3>
+              <ResumenCierreSos alerta={emergency} />
             </section>
           )}
 

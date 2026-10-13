@@ -22,7 +22,9 @@ const admin = {
   clients: lazy(() => import('./pages/admin/ClientsPage')),
   moderators: lazy(() => import('./pages/admin/ModeratorsPage')),
   drivers: lazy(() => import('./pages/admin/DriversPage')),
-  'mapa-conductores': lazy(() => import('./pages/admin/DriversMapPage')),
+  mapa: lazy(() => import('./pages/panel/MapaVivoPage')),
+  'drivers/:id': lazy(() => import('./pages/panel/PerfilConductorPage').then((m) => ({ default: () => <m.default area="admin" /> }))),
+  'clients/:id': lazy(() => import('./pages/panel/PerfilClientePage').then((m) => ({ default: () => <m.default area="admin" /> }))),
   trips: lazy(() => import('./pages/admin/TripsPage')),
   earnings: lazy(() => import('./pages/admin/EarningsPage')),
   commissions: lazy(() => import('./pages/admin/CommissionsPage')),
@@ -38,7 +40,6 @@ const admin = {
   referidos: lazy(() => import('./pages/admin/ReferidosPage')),
   comunicacion: lazy(() => import('./pages/admin/EnviarComunicacionPage')),
   comunicados: lazy(() => import('./pages/admin/ComunicadosPage')),
-  encuestas: lazy(() => import('./pages/admin/EncuestasPage')),
   conversations: lazy(() => import('./pages/admin/ConversationsPage')),
   avisos: lazy(() => import('./pages/admin/AvisosPage')),
   'moderator-reports': lazy(() => import('./pages/admin/ModeratorReportsPage')),
@@ -51,8 +52,12 @@ const moderator = {
   index: lazy(() => import('./pages/moderator/DashboardPage')),
   drivers: lazy(() => import('./pages/moderator/DriversPage')),
   'drivers/inactive': lazy(() => import('./pages/moderator/InactiveDriversPage')),
+  'drivers/:id': lazy(() => import('./pages/moderator/DriverDetailPage')),
+  'clients/:id': lazy(() => import('./pages/panel/PerfilClientePage').then((m) => ({ default: () => <m.default area="moderator" /> }))),
+  mapa: lazy(() => import('./pages/panel/MapaVivoPage').then((m) => ({ default: () => <m.default area="moderator" /> }))),
+  conductores: lazy(() => import('./pages/moderator/DriverDirectoryPage')),
+  disputes: lazy(() => import('./pages/moderator/DisputesPage')),
   comunicados: lazy(() => import('./pages/moderator/ComunicadosPage')),
-  encuestas: lazy(() => import('./pages/moderator/EncuestasPage')),
   avisos: lazy(() => import('./pages/moderator/AvisosPage')),
   profile: lazy(() => import('./pages/moderator/ProfilePage')),
   trips: lazy(() => import('./pages/moderator/TripsPage')),
@@ -62,7 +67,7 @@ const moderator = {
   tickets: lazy(() => import('./pages/moderator/TicketsPage')),
   conversations: lazy(() => import('./pages/moderator/ConversationsPage')),
   companeros: lazy(() => import('./pages/moderator/CompanerosPage')),
-  reports: lazy(() => import('./pages/moderator/NotificacionesPage')),
+  reports: lazy(() => import('./pages/moderator/MisReportesPage')),
 };
 
 const FullScreenLoader = () => (
@@ -113,6 +118,7 @@ export default function App() {
 
             <Route path="/admin" element={<ProtectedRoute area="admin"><AdminLayout /></ProtectedRoute>}>
               {renderRoutes(admin)}
+              <Route path="mapa-conductores" element={<Navigate to="/admin/mapa" replace />} />
             </Route>
 
             <Route path="/moderator" element={<ProtectedRoute area="moderator"><ModeratorLayout /></ProtectedRoute>}>

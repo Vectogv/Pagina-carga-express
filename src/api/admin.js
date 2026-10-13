@@ -43,6 +43,7 @@ export const getDrivers = (params) => api.get(`${BASE}/drivers`, { params })
 
 // Trips
 export const getTrips = (params) => api.get(`${BASE}/trips`, { params })
+export const getTripRecorrido = (id) => api.get(`${BASE}/trips/${id}/recorrido`)
 
 // Earnings
 export const getEarnings = (params) => api.get(`${BASE}/earnings`, { params })
@@ -55,7 +56,8 @@ export const uploadAvatar = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 
-// Emergencies - page/limit; PUT resolve acepta {observacion?} (el backend viejo lo ignora)
+// Emergencies - page/limit, ?estado=a,b (CSV; sin él: atendidas + pendientes), ?zona=.
+// PUT resolve exige {tipoCierre, observacion} (422 si falta; 409 si ya estaba resuelta).
 export const getEmergencies = (params) => api.get(`${BASE}/emergencies`, { params })
 export const resolveEmergency = (id, data = {}) => api.put(`${BASE}/emergencies/${id}/resolve`, data)
 
@@ -98,7 +100,8 @@ export const resolveSoatException = (conductorId, data) =>
   api.put(`${BASE}/verifications/${conductorId}/soat-exception`, data)
 
 // Drivers - notificar/reportar (moderator, admin con token puede intentar)
-export const notifyDriver = (id) => api.post(`/api/moderator/drivers/${id}/notify`)
+// data opcional: { documentos: [...], mensaje } → aviso de documentos faltantes; sin cuerpo, recordatorio de actividad.
+export const notifyDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/notify`, data)
 export const reportDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/report`, data)
 
 // Payments
@@ -119,10 +122,9 @@ export const updateBanner = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 
-// Comunicados & Encuestas - doc: approve sin body, reject {notaRechazo?}
+// Comunicados - doc: approve sin body, reject {notaRechazo?}
 export const approveComunicado = (id) => api.put(`${BASE}/comunicados/${id}/approve`)
 export const rejectComunicado = (id, data) => api.put(`${BASE}/comunicados/${id}/reject`, data)
-export const approveEncuesta = (id) => api.put(`${BASE}/encuestas/${id}/approve`)
 
 // Moderator Reports - doc: page/limit
 export const getModeratorReports = (params) => api.get(`${BASE}/moderator-reports`, { params })
@@ -139,9 +141,8 @@ export const rejectCancellation = (id) => api.post(`${BASE}/cancellation-request
 // Auth
 export const registerUser = (data) => api.post('/api/auth/register', data)
 
-// Listados dedicados de comunicados y encuestas (params: page, limit). Respuesta: array plano.
+// Listado dedicado de comunicados (params: page, limit). Respuesta: array plano.
 export const getAdminComunicados = (params) => api.get(`${BASE}/comunicados`, { params })
-export const getAdminEncuestas = (params) => api.get(`${BASE}/encuestas`, { params })
 
 // Gerencia: pendientes de moderadores por categoria/zona (?zona=) y comunicacion propia {titulo, mensaje, destino: conductores|moderadores, zona?}
 export const getPendientes = (params) => api.get(`${BASE}/pendientes`, { params })

@@ -1,17 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { io } from 'socket.io-client';
-import api, { tokenStore } from '../api/axios';
-import { getUnreadCount, getModeratorTrips } from '../api/moderator';
+import { tokenStore } from '../api/axios';
+import useSocketPanel from '../hooks/useSocketPanel';
+import { getUnreadCount, getModeratorTrips, getModeratorDrivers, getEmergencyCount, getTicketsCount } from '../api/moderator';
 import { useAuth } from './AuthContext';
 import { useModeratorCity } from './ModeratorCityContext';
 import { errorMessage, toList } from '../utils/format';
 import { updateFaviconBadge } from '../utils/favicon';
-import { SOCKET_URL } from '../config';
+import { avisar } from '../utils/aviso';
 
 const Ctx = createContext(null);
 
-// Estado global de los badges del moderador (Emergencias, Cierres, Conversatorio y Tickets).
-// Polling cada 60s + actualización inmediata por socket.
+// Estado global de los badges del moderador (Emergencias, Cierres, Conversatorio, Tickets y
+// conductores pendientes). Polling cada 60s + actualización inmediata por socket.
 export function ModeratorBadgesProvider({ children }) {
   const { user } = useAuth();
   const { ciudadParams } = useModeratorCity();
@@ -22,30 +22,35 @@ export function ModeratorBadgesProvider({ children }) {
   const [closures, setClosures] = useState([]);
   const [closuresLoading, setClosuresLoading] = useState(false);
   const [closuresError, setClosuresError] = useState(null);
+  const [closuresTotal, setClosuresTotal] = useState(0);
   const closuresIdsRef = useRef(new Set());
   useEffect(() => { closuresIdsRef.current = new Set(closures.map((c) => String(c.id))); }, [closures]);
   const [emergencyBadge, setEmergencyBadge] = useState(0);
   const [unreadBadge, setUnreadBadge] = useState(0);
   const [ticketBadge, setTicketBadge] = useState(0);
+  const [pendingDriversBadge, setPendingDriversBadge] = useState(0);
   const openEmergencyRef = useRef(null);
   const openConversationRef = useRef(null);
 
   const refreshEmergencies = useCallback(async () => {
     if (!tokenStore.access) return;
     try {
-      const { data } = await api.get('/api/moderator/emergency/count');
+      const { data } = await getEmergencyCount(ciudadParams);
       setEmergencyBadge((data?.pendientes ?? 0) + (data?.atendidas ?? 0));
     } catch {
       // Silencioso: el badge es informativo y se reintenta en el siguiente polling.
     }
-  }, []);
+  }, [ciudadParams]);
 
   const refreshClosures = useCallback(async () => {
     if (!tokenStore.access) return;
     setClosuresLoading(true);
     try {
       const res = await getModeratorTrips({ page: 1, limit: 50, estado: 'pendiente_confirmacion', ...ciudadParams });
-      setClosures(toList(res.data, 'trips'));
+      const lista = toList(res.data, 'trips');
+      setClosures(lista);
+      // El servidor devuelve un arreglo plano (sin total); si algún día manda {data,total} se usa.
+      setClosuresTotal(typeof res.data?.total === 'number' ? res.data.total : lista.length);
       setClosuresError(null);
     } catch (err) {
       setClosuresError(err.response?.status === 403
@@ -69,12 +74,23 @@ export function ModeratorBadgesProvider({ children }) {
   const refreshTickets = useCallback(async () => {
     if (!tokenStore.access) return;
     try {
-      const { data } = await api.get('/api/moderator/tickets/count');
+      const { data } = await getTicketsCount(ciudadParams);
       setTicketBadge(data?.abiertos ?? 0);
     } catch {
       // Silencioso: el badge es informativo y se reintenta en el siguiente polling.
     }
-  }, []);
+  }, [ciudadParams]);
+
+  // Conductores pendientes de verificación en la zona (depende de la ciudad elegida por el admin).
+  const refreshPendingDrivers = useCallback(async () => {
+    if (!tokenStore.access) return;
+    try {
+      const res = await getModeratorDrivers({ page: 1, limit: 100, estado: 'pendiente', ...ciudadParams });
+      setPendingDriversBadge(res.data?.total ?? toList(res.data, 'drivers').length);
+    } catch {
+      // Silencioso: el badge es informativo y se reintenta en el siguiente polling.
+    }
+  }, [ciudadParams]);
 
   useEffect(() => {
     refreshEmergencies();
@@ -83,6 +99,12 @@ export function ModeratorBadgesProvider({ children }) {
     const id = setInterval(() => { refreshEmergencies(); refreshUnread(); refreshTickets(); }, 60000);
     return () => clearInterval(id);
   }, [refreshEmergencies, refreshUnread, refreshTickets]);
+
+  useEffect(() => {
+    refreshPendingDrivers();
+    const id = setInterval(refreshPendingDrivers, 60000);
+    return () => clearInterval(id);
+  }, [refreshPendingDrivers]);
 
   // Los cierres dependen de la ciudad elegida (admin), por eso van en su propio efecto.
   useEffect(() => {
@@ -93,15 +115,12 @@ export function ModeratorBadgesProvider({ children }) {
   const refreshClosuresRef = useRef(refreshClosures);
   useEffect(() => { refreshClosuresRef.current = refreshClosures; }, [refreshClosures]);
 
+  const socket = useSocketPanel();
   useEffect(() => {
-    const token = tokenStore.access;
-    if (!token) return;
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-      auth: { token: `Bearer ${token}` },
-      query: { token: `Bearer ${token}` },
-    });
-    socket.on('connect', () => { refreshEmergencies(); refreshUnread(); refreshTickets(); refreshClosuresRef.current(); });
+    if (!socket) return undefined;
+    const onConnect = () => { refreshEmergencies(); refreshUnread(); refreshTickets(); refreshClosuresRef.current(); };
+    socket.on('connect', onConnect);
+    if (socket.connected) onConnect();
     // Cierre pendiente nuevo, o un viaje que entra/sale de pendiente_confirmacion.
     // Se agrupan los avisos seguidos para no pedir la lista varias veces (igual que la app).
     let closuresTimer = null;
@@ -109,32 +128,49 @@ export function ModeratorBadgesProvider({ children }) {
       clearTimeout(closuresTimer);
       closuresTimer = setTimeout(() => refreshClosuresRef.current(), 400);
     };
-    socket.on('moderator:pending_close', scheduleClosures);
-    socket.on('moderator:trip:update', (p) => {
+    const onTrip = (p) => {
       const esCierre = p?.estado === 'pendiente_confirmacion';
       const estaba = closuresIdsRef.current.has(String(p?.id));
       if (esCierre || estaba) scheduleClosures();
-    });
+    };
     // Ticket nuevo, reabierto o tomado → recalcular con el endpoint autoritativo.
-    ['ticket:nuevo', 'ticket:estado'].forEach((ev) => socket.on(ev, () => refreshTickets()));
+    const onTicket = () => refreshTickets();
     // Cambio de estado de una emergencia → recalcular con el endpoint autoritativo.
     // moderator:emergency:update llega a la sala de la zona; emergency:alert solo a admins.
-    ['emergency:alert', 'moderator:emergency:update'].forEach((ev) => socket.on(ev, () => refreshEmergencies()));
+    const onEmergencia = () => refreshEmergencies();
     // El evento llega a toda la sala de la ciudad (también los mensajes propios y los de
     // hilos de otros moderadores): se ignoran los propios y se recalcula con el backend.
-    socket.on('conversation:message', (data) => {
+    // Sonido + aviso del navegador solo si la pestaña no está en primer plano (el
+    // SOS ya suena en el EmergencyBanner).
+    const onMensaje = (data) => {
       if (data?.remitente?.id != null && String(data.remitente.id) === String(userIdRef.current)) return;
       if (openConversationRef.current && String(data.conversacionId) === String(openConversationRef.current)) return;
       refreshUnread();
-    });
-    return () => { clearTimeout(closuresTimer); socket.disconnect(); };
-  }, [refreshEmergencies, refreshUnread, refreshTickets]);
+      if (document.hidden) avisar('Mensaje nuevo', data?.remitente?.nombre ? `De ${data.remitente.nombre}` : 'Conversatorio');
+    };
+    const handlers = [
+      ['moderator:pending_close', scheduleClosures], ['moderator:trip:update', onTrip],
+      ['ticket:nuevo', onTicket], ['ticket:estado', onTicket],
+      ['emergency:alert', onEmergencia], ['moderator:emergency:update', onEmergencia],
+      ['conversation:message', onMensaje],
+    ];
+    handlers.forEach(([ev, fn]) => socket.on(ev, fn));
+    // Socket compartido (useSocketPanel): se quitan los listeners, no se desconecta.
+    return () => {
+      clearTimeout(closuresTimer);
+      socket.off('connect', onConnect);
+      handlers.forEach(([ev, fn]) => socket.off(ev, fn));
+    };
+  }, [socket, refreshEmergencies, refreshUnread, refreshTickets]);
 
-  const closuresBadge = closures.length;
+  const closuresBadge = closuresTotal;
 
-  // Favicon con badge rojo (total de pendientes de atención).
+  // Favicon con badge rojo y contador en el título de la pestaña (total de pendientes de atención).
   useEffect(() => {
-    updateFaviconBadge(emergencyBadge + closuresBadge + unreadBadge + ticketBadge);
+    const total = emergencyBadge + closuresBadge + unreadBadge + ticketBadge;
+    updateFaviconBadge(total);
+    document.title = total > 0 ? `(${total}) Carga Express` : 'Carga Express';
+    return () => { document.title = 'Carga Express'; };
   }, [emergencyBadge, closuresBadge, unreadBadge, ticketBadge]);
 
   const setOpenEmergency = useCallback((id) => { openEmergencyRef.current = id ?? null; }, []);
@@ -147,6 +183,8 @@ export function ModeratorBadgesProvider({ children }) {
     emergencyBadge,
     unreadBadge,
     ticketBadge,
+    pendingDriversBadge,
+    refreshPendingDrivers,
     closuresBadge,
     closures,
     closuresLoading,
@@ -160,7 +198,7 @@ export function ModeratorBadgesProvider({ children }) {
     setOpenConversation,
     clearEmergency,
     clearUnread,
-  }), [emergencyBadge, unreadBadge, ticketBadge, closuresBadge, closures, closuresLoading, closuresError, refreshClosures, refreshEmergencies, refreshUnread, refreshTickets, setOpenEmergency, setOpenConversation, clearEmergency, clearUnread]);
+  }), [emergencyBadge, unreadBadge, ticketBadge, pendingDriversBadge, refreshPendingDrivers, closuresBadge, closures, closuresLoading, closuresError, refreshClosures, refreshEmergencies, refreshUnread, refreshTickets, setOpenEmergency, setOpenConversation, clearEmergency, clearUnread]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

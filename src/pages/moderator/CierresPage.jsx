@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Gavel } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { direccionCorta } from '../../utils/direccion';
 import { useModeratorBadges } from '../../contexts/ModeratorBadgesContext';
-import { fullName } from '../../utils/format';
 import {
   PageHeader, DataTable, Button, Modal, Toast, ToastContainer,
 } from '../../components/ui';
+import { TarjetaPersona } from '../../components/panel';
 import PendingCloseResolver from '../../components/moderator/PendingCloseResolver';
 
 // Viajes en `pendiente_confirmacion`: el conductor cerró el viaje, el cliente no
@@ -27,33 +29,9 @@ export default function ModeratorCierresPage() {
   };
 
   const columns = [
-    { key: 'id', label: 'Viaje', render: (v) => <span className="text-mono text-primary-color">#{String(v).slice(0, 8)}</span> },
-    {
-      key: 'cliente',
-      label: 'Cliente',
-      render: (_, r) => (r.cliente ? (
-        <div className="cell-user__text">
-          <span className="cell-user__name">{fullName(r.cliente)}</span>
-          {r.cliente.telefono && <span className="cell-user__meta">{r.cliente.telefono}</span>}
-        </div>
-      ) : '—'),
-    },
-    {
-      key: 'conductor',
-      label: 'Conductor',
-      render: (_, r) => (r.conductor ? (
-        <div className="cell-user__text">
-          <span className="cell-user__name">{r.conductor.nombre || r.conductor.telefono || '—'}</span>
-          {r.conductor.placa && <span className="cell-user__meta text-mono">{r.conductor.placa}</span>}
-        </div>
-      ) : '—'),
-    },
-    { key: 'origenDireccion', label: 'Origen', render: (v) => v || '—' },
-    { key: 'destinoDireccion', label: 'Destino', render: (v) => v || '—' },
     {
       key: 'accion',
       label: '',
-      align: 'right',
       render: (_, r) => (
         <Button
           size="sm"
@@ -65,6 +43,29 @@ export default function ModeratorCierresPage() {
         </Button>
       ),
     },
+    {
+      key: 'id',
+      label: 'Viaje',
+      render: (v) => (
+        <Link className="text-mono text-primary-color" to={`/moderator/trips?viaje=${v}`} onClick={(e) => e.stopPropagation()}>
+          #{String(v).slice(0, 8)}
+        </Link>
+      ),
+    },
+    {
+      key: 'cliente',
+      label: 'Cliente',
+      render: (_, r) => (r.cliente
+        ? <TarjetaPersona persona={{ ...r.cliente, contactoVisible: r.contactoVisible === true }} tipo="cliente" area="moderator" />
+        : '—'),
+    },
+    {
+      key: 'conductor',
+      label: 'Conductor',
+      render: (_, r) => (r.conductor ? <TarjetaPersona persona={r.conductor} tipo="conductor" area="moderator" /> : '—'),
+    },
+    { key: 'origenDireccion', label: 'Origen', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
+    { key: 'destinoDireccion', label: 'Destino', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
   ];
 
   return (

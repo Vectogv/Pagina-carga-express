@@ -1,22 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getMyReports } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { errorMessage, formatDateTime, fullName, toList } from '../../utils/format';
+import { errorMessage, formatDateTime, toList } from '../../utils/format';
 import { PageHeader, DataTable, StatusBadge } from '../../components/ui';
+import { TarjetaPersona } from '../../components/panel';
 
-// GET /api/moderator/reports (myReports) solo trae {id, conductorId, descripcion,
-// estado, createdAt}: no viene un objeto/nombre de conductor, así que se muestra
-// el id en vez de dejar la celda vacía.
-const conductorName = (r) => {
-  if (typeof r.conductor === 'string') return r.conductor;
-  if (r.conductor) return fullName(r.conductor);
-  if (r.conductorName) return r.conductorName;
-  if (r.driver) return fullName(r.driver);
-  if (r.conductorId) return `Conductor #${r.conductorId}`;
-  return '—';
-};
-
-export default function NotificacionesPage() {
+export default function MisReportesPage() {
   const { ciudadParams } = useModeratorCity();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,13 +32,13 @@ export default function NotificacionesPage() {
 
   const columns = [
     { key: 'fecha', label: 'Fecha', render: (v, r) => <span className="nowrap">{formatDateTime(r.createdAt || v)}</span> },
-    { key: 'conductor', label: 'Conductor', render: (_, r) => <span className="text-strong">{conductorName(r)}</span> },
     {
-      key: 'descripcion',
-      label: 'Descripción',
-      render: (v, r) => <span className="text-secondary">{v || r.description || r.contenido || r.content || '—'}</span>,
+      key: 'conductorNombre',
+      label: 'Conductor',
+      render: (v, r) => <TarjetaPersona persona={{ id: r.conductorId, nombre: v || '—', placa: r.placa }} tipo="conductor" area="moderator" />,
     },
-    { key: 'estado', label: 'Estado', render: (v) => <StatusBadge status={v || 'abierta'} /> },
+    { key: 'descripcion', label: 'Descripción', render: (v) => <span className="text-secondary">{v || '—'}</span> },
+    { key: 'estado', label: 'Estado', render: (v, r) => <StatusBadge status={v || 'pendiente'} label={r.estadoLabel} /> },
   ];
 
   return (

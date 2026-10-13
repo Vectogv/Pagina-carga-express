@@ -14,16 +14,15 @@ export const driverName = (d) => {
 };
 
 /**
- * Estado de conexión: conectado | desconectado. GET /api/admin/drivers solo manda
- * `online`; antes un conductor en línea sin verificar salía como "En ruta", que no
- * tiene nada que ver con estar en un viaje.
+ * Estado de conexión: conectado | sin_senal | desconectado. El servidor manda `online`
+ * y `sinSenal` (conectado pero sin ubicación reciente; ultimaSenalAt dice desde cuándo).
  */
-export const connectionKey = (d) => (d?.online ? 'conectado' : 'desconectado');
+export const connectionKey = (d) => (!d?.online ? 'desconectado' : d.sinSenal ? 'sin_senal' : 'conectado');
 
 export const CONNECTION = {
   conectado: ['Conectado', 'success'],
+  sin_senal: ['Sin señal', 'warning'],
   desconectado: ['Desconectado', 'neutral'],
 };
 
 export const connectionLabel = (d) => CONNECTION[connectionKey(d)][0];
-

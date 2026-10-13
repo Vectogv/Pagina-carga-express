@@ -3,10 +3,17 @@ import { BellRing, Check, FileText, Flag, X } from 'lucide-react';
 import { getModeratorDrivers, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import { resolveStorageUrl } from '../../utils/storage';
+import { CeldaVehiculo } from './driverCells';
+import { TarjetaPersona } from '../../components/panel';
+import useDocumentosConductor from '../../hooks/useDocumentosConductor';
+import { textoCanales } from '../../utils/canales';
+import { faltantesDe, textoFaltantes } from '../../utils/documentos';
+import NotificarDocumentosDialog from './NotificarDocumentosDialog';
 import {
-  PageHeader, SearchInput, SegmentedFilter, DataTable, ConfirmDialog, Modal, Avatar, Button, StatusBadge,
-  Textarea, Toast, ToastContainer,
+  PageHeader, SearchInput, SegmentedFilter, DataTable, ConfirmDialog, Modal, Button, StatusBadge,
+  Textarea, Toast, ToastContainer, Pagination, Badge,
 } from '../../components/ui';
 
 const TABS = [
@@ -16,12 +23,17 @@ const TABS = [
   ['todos', 'Todos'],
 ];
 
-const ESTADOS = ['pendiente', 'aprobado', 'rechazado'];
-const EMPTY_BY_ESTADO = { pendiente: [], aprobado: [], rechazado: [] };
+const LIMIT = 20;
+// Clave del documento (GET /api/config/documentos-conductor) -> campo con la foto en la fila del listado.
+// SOAT, tecnomecánica y tarjeta de propiedad solo vienen en la ficha; aquí se muestra si falta o no.
+const CAMPO_FOTO = {
+  licencia: 'fotoLicencia',
+  foto_vehiculo: 'fotoVehiculo',
+  foto_conductor: 'fotoConductor',
+};
 
 const driverName = (r) => fullName(r.usuario || r);
 const driverId = (r) => r.id || r.usuarioId;
-const byNewest = (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
 
 function Photo({ label, path }) {
   const url = resolveStorageUrl(path);
@@ -50,9 +62,11 @@ function Detail({ label, children }) {
 
 export default function ModeratorDriversPage() {
   const { ciudadParams } = useModeratorCity();
-  // Una petición por estado: así cada pestaña tiene su propio conteo aunque se
-  // esté viendo otra (el backend filtra y pagina por estado, máx. 100 por página).
-  const [byEstado, setByEstado] = useState(EMPTY_BY_ESTADO);
+  const zonas = useZonas();
+  const { documentos } = useDocumentosConductor();
+  const [drivers, setDrivers] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [action, setAction] = useState(null);
@@ -67,28 +81,36 @@ export default function ModeratorDriversPage() {
     setLoading(true);
     setError(null);
     try {
-      const responses = await Promise.all(
-        ESTADOS.map((estado) => getModeratorDrivers({ page: 1, limit: 100, estado, ...ciudadParams })),
-      );
-      const next = {};
-      ESTADOS.forEach((estado, i) => { next[estado] = toList(responses[i].data, 'drivers'); });
-      setByEstado(next);
+      // Filtro, búsqueda y paginación en el servidor (?estado=&buscar=&page=&limit=).
+      const res = await getModeratorDrivers({
+        page, limit: LIMIT, estado: tab === 'todos' ? undefined : tab, buscar: filter.trim() || undefined, ...ciudadParams,
+      });
+      setDrivers(toList(res.data, 'drivers'));
+      setTotal(res.data?.total ?? 0);
     } catch (err) {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
       else setError(errorMessage(err, 'Error al cargar conductores'));
     } finally {
       setLoading(false);
     }
-  }, [ciudadParams]);
+  }, [page, tab, filter, ciudadParams]);
 
-  useEffect(() => { fetchDrivers(); }, [fetchDrivers]);
+  useEffect(() => {
+    const id = setTimeout(fetchDrivers, filter ? 350 : 0);
+    return () => clearTimeout(id);
+  }, [fetchDrivers, filter]);
+  const cambiarFiltro = (v) => { setFilter(v); setPage(1); };
+  const cambiarTab = (v) => { setTab(v); setPage(1); };
 
   const showToast = (message, ok = true) => setToast({ message, variant: ok ? 'success' : 'danger' });
   const openAction = (type, r) => { setDocs(null); setNota(''); setAction({ type, ...r }); };
   const closeAction = () => { setAction(null); setNota(''); };
 
-  const handleNotify = async () => {
-    try { await notifyDriver(driverId(action)); showToast('Notificación enviada'); } catch (err) { showToast(errorMessage(err, 'Error al notificar'), false); }
+  const handleNotify = async (data) => {
+    try {
+      const res = await notifyDriver(driverId(action), data);
+      showToast(textoCanales(res.data?.canales));
+    } catch (err) { showToast(errorMessage(err, 'Error al notificar'), false); }
   };
   const handleReport = async () => {
     try {
@@ -108,92 +130,78 @@ export default function ModeratorDriversPage() {
     } catch (err) { showToast(errorMessage(err, 'Error al rechazar'), false); }
   };
 
+  // Sin los 6 documentos y el número de cédula no se puede aprobar (el botón queda deshabilitado con el motivo).
+  const motivoBloqueo = (r) => textoFaltantes(faltantesDe(r));
+
   const columns = [
     {
       key: 'nombre',
       label: 'Conductor',
-      render: (_, r) => (
-        <div className="cell-user">
-          <Avatar src={r.fotoConductor} name={driverName(r)} />
-          <div className="cell-user__text">
-            <span className="cell-user__name">{driverName(r)}</span>
-            <span className="cell-user__meta">{r.usuario?.email || r.email || '—'}</span>
-          </div>
-        </div>
-      ),
+      render: (_, r) => <TarjetaPersona persona={r} tipo="conductor" area="moderator" size={40} />,
     },
-    { key: 'telefono', label: 'Teléfono', render: (_, r) => r.usuario?.telefono || '—' },
-    { key: 'placa', label: 'Placa', render: (v) => (v ? <span className="text-mono">{v}</span> : '—') },
-    { key: 'ciudad', label: 'Ciudad', render: (v) => (v === 'california' ? 'cali' : (v || '—')) },
-    { key: 'estadoVerificacion', label: 'Verificación', render: (v) => <StatusBadge status={v} /> },
+    { key: 'placa', label: 'Vehículo', render: (_, r) => <CeldaVehiculo r={r} /> },
+    { key: 'telefono', label: 'Contacto', render: (_, r) => r.usuario?.telefono || '—' },
+    { key: 'ciudad', label: 'Ciudad', render: (v) => zonaLabelFrom(zonas, v) },
+    { key: 'estadoVerificacion', label: 'Estado', render: (v) => <StatusBadge status={v} /> },
     {
       key: 'acciones',
       label: '',
       align: 'right',
       render: (_, r) => {
         const pend = (r.estadoVerificacion || 'pendiente') === 'pendiente';
+        const bloqueado = pend ? motivoBloqueo(r) : '';
         return (
-          <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
-            <Button size="icon" variant="ghost" onClick={() => setDocs(r)} aria-label={`Ver documentos de ${driverName(r)}`} title="Ver documentos">
-              <FileText size={15} />
-            </Button>
-            {pend && (
-              <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={() => openAction('approve', r)}>Aprobar</Button>
-            )}
-            {pend && (
-              <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={() => openAction('reject', r)}>Rechazar</Button>
-            )}
-            <Button size="icon" variant="ghost" onClick={() => openAction('notify', r)} aria-label={`Notificar a ${driverName(r)}`} title="Notificar">
-              <BellRing size={15} />
-            </Button>
-            <Button size="icon" variant="ghost" onClick={() => openAction('report', r)} aria-label={`Reportar a ${driverName(r)}`} title="Reportar al administrador">
-              <Flag size={15} />
-            </Button>
+          <div className="acciones-fila">
+            <div className="acciones-fila__botones">
+              {pend && (
+                <>
+                  <Button size="sm" variant="soft-success" icon={<Check size={14} />} disabled={!!bloqueado} title={bloqueado || undefined} onClick={() => openAction('approve', r)}>
+                    Aprobar
+                  </Button>
+                  <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={() => openAction('reject', r)}>Rechazar</Button>
+                  <span className="acciones-fila__sep" aria-hidden="true" />
+                </>
+              )}
+              <Button size="icon" variant="ghost" onClick={() => setDocs(r)} aria-label={`Ver documentos de ${driverName(r)}`} title="Ver documentos">
+                <FileText size={15} />
+              </Button>
+              <Button size="icon" variant="ghost" onClick={() => openAction('notify', r)} aria-label={`Notificar a ${driverName(r)}`} title="Notificar">
+                <BellRing size={15} />
+              </Button>
+              <Button size="icon" variant="ghost" onClick={() => openAction('report', r)} aria-label={`Reportar a ${driverName(r)}`} title="Reportar al administrador">
+                <Flag size={15} />
+              </Button>
+            </div>
+            {bloqueado && <span className="acciones-fila__aviso">{bloqueado}</span>}
           </div>
         );
       },
     },
   ];
 
-  const drivers = tab === 'todos'
-    ? ESTADOS.flatMap((e) => byEstado[e]).sort(byNewest)
-    : byEstado[tab] || [];
-  const counts = {
-    pendiente: byEstado.pendiente.length,
-    aprobado: byEstado.aprobado.length,
-    rechazado: byEstado.rechazado.length,
-    todos: ESTADOS.reduce((acc, e) => acc + byEstado[e].length, 0),
-  };
-  const tabOptions = TABS.map(([value, label]) => ({ value, label, count: counts[value] }));
-
-  const filtered = drivers.filter((d) => {
-    if (!filter.trim()) return true;
-    const q = filter.toLowerCase();
-    const u = d.usuario || {};
-    return `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase().includes(q)
-      || (u.email || '').toLowerCase().includes(q)
-      || (u.telefono || '').includes(q)
-      || (d.placa || '').toLowerCase().includes(q);
-  });
+  const tabOptions = TABS.map(([value, label]) => ({ value, label, count: value === tab ? total : undefined }));
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+  const faltanDocs = docs ? faltantesDe(docs) : [];
 
   const actionEmail = action?.usuario?.email || '';
 
   return (
     <div className="page">
-      <PageHeader title="Conductores" description="Verifica, notifica y reporta a los conductores de tu ciudad." />
+      <PageHeader title="Verificación de conductores" description="Verifica, notifica y reporta a los conductores de tu ciudad. Toca el nombre para abrir la ficha completa." />
 
       <div className="toolbar">
-        <SearchInput value={filter} onChange={setFilter} placeholder="Buscar por nombre, placa, correo o teléfono" />
-        <SegmentedFilter options={tabOptions} value={tab} onChange={setTab} ariaLabel="Estado de verificación" />
+        <SearchInput value={filter} onChange={cambiarFiltro} placeholder="Buscar nombre, cédula, placa" />
+        <SegmentedFilter options={tabOptions} value={tab} onChange={cambiarTab} ariaLabel="Estado de verificación" />
       </div>
 
       {error && <div className="page-error" role="alert">{error}</div>}
 
       <DataTable
         columns={columns}
-        data={filtered}
+        data={drivers}
         loading={loading}
         emptyMessage={filter ? `Sin resultados para “${filter}”` : (tab === 'pendiente' ? 'Sin conductores pendientes' : 'No hay conductores en tu ciudad')}
+        footer={totalPages > 1 ? <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} /> : null}
       />
 
       <Modal
@@ -208,7 +216,15 @@ export default function ModeratorDriversPage() {
             {(docs.estadoVerificacion || 'pendiente') === 'pendiente' && (
               <>
                 <Button variant="soft-danger" icon={<X size={14} />} onClick={() => openAction('reject', docs)}>Rechazar</Button>
-                <Button variant="soft-success" icon={<Check size={14} />} onClick={() => openAction('approve', docs)}>Aprobar</Button>
+                <Button
+                  variant="soft-success"
+                  icon={<Check size={14} />}
+                  disabled={!!motivoBloqueo(docs)}
+                  title={motivoBloqueo(docs) || undefined}
+                  onClick={() => openAction('approve', docs)}
+                >
+                  Aprobar
+                </Button>
               </>
             )}
           </>
@@ -221,7 +237,8 @@ export default function ModeratorDriversPage() {
               <Detail label="Nombre">{docs.usuario?.nombre}</Detail>
               <Detail label="Teléfono">{docs.usuario?.telefono}</Detail>
               <Detail label="Correo">{docs.usuario?.email}</Detail>
-              <Detail label="Cédula">{docs.cedula}</Detail>
+              <Detail label="Número de cédula">{docs.cedula}</Detail>
+              {motivoBloqueo(docs) && <Detail label="Para aprobar"><span className="text-warning">{motivoBloqueo(docs)}</span></Detail>}
               <Detail label="Placa">{docs.placa && <span className="text-mono">{docs.placa}</span>}</Detail>
               <Detail label="Tipo de vehículo">{docs.tipoVehiculo}</Detail>
               <Detail label="Ciudad">{docs.ciudad}</Detail>
@@ -232,23 +249,29 @@ export default function ModeratorDriversPage() {
             <hr className="divider" />
             <h3 className="section-title">Documentos cargados</h3>
             <div className="form-grid">
-              <Photo label="Foto del conductor" path={docs.fotoConductor} />
-              <Photo label="Vehículo" path={docs.fotoVehiculo} />
-              <Photo label="Cédula" path={docs.fotoCedula} />
-              <Photo label="Licencia" path={docs.fotoLicencia} />
+              {documentos.filter((d) => d.clave !== 'numero_cedula').map((d) => (CAMPO_FOTO[d.clave]
+                ? <Photo key={d.clave} label={d.etiqueta} path={docs[CAMPO_FOTO[d.clave]]} />
+                : (
+                  <div key={d.clave} className="stack">
+                    <span className="detail-list__label">{d.etiqueta}</span>
+                    <Badge variant={faltanDocs.includes(d.clave) ? 'warning' : 'success'} size="sm">
+                      {faltanDocs.includes(d.clave) ? 'Falta' : 'Cargado'}
+                    </Badge>
+                  </div>
+                )))}
             </div>
           </div>
         )}
       </Modal>
 
-      <ConfirmDialog
-        isOpen={action?.type === 'notify'}
-        onClose={closeAction}
-        onConfirm={handleNotify}
-        title="Notificar conductor"
-        message={`Se enviará una notificación push a ${actionEmail || driverName(action || {})}.`}
-        confirmText="Notificar"
-      />
+      {action?.type === 'notify' && (
+        <NotificarDocumentosDialog
+          onClose={closeAction}
+          faltantes={faltantesDe(action)}
+          destinatario={actionEmail || driverName(action)}
+          onEnviar={handleNotify}
+        />
+      )}
       <ConfirmDialog
         isOpen={action?.type === 'approve'}
         onClose={closeAction}

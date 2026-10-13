@@ -8,10 +8,10 @@ const DEFAULTS = {
   radioInicialKm: 3, minAmpliar: 3, radioAmpliadoKm: 8, minSugerencia: 5, minCierre: 20,
   minRespuestaCierre: 10, minSeguirEsperando: 20,
   etapas: { ampliar: true, sugerencia: true, cierre: true },
-  tarifaKm: { piaggio: 0, furgon: 0, camioneta: 0 },
+  tarifaKm: { piaggio: 0, furgon: 0, camioneta: 0, default: 0 },
 };
 const NUM_KEYS = Object.keys(DEFAULTS).filter((k) => k !== 'etapas' && k !== 'tarifaKm');
-const TARIFAS = [['piaggio', 'Piaggio'], ['furgon', 'Furgón sellado'], ['camioneta', 'Camioneta']];
+const TARIFAS = [['piaggio', 'Piaggio'], ['furgon', 'Furgón sellado'], ['camioneta', 'Camioneta'], ['default', 'Por defecto (otros vehículos)']];
 const MAX_TARIFA = 100000;
 const MAX_KM = 20; // tope de ofertas del servidor
 

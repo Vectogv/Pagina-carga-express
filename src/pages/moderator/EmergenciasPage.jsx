@@ -13,8 +13,7 @@ import { errorMessage, formatDateTime, toList } from '../../utils/format';
 import {
   PageHeader, SegmentedFilter, DataTable, Pagination, StatusBadge, Button, Toast, ToastContainer,
 } from '../../components/ui';
-import RouteMap from '../../components/maps/RouteMap';
-import { sosRouteProps, hasRoutePoints } from '../../components/maps/sosRoute';
+import { MapaEmergencia, tieneMapaEmergencia, CIERRE_VACIO, cierreSosValido, cuerpoCierreSos } from '../../components/panel';
 import EmergencyDetailModal from './emergencias/EmergencyDetailModal';
 import './emergencias/EmergenciasPage.css';
 
@@ -35,13 +34,16 @@ const EMPTY_BY_TAB = {
 const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
 const sameId = (a, b) => String(a) === String(b);
 
-const resolveWithObservation = (id, observacion) => resolveEmergency(id, { observacion });
 
 export default function ModeratorEmergenciasPage() {
   const { setOpenEmergency } = useModeratorBadges();
   const { ciudadParams } = useModeratorCity();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = TABS.some((t) => t.value === searchParams.get('tab')) ? searchParams.get('tab') : 'activas';
+  // ?id=ALERTA o ?viaje=VIAJE abren ese caso al llegar desde el inicio (igual que Disputas con ?viaje=).
+  const idParam = searchParams.get('id');
+  const viajeParam = searchParams.get('viaje');
+  const casoAbiertoPorParamRef = useRef(null);
 
   const [pageState, setPageState] = useState({ tab, page: 1 });
   const page = pageState.tab === tab ? pageState.page : 1;
@@ -54,7 +56,7 @@ export default function ModeratorEmergenciasPage() {
   const [actionLoading, setActionLoading] = useState(null);
   const [selected, setSelected] = useState(null);
   const [tripDetail, setTripDetail] = useState(null);
-  const [observacion, setObservacion] = useState('');
+  const [cierre, setCierre] = useState(CIERRE_VACIO);
   const [mensajes, setMensajes] = useState([]);
   const [nuevoTexto, setNuevoTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -139,9 +141,8 @@ export default function ModeratorEmergenciasPage() {
 
   // SOS sin resolver más reciente con coordenadas: mapa compacto sobre la tabla.
   const destacada = useMemo(() => (tab === 'historico' ? null : emergencies
-    .filter((e) => e.estado !== 'resuelta' && hasRoutePoints(sosRouteProps(e)))
+    .filter((e) => e.estado !== 'resuelta' && tieneMapaEmergencia(e))
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0] || null), [emergencies, tab]);
-  const mapaDestacado = useMemo(() => (destacada ? sosRouteProps(destacada) : null), [destacada]);
 
   const showToast = (message, ok = true) => setToast({ message, variant: ok ? 'success' : 'danger' });
 
@@ -166,7 +167,7 @@ export default function ModeratorEmergenciasPage() {
     setTripDetail(null);
     setMensajes([]);
     setMensajesError(null);
-    setObservacion('');
+    setCierre(CIERRE_VACIO);
     setNuevoTexto('');
     loadMessages(row.id);
     const viajeId = row.viajeId || row.tripId || row.viaje?.id;
@@ -180,11 +181,29 @@ export default function ModeratorEmergenciasPage() {
     }
   };
 
+  useEffect(() => {
+    const clave = idParam || viajeParam;
+    if (!clave || loading || casoAbiertoPorParamRef.current === clave) return;
+    casoAbiertoPorParamRef.current = clave;
+    const row = emergencies.find((e) => (idParam
+      ? sameId(e.id, idParam)
+      : sameId(e.viajeId || e.tripId || e.viaje?.id, viajeParam)));
+    if (row) openDetail(row);
+    else showToast('Ese caso no está en la lista actual (puede estar resuelto o en otra página)', false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idParam, viajeParam, loading, emergencies]);
+
   const closeDetail = () => {
+    if (searchParams.has('id') || searchParams.has('viaje')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('id');
+      next.delete('viaje');
+      setSearchParams(next, { replace: true });
+    }
     selectedIdRef.current = null;
     setSelected(null);
     setTripDetail(null);
-    setObservacion('');
+    setCierre(CIERRE_VACIO);
   };
 
   const enviarMensaje = async () => {
@@ -232,16 +251,18 @@ export default function ModeratorEmergenciasPage() {
 
   const handleResolve = async () => {
     if (!selected) return;
-    if (!observacion.trim()) { showToast('La observación es obligatoria', false); return; }
+    if (!cierreSosValido(cierre)) { showToast('Elige el tipo de caso y escribe la gestión realizada (20 a 1000 caracteres)', false); return; }
     const id = selected.id;
     setActionLoading(id);
     try {
-      const { data: updated } = await resolveWithObservation(id, observacion.trim());
+      const { data: updated } = await resolveEmergency(id, cuerpoCierreSos(cierre));
       setSelected((prev) => ({
         ...prev,
         estado: updated.estado || 'resuelta',
         estadoLabel: updated.estadoLabel,
         observacion: updated.observacion,
+        tipoCierre: updated.tipoCierre,
+        tipoCierreLabel: updated.tipoCierreLabel,
         resueltoPor: updated.resueltoPor,
         resueltaAt: updated.resueltaAt,
         atendidaAt: updated.atendidaAt || prev.atendidaAt,
@@ -249,7 +270,7 @@ export default function ModeratorEmergenciasPage() {
       }));
       setEmergencies((prev) => prev.map((e) => (sameId(e.id, id) ? { ...e, estado: updated.estado || 'resuelta', observacion: updated.observacion } : e)));
       showToast('Emergencia resuelta');
-      setObservacion('');
+      setCierre(CIERRE_VACIO);
     } catch (err) {
       if (err.response?.status === 409) showToast('Ya fue resuelta', false);
       else showToast(errorMessage(err, 'Error al resolver'), false);
@@ -276,7 +297,7 @@ export default function ModeratorEmergenciasPage() {
       label: 'Viaje',
       render: (_, r) => (
         <div className="cell-user__text">
-          <span className="text-mono text-primary-color">#{String(r.viajeId || '').slice(0, 6)}</span>
+          <span className="text-mono text-primary-color">Viaje #{String(r.viajeId || '')}</span>
           {(r.viaje?.estadoLabel || r.viaje?.estado) && <span className="cell-user__meta">{r.viaje.estadoLabel || r.viaje.estado}</span>}
         </div>
       ),
@@ -330,7 +351,7 @@ export default function ModeratorEmergenciasPage() {
               Ver caso <ChevronRight size={14} />
             </Button>
           </div>
-          <RouteMap {...mapaDestacado} alto={170} compacto />
+          <MapaEmergencia key={destacada.id} area="moderator" emergencia={destacada} alturaPx={170} />
         </div>
       )}
 
@@ -357,8 +378,8 @@ export default function ModeratorEmergenciasPage() {
           onSend: enviarMensaje,
           sending: enviando,
         }}
-        observacion={observacion}
-        onObservacionChange={setObservacion}
+        cierre={cierre}
+        onCierreChange={setCierre}
         actionLoading={actionLoading}
         onAcknowledge={handleAcknowledge}
         onResolve={handleResolve}

@@ -53,7 +53,8 @@ const noop = () => {};
  * - defaultCity: ciudad a usar si el usuario no tiene zonaModerador.
  * - api: permite sustituir los endpoints (por defecto los del moderador).
  */
-export default function ConversationsBoard({ getContacts, onOpenConversation, createCity, defaultCity, api = DEFAULT_API }) {
+// `abrirCon`: id de usuario con quien abrir (o crear) el chat al cargar; viene de ?usuario= en la URL.
+export default function ConversationsBoard({ getContacts, onOpenConversation, createCity, defaultCity, abrirCon, api = DEFAULT_API }) {
   const {
     getConversations: fetchConvs,
     getUnreadCount: fetchUnreadCount,
@@ -456,10 +457,23 @@ export default function ConversationsBoard({ getContacts, onOpenConversation, cr
       openConversation(conv);
     } catch (err) {
       setCreateError(errorMessage(err, 'No se pudo crear la conversación'));
+      return false;
     } finally {
       setCreating(false);
     }
+    return true;
   };
+
+  // Enlace "Chat" desde la ficha del conductor, el viaje o el Equipo: una sola vez por carga.
+  const abrirConRef = useRef(null);
+  useEffect(() => {
+    if (loading || !abrirCon || abrirConRef.current === abrirCon) return;
+    abrirConRef.current = abrirCon;
+    autoOpenedRef.current = true;
+    // Si falla (p. ej. 403 con un cliente sin caso), el error se ve en el modal de nueva conversación.
+    handleCreate({ id: Number(abrirCon) || abrirCon }).then((ok) => { if (ok === false) setShowNew(true); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, abrirCon]);
 
   const openNewModal = () => {
     setCreateError('');

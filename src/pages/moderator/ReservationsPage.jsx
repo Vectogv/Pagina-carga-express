@@ -1,16 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { direccionCorta } from '../../utils/direccion';
 import { getModeratorReservations } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { errorMessage, formatCurrency, formatDate, fullName, toList } from '../../utils/format';
+import { errorMessage, formatCurrency, formatDate, toList } from '../../utils/format';
 import {
   PageHeader, SegmentedFilter, DataTable, Pagination, StatusBadge,
 } from '../../components/ui';
+import { TarjetaPersona } from '../../components/panel';
 
 const LIMIT = 20;
 
 const TABS = [
   { value: 'proximas', label: 'Próximas' },
   { value: 'todas', label: 'Todas' },
+  { value: 'canceladas', label: 'Canceladas' },
 ];
 
 export default function ModeratorReservationsPage() {
@@ -30,6 +34,8 @@ export default function ModeratorReservationsPage() {
     try {
       const params = { page, limit: LIMIT, ...ciudadParams };
       if (tab === 'proximas') params.proximas = true;
+      // El servidor lista solo `reservado` por defecto; las canceladas quedan archivadas y se piden aparte.
+      if (tab === 'canceladas') params.estado = 'cancelado';
       const res = await getModeratorReservations(params);
       const d = res.data || {};
       setReservations(toList(d, 'data'));
@@ -47,34 +53,28 @@ export default function ModeratorReservationsPage() {
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const columns = [
-    { key: 'id', label: 'ID', render: (v) => <span className="text-mono text-primary-color">#{String(v).slice(0, 8)}</span> },
+    { key: 'id', label: 'ID', render: (v) => <Link className="text-mono text-primary-color" to={`/moderator/trips?viaje=${v}`}>#{String(v).slice(0, 8)}</Link> },
     { key: 'estado', label: 'Estado', render: (v, r) => <StatusBadge status={v} label={r.estadoLabel} /> },
     {
       key: 'programada',
       label: 'Programada',
       render: (_, r) => <span className="nowrap">{formatDate(r.fechaProgramada)} · {r.horaProgramada || '—'}</span>,
     },
-    { key: 'origenDireccion', label: 'Origen', render: (v) => v || '—' },
-    { key: 'destinoDireccion', label: 'Destino', render: (v) => v || '—' },
+    { key: 'origenDireccion', label: 'Origen', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
+    { key: 'destinoDireccion', label: 'Destino', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
     {
       key: 'cliente',
       label: 'Cliente',
-      render: (_, r) => (r.cliente ? (
-        <div className="cell-user__text">
-          <span className="cell-user__name">{fullName(r.cliente)}</span>
-          {r.cliente.telefono && <span className="cell-user__meta">{r.cliente.telefono}</span>}
-        </div>
-      ) : '—'),
+      render: (_, r) => (r.cliente
+        ? <TarjetaPersona persona={{ ...r.cliente, contactoVisible: r.contactoVisible === true }} tipo="cliente" area="moderator" />
+        : '—'),
     },
     {
       key: 'conductor',
       label: 'Conductor',
-      render: (_, r) => (r.conductor ? (
-        <div className="cell-user__text">
-          <span className="cell-user__name">{r.conductor.nombre || r.conductor.telefono || '—'}</span>
-          {r.conductor.placa && <span className="cell-user__meta text-mono">{r.conductor.placa}</span>}
-        </div>
-      ) : <span className="text-muted">Sin asignar</span>),
+      render: (_, r) => (r.conductor
+        ? <TarjetaPersona persona={r.conductor} tipo="conductor" area="moderator" />
+        : <span className="text-muted">Sin asignar</span>),
     },
     {
       key: 'precio',
@@ -101,7 +101,7 @@ export default function ModeratorReservationsPage() {
         columns={columns}
         data={reservations}
         loading={loading}
-        emptyMessage={tab === 'proximas' ? 'No hay reservas próximas en tu ciudad' : 'No hay reservas en tu ciudad'}
+        emptyMessage={tab === 'proximas' ? 'No hay reservas próximas en tu ciudad' : tab === 'canceladas' ? 'No hay reservas canceladas en tu ciudad' : 'No hay reservas activas en tu ciudad'}
         footer={totalPages > 1 ? <Pagination page={page} totalPages={totalPages} total={total} onChange={setPage} /> : null}
       />
     </div>
