@@ -129,6 +129,9 @@ export default function GeneralConfig({ notify }) {
         )}
       >
         {currentLoading && !current && <div className="config__placeholder">Cargando configuración...</div>}
+        {!currentLoading && !currentError && !current && (
+          <div className="config__placeholder">Todavía no hay configuración guardada: se usan los valores por defecto.</div>
+        )}
         {!currentLoading && currentError && !current && (
           <div className="page-error" role="alert">
             <span>{currentError}</span>

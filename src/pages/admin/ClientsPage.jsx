@@ -103,7 +103,7 @@ export default function ClientsPage() {
       />
 
       <div className="toolbar">
-        <SearchInput value={search} onChange={handleSearch} placeholder="Buscar por nombre, correo o teléfono" />
+        <SearchInput value={search} onChange={handleSearch} placeholder="Buscar nombre, correo o teléfono" />
       </div>
 
       {error && <div className="page-error" role="alert">{error}</div>}

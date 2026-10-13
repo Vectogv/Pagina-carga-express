@@ -548,13 +548,27 @@
 
 /* ── Móvil: un panel a la vez ──────────────────────── */
 @media (max-width: 768px) {
+  /* Lista: fluye con el scroll de la página (antes había doble scroll). */
   .chat {
     grid-template-columns: minmax(0, 1fr);
-    height: calc(100dvh - 180px);
-    min-height: 420px;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .chat__list-scroll { overflow: visible; }
+
+  /* Hilo abierto: toda la pantalla, con el redactor siempre a la vista. */
+  .chat--thread-open {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    z-index: var(--z-drawer);
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
   }
 
-  .chat__list { border-right: none; }
+  .chat__list { border-right: none; min-height: 0; }
   /* El selector de ciudad baja a su propia fila; al lado de los filtros quedaba de 0 px. */
   .chat__list-filters { flex-wrap: wrap; }
   .chat__city-select { flex: 1 1 100%; }

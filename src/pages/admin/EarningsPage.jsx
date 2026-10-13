@@ -322,7 +322,7 @@ export default function EarningsPage() {
         <SearchInput
           value={busqueda}
           onChange={handleBusqueda}
-          placeholder="Buscar por conductor, placa, dirección o # de viaje"
+          placeholder="Buscar conductor, placa o # de viaje"
         />
         <Select value={orden} onChange={(e) => { setOrden(e.target.value); setPage(1); }} aria-label="Ordenar viajes">
           {ORDENES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}

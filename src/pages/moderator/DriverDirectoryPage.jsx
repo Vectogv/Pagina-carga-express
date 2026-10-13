@@ -92,7 +92,7 @@ export default function DriverDirectoryPage() {
       />
 
       <div className="toolbar">
-        <SearchInput value={q} onChange={cambiarBusqueda} placeholder="Buscar por nombre, cédula o placa" />
+        <SearchInput value={q} onChange={cambiarBusqueda} placeholder="Buscar nombre, cédula, placa" />
         <SegmentedFilter options={ESTADOS} value={estado} onChange={cambiarEstado} ariaLabel="Estado de verificación" />
         <SegmentedFilter options={CONEXION} value={online} onChange={cambiarOnline} ariaLabel="Conexión" />
       </div>

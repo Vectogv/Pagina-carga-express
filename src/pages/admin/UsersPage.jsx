@@ -231,7 +231,7 @@ export default function UsersPage() {
         // El backend responde 403 al suspender o eliminar a un admin: no se ofrece.
         const isAdmin = u.rol === 'admin';
         return (
-          <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
+          <div className="acciones-tabla">
             <Button size="icon" variant="ghost" onClick={() => setEditUser(u)} aria-label={`Editar a ${name}`} title="Editar">
               <Pencil size={15} />
             </Button>
@@ -279,9 +279,12 @@ export default function UsersPage() {
               </Button>
             )}
             {!isAdmin && (
-              <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(u)} aria-label={`Eliminar a ${name}`} title="Eliminar">
-                <Trash2 size={15} />
-              </Button>
+              <>
+                <span className="acciones-tabla__sep" aria-hidden="true" />
+                <Button size="icon" variant="soft-danger" onClick={() => setDeleteTarget(u)} aria-label={`Eliminar a ${name}`} title="Eliminar">
+                  <Trash2 size={15} />
+                </Button>
+              </>
             )}
           </div>
         );
@@ -298,7 +301,7 @@ export default function UsersPage() {
       />
 
       <div className="toolbar">
-        <SearchInput value={search} onChange={handleSearch} placeholder="Buscar por nombre, correo o teléfono" />
+        <SearchInput value={search} onChange={handleSearch} placeholder="Buscar nombre, correo o teléfono" />
         <SegmentedFilter options={ROLE_FILTERS} value={rolFilter} onChange={handleRole} ariaLabel="Filtrar por rol" />
         <FiltroZona value={zona} onChange={handleZona} />
       </div>

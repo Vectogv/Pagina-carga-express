@@ -28,7 +28,7 @@ const columns = [
     key: 'detalle',
     label: 'Detalle',
     render: (_, b) => (
-      <span className="truncate" style={{ display: 'inline-block', maxWidth: 320 }} title={b.errorMensaje || b.archivo || ''}>
+      <span className="truncate" style={{ display: 'block', maxWidth: 320 }} title={b.errorMensaje || b.archivo || ''}>
         {statusOf(b) === 'fallido' ? (b.errorMensaje || 'Sin detalle del error') : (b.archivo || '—')}
       </span>
     ),

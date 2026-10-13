@@ -343,11 +343,26 @@
 .tickets__conn--reconectando .tickets__conn-dot { background: var(--danger); }
 
 @media (max-width: 900px) {
-  .tickets { grid-template-columns: 1fr; height: calc(100dvh - 160px); }
-  .tickets__list { border-right: 0; }
+  /* Lista: fluye con el scroll de la página (antes había doble scroll). */
+  .tickets { grid-template-columns: 1fr; height: auto; min-height: 0; overflow: visible; }
+  .tickets__list { border-right: 0; min-height: 0; }
+  .tickets__list-scroll { overflow: visible; }
   .tickets--detail .tickets__list { display: none; }
   .tickets:not(.tickets--detail) .tickets__detail { display: none; }
   .tickets__back { display: inline-flex; }
+
+  /* Detalle: ocupa toda la pantalla, con el redactor siempre a la vista. */
+  .tickets--detail {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    z-index: var(--z-drawer);
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
+  }
+  .tickets__detail-actions .select-group { flex: 1 1 140px; min-width: 0; }
+  .tickets__composer textarea { min-height: 56px; }
 }
 
 /* iOS hace zoom automático si un campo enfocado tiene menos de 16px. */

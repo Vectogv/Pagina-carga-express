@@ -2,7 +2,14 @@ import { Inbox } from 'lucide-react';
 import './DataTable.css';
 
 const SKELETON_WIDTHS = ['80%', '65%', '50%', '72%', '58%', '44%'];
-const defaultRowKey = (row, i) => row.id ?? row._id ?? i;
+const defaultRowKey = (row, i) => row?.id ?? row?._id ?? i;
+
+/** rowKey puede ser una función (row, i) => key o el nombre de un campo ("id"). */
+function claveDeFila(rowKey) {
+  if (typeof rowKey === 'function') return rowKey;
+  if (typeof rowKey === 'string' && rowKey) return (row, i) => row?.[rowKey] ?? i;
+  return defaultRowKey;
+}
 
 /**
  * Tabla estándar del panel.
@@ -18,6 +25,7 @@ export default function DataTable({
   rowKey = defaultRowKey,
   footer = null,
 }) {
+  const keyOf = claveDeFila(rowKey);
   if (loading) {
     return (
       <div className="dtable" aria-busy="true">
@@ -61,7 +69,7 @@ export default function DataTable({
           <tbody>
             {data.map((row, i) => (
               <tr
-                key={rowKey(row, i)}
+                key={keyOf(row, i)}
                 className={`dtable__row ${onRowClick ? 'dtable__row--clickable' : ''}`}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >

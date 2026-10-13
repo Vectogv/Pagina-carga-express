@@ -32,7 +32,7 @@ export default function Empresa() {
   const [bajando, setBajando] = useState(false);
 
   useEffect(() => {
-    if (!mes) return undefined;
+    if (!mes || !user?.empresa?.esDueno) return undefined; // sin empresa propia no se consulta (403) y se redirige abajo
     let vivo = true;
     setDatos(null);
     setError(null);
@@ -40,7 +40,7 @@ export default function Empresa() {
       .then((r) => { if (vivo) setDatos(r.data?.data || r.data); })
       .catch((e) => { if (vivo) setError(errorMessage(e, 'No se pudo cargar el resumen')); });
     return () => { vivo = false; };
-  }, [mes]);
+  }, [mes, user?.empresa?.esDueno]);
 
   if (!user?.empresa?.esDueno) return <Navigate to="/cliente" replace />;
 

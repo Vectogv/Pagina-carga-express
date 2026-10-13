@@ -104,7 +104,8 @@
 }
 
 /* ── Móvil: cada fila se ve como una tarjeta clave/valor ───── */
-@media (max-width: 640px) {
+/* Hasta 900 px (tabletas incluidas) la tabla pasa a tarjetas: a 768 px las de Viajes/Usuarios/Conductores no cabían. */
+@media (max-width: 900px) {
   .dtable__scroll { overflow-x: visible; }
 
   .dtable__table,
@@ -174,6 +175,8 @@
 
   .dtable__td[data-label=""]::before { display: none; }
   .dtable__td[data-label=""] { justify-content: flex-end; flex-wrap: wrap; }
+  /* Una celda sin rótulo ni contenido (p. ej. acciones que no aplican) no deja una fila vacía. */
+  .dtable__td[data-label=""]:empty { display: none; }
 
   .dtable__footer {
     background: transparent;

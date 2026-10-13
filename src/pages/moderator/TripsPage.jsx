@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { ChevronRight } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { direccionCorta } from '../../utils/direccion';
 import {
@@ -11,7 +10,7 @@ import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { SOCKET_URL } from '../../config';
 import { errorMessage, formatCurrency, formatDateTime, fullName, toList } from '../../utils/format';
 import {
-  PageHeader, DataTable, StatusBadge, Badge, Button, Select,
+  PageHeader, DataTable, StatusBadge, Badge, Select,
 } from '../../components/ui';
 import TripDetailModal from './trips/TripDetailModal';
 import './trips/TripsPage.css';
@@ -180,22 +179,9 @@ export default function ModeratorTripsPage() {
     fetchTrips();
   };
 
+  // La fila entera abre el detalle (onRowClick); la columna con solo un ">" dejaba
+  // una fila vacía al principio de cada tarjeta en móvil.
   const columns = [
-    {
-      key: 'seguimiento',
-      label: '',
-      render: (_, r) => (
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={(e) => { e.stopPropagation(); setSelectedId(r.id); }}
-          aria-label={`Ver detalle del viaje ${String(r.id).slice(0, 8)}`}
-          title="Ver detalle"
-        >
-          <ChevronRight size={16} />
-        </Button>
-      ),
-    },
     {
       key: 'id',
       label: 'ID',

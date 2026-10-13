@@ -19,6 +19,7 @@ export default function ModeratorComunicadosPage() {
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [verDetalle, setVerDetalle] = useState(null);
   const closeToast = useCallback(() => setToast(null), []);
 
   const fetchList = useCallback(async () => {
@@ -62,7 +63,20 @@ export default function ModeratorComunicadosPage() {
 
   const columns = [
     { key: 'titulo', label: 'Título', render: (v) => <span className="text-strong">{v || '—'}</span> },
-    { key: 'contenido', label: 'Contenido', render: (v) => <span className="truncate" style={{ display: 'inline-block', maxWidth: 320 }}>{v || '—'}</span> },
+    {
+      key: 'contenido',
+      label: 'Contenido',
+      render: (v, r) => (v ? (
+        <span className="row" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
+          <span className="truncate" style={{ display: 'block', maxWidth: 320, minWidth: 0 }}>{v}</span>
+          {v.length > 60 && (
+            <Button size="sm" variant="ghost" onClick={() => setVerDetalle(r)} aria-label={`Leer completo: ${r.titulo || 'comunicado'}`}>
+              Ver más
+            </Button>
+          )}
+        </span>
+      ) : '—'),
+    },
     {
       key: 'estado',
       label: 'Estado',
@@ -94,6 +108,16 @@ export default function ModeratorComunicadosPage() {
       {error && <div className="page-error" role="alert">{error}</div>}
 
       <DataTable columns={columns} data={list} loading={loading} emptyMessage="No has creado comunicados" />
+
+      <Modal
+        open={!!verDetalle}
+        onClose={() => setVerDetalle(null)}
+        title={verDetalle?.titulo || 'Comunicado'}
+        description={verDetalle ? `Creado ${formatDate(verDetalle.createdAt)}` : undefined}
+        footer={<Button variant="secondary" onClick={() => setVerDetalle(null)}>Cerrar</Button>}
+      >
+        <p style={{ whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>{verDetalle?.contenido}</p>
+      </Modal>
 
       <Modal
         isOpen={open}

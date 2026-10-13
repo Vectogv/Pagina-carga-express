@@ -316,8 +316,9 @@
   .avisos__content, .dispute-reason-preview, .em-truncate { max-width: 100%; }
   .dashboard__city, .trips-filter { min-width: 0; width: 100%; }
 
-  /* Evita que palabras largas, correos o ids rompan el ancho */
-  .app-content { overflow-wrap: anywhere; }
+  /* Evita que palabras largas, correos o ids rompan el ancho. `break-word` solo parte
+     la palabra si de verdad no cabe; `anywhere` partía correos por la mitad sin necesidad. */
+  .app-content { overflow-wrap: break-word; }
   .app-content img, .app-content video, .app-content iframe { max-width: 100%; }
   .echat__msg, .em-msg__bubble { max-width: 92%; }
   .echat__messages, .em-chat { max-height: 50dvh; }
@@ -333,10 +334,30 @@
 .acciones-fila { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .acciones-fila__botones { display: flex; align-items: center; gap: var(--space-2); flex-wrap: nowrap; }
 .acciones-fila__sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
-.acciones-fila__aviso { font-size: var(--text-xs); color: var(--text-muted); white-space: nowrap; }
+.acciones-fila__aviso { font-size: var(--text-xs); color: var(--text-muted); max-width: 320px; text-align: right; line-height: 1.4; }
 @media (max-width: 640px) {
   .acciones-fila { align-items: flex-end; width: 100%; }
   .acciones-fila__botones { flex-wrap: wrap; justify-content: flex-end; }
   .acciones-fila .btn { min-height: 44px; }
   .acciones-fila .btn--icon, .acciones-fila [class*="btn--icon"] { min-width: 44px; }
+  .acciones-fila__aviso { max-width: 100%; }
+}
+
+/* Acciones de una fila (Usuarios, Conductores, Avisos): botones de ícono con aire y "Eliminar" aparte. */
+.acciones-tabla { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1); flex-wrap: wrap; }
+.acciones-tabla__sep { width: 1px; height: 22px; background: var(--border); margin: 0 var(--space-1); flex-shrink: 0; }
+@media (max-width: 900px) {
+  .acciones-tabla { gap: var(--space-2); width: 100%; }
+  .acciones-tabla .btn--icon { width: 40px; height: 40px; }
+  .acciones-tabla__sep { height: 28px; }
+}
+
+/* ── Móvil: objetivos táctiles de 36–40 px en filtros, enlaces de tabla y mapas ───── */
+@media (max-width: 900px) {
+  .segmented { padding: 4px; }
+  .segmented__item { min-height: 36px; padding: 0 14px; }
+  .dtable__td a:not(.btn) { display: inline-flex; align-items: center; min-height: 36px; }
+  .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 40px; height: 40px; line-height: 40px; font-size: 20px; }
+  .page-header { row-gap: var(--space-3); }
+  .page-header__actions { padding-bottom: var(--space-1); }
 }

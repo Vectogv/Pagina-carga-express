@@ -29,3 +29,9 @@
 .tabs__content { padding-top: var(--space-2); }
 
 .tabs__trigger { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+/* Móvil: las pestañas bajan de línea en vez de esconderse a la derecha. */
+@media (max-width: 900px) {
+  .tabs__list { flex-wrap: wrap; overflow-x: visible; gap: 0 var(--space-1); }
+  .tabs__trigger { padding: 8px 12px; }
+}

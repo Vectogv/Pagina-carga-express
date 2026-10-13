@@ -135,7 +135,7 @@ export default function DriversPage() {
         const act = (type) => (e) => { e.stopPropagation(); setAction({ type, driver: d }); };
         const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
         return (
-          <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
+          <div className="acciones-tabla">
             {d.estadoVerificacion === 'pendiente' && (
               <>
                 <Button size="icon" variant="soft-success" onClick={act('approve')} aria-label={`Aprobar a ${name}`} title="Aprobar verificación">
@@ -180,7 +180,8 @@ export default function DriversPage() {
             <Button size="icon" variant="ghost" onClick={act('report')} aria-label={`Reportar a ${name}`} title="Reportar">
               <Flag size={15} />
             </Button>
-            <Button size="icon" variant="ghost" onClick={act('delete')} aria-label={`Eliminar a ${name}`} title="Eliminar">
+            <span className="acciones-tabla__sep" aria-hidden="true" />
+            <Button size="icon" variant="soft-danger" onClick={act('delete')} aria-label={`Eliminar a ${name}`} title="Eliminar">
               <Trash2 size={15} />
             </Button>
           </div>
@@ -207,7 +208,7 @@ export default function DriversPage() {
       />
 
       <div className="toolbar">
-        <SearchInput value={search} onChange={resetPage(setSearch)} placeholder="Buscar por nombre, correo, teléfono, cédula o placa" />
+        <SearchInput value={search} onChange={resetPage(setSearch)} placeholder="Buscar nombre, cédula, placa" />
         <Select className="inline-select" value={filterStatus} onChange={(e) => resetPage(setFilterStatus)(e.target.value)} aria-label="Filtrar por estado">
           {STATUS_FILTERS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Select>

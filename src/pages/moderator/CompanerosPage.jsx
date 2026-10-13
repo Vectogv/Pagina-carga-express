@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
 import { getContactableUsers } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { errorMessage, fullName, toList } from '../../utils/format';
@@ -70,7 +71,11 @@ export default function CompanerosPage() {
     {
       key: 'chat',
       label: '',
-      render: (_, r) => <Link className="btn btn--ghost btn--sm" to={`/moderator/conversations?usuario=${r.id}`}>Chat</Link>,
+      render: (_, r) => (
+        <Link className="btn btn--secondary btn--sm" to={`/moderator/conversations?usuario=${r.id}`}>
+          <MessageSquare size={14} /> Chat
+        </Link>
+      ),
     },
   ];
 
@@ -82,7 +87,7 @@ export default function CompanerosPage() {
       />
 
       <div className="toolbar">
-        <SearchInput value={q} onChange={setQ} placeholder="Buscar por nombre, correo o teléfono" />
+        <SearchInput value={q} onChange={setQ} placeholder="Buscar nombre, correo o teléfono" />
         <SegmentedFilter options={ROLE_FILTERS} value={roleFilter} onChange={setRoleFilter} ariaLabel="Filtrar por rol" />
       </div>
 

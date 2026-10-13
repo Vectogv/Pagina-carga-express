@@ -168,7 +168,7 @@ export default function ModeratorsPage() {
               className="toolbar__spacer"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setSearched(false); }}
-              placeholder="Buscar por nombre o correo"
+              placeholder="Buscar nombre o correo"
               aria-label="Buscar usuario por nombre o correo"
             />
             <Select className="inline-select" value={selectedZona} onChange={(e) => setSelectedZona(e.target.value)} aria-label="Zona a asignar">

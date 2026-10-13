@@ -66,7 +66,7 @@ export default function PerfilClientePage({ area = 'moderator' }) {
         {cab}
         <Card>
           <div className="perfil-cab">
-            {foto ? <img src={foto} alt={nombre} className="perfil-cab__foto" /> : <Avatar name={nombre} size={112} />}
+            <Avatar src={foto} name={nombre} size={112} className="perfil-cab__foto" />
             <div className="perfil-cab__info">
               <h2 className="perfil-cab__nombre">{nombre}</h2>
               <p className="perfil-aviso">Datos completos solo con un caso abierto (ticket, SOS o disputa) en tu zona.</p>
@@ -113,7 +113,7 @@ export default function PerfilClientePage({ area = 'moderator' }) {
 
       <Card>
         <div className="perfil-cab">
-          {foto ? <img src={foto} alt={nombre} className="perfil-cab__foto" /> : <Avatar name={nombre} size={112} />}
+          <Avatar src={foto} name={nombre} size={112} className="perfil-cab__foto" />
           <div className="perfil-cab__info">
             <h2 className="perfil-cab__nombre">{nombre}</h2>
             <span className="text-muted">{[c.email, c.telefono].filter(Boolean).join(' · ')}</span>

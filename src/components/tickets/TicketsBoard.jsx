@@ -193,11 +193,20 @@ export default function TicketsBoard({ area }) {
   }, [api, isAdmin, detail?.id, detail?.zona]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Aplica un ticket actualizado (respuesta HTTP o socket) a la lista y al detalle.
+  // Si el estado nuevo ya no cabe en el filtro (p. ej. "Activos" y pasa a cerrado),
+  // el ticket sale de la lista: antes se quedaba y "Activos" mostraba cerrados.
   const mergeTicket = useCallback((ticket) => {
     if (!ticket?.id) return;
-    setTickets((prev) => prev.map((t) => (sameId(t.id, ticket.id) ? { ...t, ...ticket } : t)));
+    const cabeEnFiltro = (estado) => {
+      if (!estado || filtroEstado === 'all') return true;
+      if (filtroEstado === 'activos') return estado === 'abierto' || estado === 'en_proceso';
+      return estado === filtroEstado;
+    };
+    setTickets((prev) => prev
+      .map((t) => (sameId(t.id, ticket.id) ? { ...t, ...ticket } : t))
+      .filter((t) => !sameId(t.id, ticket.id) || cabeEnFiltro(t.estado)));
     setDetail((prev) => (prev && sameId(prev.id, ticket.id) ? { ...prev, ...ticket, mensajes: prev.mensajes } : prev));
-  }, []);
+  }, [filtroEstado]);
 
   const onSocketEvent = useCallback((payload, evento) => {
     if (evento === 'ticket:nuevo') {

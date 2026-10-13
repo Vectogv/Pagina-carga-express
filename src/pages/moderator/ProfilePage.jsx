@@ -109,7 +109,7 @@ export default function ModeratorProfilePage() {
           <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatar} hidden />
           <div className="profile-hero__text">
             <h3 className="profile-hero__name">{displayName}</h3>
-            <p className="text-muted text-sm">{form.email || '—'}</p>
+            <p className="text-muted text-sm truncate" title={form.email || undefined}>{form.email || '—'}</p>
             <div className="row">
               <Badge variant="warning">Moderador</Badge>
               <Badge variant={zona ? 'neutral' : 'danger'}><MapPin size={12} /> {zona || 'Sin zona'}</Badge>

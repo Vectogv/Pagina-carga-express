@@ -43,7 +43,7 @@ export default function NewConversationModal({
       footer={<Button variant="secondary" onClick={onClose} disabled={creating}>Cerrar</Button>}
     >
       <div className="stack">
-        <SearchInput value={search} onChange={onSearchChange} placeholder="Buscar por nombre, apellido, teléfono o correo" />
+        <SearchInput value={search} onChange={onSearchChange} placeholder="Buscar nombre, teléfono o correo" />
 
         {searching && (
           <p className="chat__searching">

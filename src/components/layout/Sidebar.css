@@ -192,7 +192,29 @@
   }
 
   .sidebar--open { transform: translateX(0); box-shadow: var(--shadow-lg); }
+
+  /* Táctil: opciones de 40 px y una X para cerrar el menú. */
+  .sidebar__link { height: 40px; }
+  .sidebar__logout { width: 40px; height: 40px; }
+  .sidebar__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-left: auto;
+    flex-shrink: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .sidebar__close:hover { background: var(--bg-sunken); color: var(--text-primary); }
 }
+
+.sidebar__close { display: none; }
+@media (max-width: 900px) { .sidebar__close { display: inline-flex; } }
 
 @media (min-width: 901px) {
   .sidebar__backdrop { display: none; }

@@ -73,11 +73,11 @@ export default function ReferidosPage() {
       key: 'acciones',
       label: '',
       align: 'right',
-      render: (_, row) => row.estado !== 'anulado' && (
+      render: (_, row) => (row.estado === 'anulado' ? null : (
         <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={() => setConfirm(row)}>
           Anular
         </Button>
-      ),
+      )),
     },
   ];
 
