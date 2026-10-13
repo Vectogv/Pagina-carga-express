@@ -39,6 +39,7 @@ const admin = {
   pendientes: lazy(() => import('./pages/admin/PendientesPage')),
   referidos: lazy(() => import('./pages/admin/ReferidosPage')),
   comunicacion: lazy(() => import('./pages/admin/EnviarComunicacionPage')),
+  correos: lazy(() => import('./pages/admin/CorreosPage')),
   comunicados: lazy(() => import('./pages/admin/ComunicadosPage')),
   conversations: lazy(() => import('./pages/admin/ConversationsPage')),
   avisos: lazy(() => import('./pages/admin/AvisosPage')),

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import L from 'leaflet';
 import { MapContainer, Marker, TileLayer } from 'react-leaflet';
-import { ArrowLeft, Eye, BellRing, Check, Flag, MessageSquare, X } from 'lucide-react';
+import { ArrowLeft, Eye, BellRing, Check, Flag, Mail, MessageSquare, X } from 'lucide-react';
 import { getModeratorDriver, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
 import { errorMessage, formatCurrency, formatDate, formatDateTime, fullName } from '../../utils/format';
 import { resolveStorageUrl } from '../../utils/storage';
@@ -10,6 +10,7 @@ import { faltantesDe, textoFaltantes } from '../../utils/documentos';
 import { textoCanales } from '../../utils/canales';
 import useDocumentosConductor from '../../hooks/useDocumentosConductor';
 import NotificarDocumentosDialog from '../moderator/NotificarDocumentosDialog';
+import EnviarCorreoDialog from '../../components/panel/EnviarCorreoDialog';
 import { ConnectionBadge } from '../admin/drivers/DriverBadges';
 import { TarjetaPersona, Encuadre, posicionDe } from '../../components/panel';
 import {
@@ -186,6 +187,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
               </Link>
             )}
             <Button size="sm" variant="ghost" icon={<BellRing size={14} />} onClick={() => openAction('notify')}>Notificar</Button>
+            {u.email && <Button size="sm" variant="ghost" icon={<Mail size={14} />} onClick={() => openAction('correo')}>Correo</Button>}
             {!esAdmin && <Button size="sm" variant="ghost" icon={<Flag size={14} />} onClick={() => openAction('report')}>Reportar</Button>}
             {pend && (
               <Button
@@ -321,6 +323,9 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
           destinatario={u.email || nombre}
           onEnviar={notificar}
         />
+      )}
+      {action === 'correo' && (
+        <EnviarCorreoDialog area={area} userId={u.id} destinatario={u.email} onClose={closeAction} onEnviado={(m) => showToast(m)} />
       )}
       <ConfirmDialog
         isOpen={action === 'approve'}
