@@ -9,8 +9,8 @@ import {
 
 const ESTADOS = {
   pendiente: { label: 'Pendiente', variant: 'warning' },
-  aprobada: { label: 'Aprobada', variant: 'success' },
-  rechazada: { label: 'Rechazada', variant: 'danger' },
+  aprobado: { label: 'Aprobada', variant: 'success' },
+  rechazado: { label: 'Rechazada', variant: 'danger' },
 };
 
 // Documento: miniatura si es imagen; si la URL termina en .pdf, un enlace.
@@ -133,8 +133,8 @@ export default function EmpresasPage() {
         <Select className="inline-select" value={estado} onChange={(e) => { setEstado(e.target.value); setPage(1); }} aria-label="Filtrar por estado">
           <option value="">Todos los estados</option>
           <option value="pendiente">Pendientes</option>
-          <option value="aprobada">Aprobadas</option>
-          <option value="rechazada">Rechazadas</option>
+          <option value="aprobado">Aprobadas</option>
+          <option value="rechazado">Rechazadas</option>
         </Select>
       </div>
 

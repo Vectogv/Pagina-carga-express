@@ -6,7 +6,7 @@ import { descargarBlob, descargarCsv } from '../../utils/csv';
 import { errorMessage, formatDate } from '../../utils/format';
 
 const pesos = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`;
-const mesActual = () => new Date().toISOString().slice(0, 7);
+const mesActual = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 
 function Tabla({ titulo, cols, filas, vacio }) {
   return (
