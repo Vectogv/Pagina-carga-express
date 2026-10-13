@@ -4,7 +4,7 @@ import { Car, CheckCheck, CircleCheck, MapPin, Phone, Siren, Star } from 'lucide
 import { acknowledgeEmergency, resolveEmergency } from '../../../api/moderator';
 import PendingCloseResolver from '../../../components/moderator/PendingCloseResolver';
 import ServiceStatusTimeline from '../../../components/moderator/ServiceStatusTimeline';
-import { errorMessage, formatCurrency, formatDateTime, fullName } from '../../../utils/format';
+import { errorMessage, formatCurrency, formatDateTime, fullName, ayudaTexto, precioConAyuda } from '../../../utils/format';
 import { resolveStorageUrl } from '../../../utils/storage';
 import {
   MapaRecorrido, CIERRE_VACIO, cierreSosValido, cuerpoCierreSos, FormularioCierreSos, ResumenCierreSos,
@@ -213,9 +213,15 @@ export default function TripDetailModal({
                 <span className="detail-list__label">Oferta aceptada</span>
                 <span className="detail-list__value">{formatCurrency(detail.dinero?.ofertaAceptada)}</span>
               </div>
+              {ayudaTexto({ ...detail.dinero, ...detail }) && (
+                <div className="detail-list__item">
+                  <span className="detail-list__label">Ayuda del conductor</span>
+                  <span className="detail-list__value">{ayudaTexto({ ...detail.dinero, ...detail })}</span>
+                </div>
+              )}
               <div className="detail-list__item">
                 <span className="detail-list__label">Precio final</span>
-                <span className="detail-list__value text-success">{formatCurrency(detail.dinero?.precioFinal)}</span>
+                <span className="detail-list__value text-success">{precioConAyuda(detail.dinero?.precioFinal, detail.montoAyuda ?? detail.dinero?.montoAyuda)}</span>
               </div>
             </div>
             {ganancia && (

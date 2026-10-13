@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Phone, Star } from 'lucide-react';
 import { Modal, StatusBadge } from '../../../components/ui';
-import { formatDate, formatDateTime } from '../../../utils/format';
+import { formatDate, formatDateTime, ayudaTexto, precioConAyuda } from '../../../utils/format';
 import { resolveStorageUrl } from '../../../utils/storage';
 import { getTripById } from '../../../api/admin';
 import PendingCloseResolver from '../../../components/moderator/PendingCloseResolver';
@@ -96,8 +96,11 @@ export default function TripDetailModal({ trip, onClose, onResolved }) {
 
   const precioFinal = trip?.precioFinal ?? detail?.precioFinal ?? null;
   const precioEstimado = trip?.precioEstimado ?? detail?.precioEstimado ?? null;
+  const montoAyuda = Number(trip?.montoAyuda ?? detail?.montoAyuda) || 0;
+  const baseViaje = precioFinal != null ? Number(precioFinal) - montoAyuda : null; // la ayuda no paga comisión
+  const ayuda = ayudaTexto({ ...detail, ...trip });
   const comision = status === 'finalizado' && precioFinal != null && driver
-    ? Math.round(Number(precioFinal) * COMISION * 100) / 100
+    ? Math.round(baseViaje * COMISION * 100) / 100
     : null;
 
   const photos = [
@@ -196,7 +199,8 @@ export default function TripDetailModal({ trip, onClose, onResolved }) {
                 <span className="trip-price">{money(tripPrice(trip))}</span>
               </Detail>
               {precioEstimado != null && <Detail label="Precio estimado">{money(precioEstimado)}</Detail>}
-              {precioFinal != null && <Detail label="Precio final">{money(precioFinal)}</Detail>}
+              {ayuda && <Detail label="Ayuda del conductor">{ayuda}</Detail>}
+              {precioFinal != null && <Detail label="Precio final">{precioConAyuda(precioFinal, montoAyuda)}</Detail>}
               {comision != null && (
                 <>
                   <Detail label="Comisión plataforma (10 %)">{money(comision)}</Detail>

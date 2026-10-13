@@ -65,3 +65,16 @@ export const errorMessage = (err, fallback = 'Ocurrió un error inesperado') =>
   || err?.response?.data?.error
   || err?.message
   || fallback;
+
+const PISOS = { 1: 'casa o 1.er piso', 2: '2.º piso', 3: '3.er piso', 4: '4.º piso o más' };
+/** Línea "Con ayuda · recoge 2.º piso · entrega 3.er piso" o '' si el viaje no pidió ayuda. */
+export function ayudaTexto(t) {
+  if (!t?.requiereAyuda) return '';
+  const p = [t.pisoOrigen && `recoge ${PISOS[t.pisoOrigen] || `piso ${t.pisoOrigen}`}`, t.pisoDestino && `entrega ${PISOS[t.pisoDestino] || `piso ${t.pisoDestino}`}`];
+  return ['Con ayuda', ...p].filter(Boolean).join(' · ');
+}
+/** "$90.000 (viaje $75.000 + ayuda $15.000)" si hay ayuda; si no, solo el total. */
+export function precioConAyuda(total, ayuda) {
+  const a = Number(ayuda) || 0;
+  return a > 0 ? `${formatCurrency(total)} (viaje ${formatCurrency(Number(total) - a)} + ayuda ${formatCurrency(a)})` : formatCurrency(total);
+}
