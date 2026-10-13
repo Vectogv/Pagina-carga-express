@@ -16,7 +16,6 @@ export const notifyDriver = (id, data) => api.post(`/api/moderator/drivers/${id}
 export const reportDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/report`, data)
 export const approveDriver = (id) => api.post(`/api/moderator/drivers/${id}/approve`)
 export const rejectDriver = (id, data) => api.post(`/api/moderator/drivers/${id}/reject`, data)
-export const getMapboxToken = () => api.get('/api/config/mapbox')
 
 // Comunicados
 export const createComunicado = (data) => api.post('/api/moderator/comunicados', data)

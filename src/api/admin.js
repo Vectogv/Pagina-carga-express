@@ -56,7 +56,8 @@ export const uploadAvatar = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 
-// Emergencies - page/limit; PUT resolve acepta {observacion?} (el backend viejo lo ignora)
+// Emergencies - page/limit, ?estado=a,b (CSV; sin él: atendidas + pendientes), ?zona=.
+// PUT resolve exige {tipoCierre, observacion} (422 si falta; 409 si ya estaba resuelta).
 export const getEmergencies = (params) => api.get(`${BASE}/emergencies`, { params })
 export const resolveEmergency = (id, data = {}) => api.put(`${BASE}/emergencies/${id}/resolve`, data)
 

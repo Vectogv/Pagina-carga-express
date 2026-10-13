@@ -3,21 +3,22 @@ import { Link } from 'react-router-dom';
 import { Car, CheckCheck, CircleCheck, MapPin, Phone, Siren, Star } from 'lucide-react';
 import { acknowledgeEmergency, resolveEmergency } from '../../../api/moderator';
 import PendingCloseResolver from '../../../components/moderator/PendingCloseResolver';
-import { Textarea } from '../../../components/ui/Input/Input';
 import ServiceStatusTimeline from '../../../components/moderator/ServiceStatusTimeline';
 import { errorMessage, formatCurrency, formatDateTime, fullName } from '../../../utils/format';
 import { resolveStorageUrl } from '../../../utils/storage';
-import { MapaRecorrido } from '../../../components/panel';
+import {
+  MapaRecorrido, CIERRE_VACIO, cierreSosValido, cuerpoCierreSos, FormularioCierreSos, ResumenCierreSos,
+} from '../../../components/panel';
 import {
   Modal, Avatar, Badge, Button, StatusBadge, LoadingState,
 } from '../../../components/ui';
 
-/** Ruta planeada (azul) y recorrido real (rojo) desde GET /api/moderator/trips/:id/recorrido. */
-function RouteMap({ viajeId, origen, destino, marcaSos }) {
+/** Ruta planeada (azul), recorrido real (rojo) y el SOS del viaje si lo hubo: GET /api/moderator/trips/:id/recorrido. */
+function MapaViaje({ viajeId, origen, destino, marcaSos }) {
   return (
     <section className="trip-detail__section">
       <h4 className="section-title">Ruta</h4>
-      <MapaRecorrido area="moderator" viajeId={viajeId} alturaPx={280} marcaSos={marcaSos} />
+      <MapaRecorrido area="moderator" viajeId={viajeId} alturaPx={280} modo="viaje" marcaSos={marcaSos} />
       <div className="trip-detail__route">
         <div className="trip-detail__stop">
           <MapPin size={14} className="text-success" />
@@ -34,7 +35,7 @@ function RouteMap({ viajeId, origen, destino, marcaSos }) {
 
 function EmergencyItem({ alerta, onChanged }) {
   const [busy, setBusy] = useState(false);
-  const [observacion, setObservacion] = useState('');
+  const [cierre, setCierre] = useState(CIERRE_VACIO);
   const [error, setError] = useState(null);
 
   const run = async (fn) => {
@@ -76,27 +77,23 @@ function EmergencyItem({ alerta, onChanged }) {
       )}
       {alerta.estado === 'atendida' && (
         <>
-          {/* Misma regla que Emergencias: resolver exige dejar constancia de la gestión. */}
-          <Textarea
-            label="Observación / gestión realizada"
-            value={observacion}
-            onChange={(e) => setObservacion(e.target.value)}
-            disabled={busy}
-          />
+          {/* Misma regla que Emergencias: resolver exige tipo de caso y gestión realizada. */}
+          <FormularioCierreSos valor={cierre} onChange={setCierre} disabled={busy} />
           <div>
             <Button
               size="sm"
               variant="success"
               icon={<CheckCheck size={14} />}
               loading={busy}
-              disabled={!observacion.trim()}
-              onClick={() => run((id) => resolveEmergency(id, { observacion: observacion.trim() }))}
+              disabled={!cierreSosValido(cierre)}
+              onClick={() => run((id) => resolveEmergency(id, cuerpoCierreSos(cierre)))}
             >
               Resolver
             </Button>
           </div>
         </>
       )}
+      {alerta.estado === 'resuelta' && <ResumenCierreSos alerta={alerta} />}
     </div>
   );
 }
@@ -113,7 +110,7 @@ export default function TripDetailModal({
   const cliente = detail?.cliente;
   // Punto del SOS más reciente del viaje (si lo hay) para marcarlo en el mapa.
   const sos = alertas.find((a) => a.lat != null && a.lng != null);
-  const marcaSos = sos ? { lat: sos.lat, lng: sos.lng, at: sos.createdAt } : null;
+  const marcaSos = sos ? { id: sos.id, lat: sos.lat, lng: sos.lng, at: sos.createdAt } : null;
 
   return (
     <Modal
@@ -137,7 +134,7 @@ export default function TripDetailModal({
             )}
           </section>
 
-          <RouteMap key={detail.id} viajeId={detail.id} origen={detail.origen} destino={detail.destino} marcaSos={marcaSos} />
+          <MapaViaje key={detail.id} viajeId={detail.id} origen={detail.origen} destino={detail.destino} marcaSos={marcaSos} />
 
           <div className="two-col">
             <section className="trip-detail__card">
@@ -191,7 +188,7 @@ export default function TripDetailModal({
               {(conductor?.id || conductor?.usuarioId) && (
                 <div className="row">
                   {conductor.id && (
-                    <Link className="btn btn--soft-primary btn--sm" to={`/moderator/drivers/${conductor.id}`}>Ver ficha</Link>
+                    <Link className="btn btn--soft-primary btn--sm" to={`/moderator/drivers/${conductor.id}`}>Ver perfil</Link>
                   )}
                   {conductor.usuarioId && (
                     <Link className="btn btn--soft-primary btn--sm" to={`/moderator/conversations?usuario=${conductor.usuarioId}`}>Chat con conductor</Link>

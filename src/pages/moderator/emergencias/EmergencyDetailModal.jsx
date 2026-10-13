@@ -1,11 +1,11 @@
 import { CheckCheck, ExternalLink, Phone, Siren, Star } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '../../../utils/format';
 import {
-  Modal, Badge, Button, StatusBadge, Textarea,
+  Modal, Badge, Button, StatusBadge,
 } from '../../../components/ui';
-import RouteMap from '../../../components/maps/RouteMap';
-import { sosRouteProps, hasRoutePoints } from '../../../components/maps/sosRoute';
-import { MapaRecorrido } from '../../../components/panel';
+import {
+  MapaEmergencia, tieneMapaEmergencia, cierreSosValido, FormularioCierreSos, ResumenCierreSos,
+} from '../../../components/panel';
 import EmergencyChat from './EmergencyChat';
 
 const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
@@ -19,7 +19,7 @@ function PhoneLink({ value }) {
 
 export default function EmergencyDetailModal({
   selected, tripDetail, onClose,
-  chat, observacion, onObservacionChange,
+  chat, cierre, onCierreChange,
   actionLoading, onAcknowledge, onResolve,
 }) {
   if (!selected) return null;
@@ -27,10 +27,8 @@ export default function EmergencyDetailModal({
   const solicitante = selected.usuario;
   const conductor = tripDetail?.conductor;
   const hasLocation = selected.lat && selected.lng;
-  const mapa = sosRouteProps(selected, tripDetail);
-  // Con viaje: ruta planeada (azul), recorrido real (rojo) y el punto del SOS. Sin viaje: solo el punto.
-  const viajeId = selected.viajeId || selected.tripId || selected.viaje?.id || tripDetail?.id || null;
-  const marcaSos = hasLocation ? { lat: selected.lat, lng: selected.lng, at: selected.createdAt } : null;
+  // Con viaje: A, B, el "!" del SOS, rojo A→SOS y azul SOS→B (OpenStreetMap). Sin viaje: solo los puntos.
+  const conMapa = tieneMapaEmergencia(selected);
   const busy = actionLoading === selected.id;
   const chatTitle = solicitante?.nombre ? `Chat con ${solicitante.nombre}` : 'Chat de emergencia';
 
@@ -43,7 +41,7 @@ export default function EmergencyDetailModal({
     );
   } else if (selected.estado === 'atendida') {
     footer = (
-      <Button variant="success" icon={<CheckCheck size={15} />} loading={busy} disabled={!observacion.trim()} onClick={onResolve}>
+      <Button variant="success" icon={<CheckCheck size={15} />} loading={busy} disabled={!cierreSosValido(cierre)} onClick={onResolve}>
         Resolver
       </Button>
     );
@@ -77,15 +75,10 @@ export default function EmergencyDetailModal({
           </p>
         </section>
 
-        {viajeId ? (
+        {conMapa && (
           <section className="em-card">
             <h4 className="section-title">Mapa del SOS</h4>
-            <MapaRecorrido key={viajeId} area="moderator" viajeId={viajeId} alturaPx={280} marcaSos={marcaSos} />
-          </section>
-        ) : hasRoutePoints(mapa) && (
-          <section className="em-card">
-            <h4 className="section-title">Mapa del SOS</h4>
-            <RouteMap {...mapa} alto={280} />
+            <MapaEmergencia area="moderator" emergencia={selected} viaje={tripDetail} alturaPx={280} />
           </section>
         )}
 
@@ -135,27 +128,17 @@ export default function EmergencyDetailModal({
             <p className="text-sm text-muted">
               Atendido por {selected.administrador || selected.atendidoPor || '—'}{selected.atendidaAt ? ` · ${formatDateTime(selected.atendidaAt)}` : ''}
             </p>
-            <Textarea
-              label="Observación / gestión realizada"
-              required
-              value={observacion}
-              onChange={(e) => onObservacionChange(e.target.value)}
-              placeholder="Describe la gestión realizada…"
-              rows={3}
-            />
+            <FormularioCierreSos valor={cierre} onChange={onCierreChange} disabled={busy} />
           </section>
         )}
 
         {selected.estado === 'resuelta' && (
           <section className="em-card em-card--success">
             <h4 className="section-title em-card__success-title"><CheckCheck size={13} /> Resuelta</h4>
-            <p className="text-secondary">{selected.observacion || 'Sin observación'}</p>
             <p className="text-sm text-muted">
               Atendido por {selected.administrador || selected.atendidoPor || '—'}{selected.atendidaAt ? ` · ${formatDateTime(selected.atendidaAt)}` : ''}
             </p>
-            <p className="text-sm text-muted">
-              Resuelto por {selected.resueltoPor || '—'}{selected.resueltaAt ? ` · ${formatDateTime(selected.resueltaAt)}` : ''}
-            </p>
+            <ResumenCierreSos alerta={selected} />
           </section>
         )}
       </div>

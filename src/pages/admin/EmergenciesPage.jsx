@@ -5,10 +5,11 @@ import {
 } from '../../api/admin';
 import { errorMessage, formatDate, toList } from '../../utils/format';
 import {
-  PageHeader, DataTable, ConfirmDialog, StatusBadge, Button, Badge, Textarea,
+  PageHeader, DataTable, ConfirmDialog, StatusBadge, Button, Badge,
 } from '../../components/ui';
-import RouteMap from '../../components/maps/RouteMap';
-import { sosRouteProps, hasRoutePoints } from '../../components/maps/sosRoute';
+import {
+  MapaEmergencia, tieneMapaEmergencia, CIERRE_VACIO, cierreSosValido, cuerpoCierreSos, FormularioCierreSos,
+} from '../../components/panel';
 import EmergencyDetailModal from './emergencies/EmergencyDetailModal';
 import { shortId, userName, ruta, coords, emergencyBadge } from './emergencies/emergencyUtils';
 import './emergencies/EmergenciesPage.css';
@@ -24,10 +25,10 @@ export default function EmergenciesPage() {
   const [tripDetail, setTripDetail] = useState(null);
   const [chat, setChat] = useState(EMPTY_CHAT);
   const [confirm, setConfirm] = useState(null);
-  const [notes, setNotes] = useState('');
-  // GET /api/admin/emergencies (admin_controller.ts#emergencies) solo trae alertas
-  // con atendida=false: no hay endpoint de historial de resueltas con estos campos.
-  // Se guardan aquí, en el cliente, las que se resuelven durante esta sesión.
+  const [cierre, setCierre] = useState(CIERRE_VACIO);
+  // GET /api/admin/emergencies sin `estado` trae las abiertas (atendidas + pendientes).
+  // Las resueltas se guardan aquí, en el cliente, mientras la página siga abierta;
+  // el historial completo está en el servidor con ?estado=resuelta.
   const [resolvedHere, setResolvedHere] = useState([]);
 
   const fetchEmergencies = useCallback(async () => {
@@ -56,9 +57,8 @@ export default function EmergenciesPage() {
 
   // SOS activo más reciente con coordenadas: se muestra en un mapa compacto sobre la tabla.
   const destacada = useMemo(() => pending
-    .filter((e) => hasRoutePoints(sosRouteProps(e)))
+    .filter(tieneMapaEmergencia)
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0] || null, [pending]);
-  const mapaDestacado = useMemo(() => (destacada ? sosRouteProps(destacada) : null), [destacada]);
 
   const openDetail = async (row) => {
     setDetail(row);
@@ -82,26 +82,25 @@ export default function EmergenciesPage() {
 
   const openConfirm = (row) => {
     setConfirm(row);
-    setNotes('');
+    setCierre(CIERRE_VACIO);
   };
 
   const closeConfirm = () => {
     setConfirm(null);
-    setNotes('');
+    setCierre(CIERRE_VACIO);
   };
 
   const handleResolve = async () => {
-    if (!confirm) return;
+    if (!confirm || !cierreSosValido(cierre)) return;
     try {
-      const nota = notes.trim();
-      // `observacion` queda guardada en la alerta (si el backend la admite; si no, se ignora).
-      await resolveEmergency(confirm.id, nota ? { observacion: nota } : {});
+      const cuerpo = cuerpoCierreSos(cierre);
+      const { data: updated } = await resolveEmergency(confirm.id, cuerpo);
       try {
-        await sendEmergencyMessage(confirm.id, `Emergencia resuelta por Admin CargaExpress${nota ? ` - ${nota}` : ''}`);
+        await sendEmergencyMessage(confirm.id, `Emergencia resuelta por Admin CargaExpress - ${cuerpo.observacion}`);
       } catch {
         // La constancia en el chat es opcional.
       }
-      setResolvedHere((prev) => [{ ...confirm, status: 'resolved', estado: 'resuelta', atendida: true, notes: nota || undefined }, ...prev]);
+      setResolvedHere((prev) => [{ ...confirm, ...(updated || {}), ...cuerpo, status: 'resolved', estado: 'resuelta', atendida: true }, ...prev]);
       closeConfirm();
       await fetchEmergencies();
     } catch (err) {
@@ -185,7 +184,7 @@ export default function EmergenciesPage() {
                 Ver caso
               </Button>
             </div>
-            <RouteMap {...mapaDestacado} alto={170} compacto />
+            <MapaEmergencia key={destacada.id} area="admin" emergencia={destacada} alturaPx={170} />
           </div>
         )}
         <DataTable
@@ -227,14 +226,9 @@ export default function EmergenciesPage() {
         title="Resolver emergencia"
         message={`¿Deseas marcar la emergencia #${confirm ? shortId(confirm.id) : ''} como resuelta?`}
         confirmText="Resolver"
+        confirmDisabled={!cierreSosValido(cierre)}
       >
-        <Textarea
-          label="Notas (opcional)"
-          placeholder="Notas sobre la resolución…"
-          rows={3}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
+        <FormularioCierreSos valor={cierre} onChange={setCierre} />
       </ConfirmDialog>
     </div>
   );

@@ -7,7 +7,7 @@ import { resolveStorageUrl } from '../../utils/storage';
 import {
   PageHeader, SegmentedFilter, DataTable, Modal, Button, StatusBadge, Pagination,
 } from '../../components/ui';
-import { TarjetaPersona } from '../../components/panel';
+import { MapaRecorrido, TarjetaPersona } from '../../components/panel';
 
 const LIMIT = 20;
 const FILTROS = [
@@ -141,6 +141,12 @@ export default function ModeratorDisputesPage() {
               <div className="detail-list__item"><span className="detail-list__label">Ruta</span><span className="detail-list__value">{d.viaje?.origen || '—'} → {d.viaje?.destino || '—'}</span></div>
               <div className="detail-list__item"><span className="detail-list__label">Monto</span><span className="detail-list__value">{d.viaje?.montoFinal != null ? formatCurrency(d.viaje.montoFinal) : '—'}</span></div>
             </div>
+            {d.viajeId && (
+              <>
+                <h3 className="section-title">Recorrido y punto de cierre</h3>
+                <MapaRecorrido key={d.viajeId} area="moderator" viajeId={d.viajeId} alturaPx={260} modo="disputa" />
+              </>
+            )}
             {d.versionCliente && (<><h3 className="section-title">Versión del cliente</h3><p>{d.versionCliente}</p></>)}
             {d.versionConductor && (<><h3 className="section-title">Versión del conductor</h3><p>{d.versionConductor}</p></>)}
             {(fotos.length > 0 || d.soporteCliente) && (
