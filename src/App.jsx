@@ -70,6 +70,7 @@ const moderator = {
   conversations: lazy(() => import('./pages/moderator/ConversationsPage')),
   companeros: lazy(() => import('./pages/moderator/CompanerosPage')),
   reports: lazy(() => import('./pages/moderator/MisReportesPage')),
+  'mi-contrato': lazy(() => import('./pages/moderator/MiContratoPage')),
 };
 
 const FullScreenLoader = () => (

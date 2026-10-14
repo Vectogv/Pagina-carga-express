@@ -21,3 +21,9 @@
 @media (max-width: 600px) {
   .vermod__grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.vermod__grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.vermod__datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px 16px; margin: 0; }
+.vermod__datos dt { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted, #6b7280); }
+.vermod__datos dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .vermod__grid--3 { grid-template-columns: 1fr; } }

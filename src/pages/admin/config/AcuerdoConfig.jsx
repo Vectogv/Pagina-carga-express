@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Badge, Button, Card, Input, LoadingState, Textarea } from '../../../components/ui';
 import { getAcuerdos, partirMarcadores, publicarAcuerdo } from '../../../api/contrato';
 import { errorMessage, formatDateTime } from '../../../utils/format';
+import DocumentoContrato from '../../../components/moderator/DocumentoContrato';
+import '../../../components/moderator/ModeradorBloqueado.css';
 import '../VerificacionesModeradoresPage.css';
 
 const VACIO = { version: '', titulo: '', texto: '' };
@@ -90,8 +92,8 @@ export default function AcuerdoConfig({ notify }) {
                 </div>
                 <div className="vermod__meta vermod__hash">SHA-256 {a.hash}</div>
                 {verId === a.id && (
-                  <div style={{ whiteSpace: 'pre-wrap', marginTop: 8, maxHeight: 360, overflowY: 'auto' }}>
-                    {partirMarcadores(a.texto).map((p, i) => (i % 2 === 1 ? <mark key={i}>{p}</mark> : p))}
+                  <div className="modbloq__acuerdo" style={{ marginTop: 8 }}>
+                    <DocumentoContrato acuerdo={a} />
                   </div>
                 )}
               </li>

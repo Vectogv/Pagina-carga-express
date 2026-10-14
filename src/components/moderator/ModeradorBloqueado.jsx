@@ -1,18 +1,36 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Check, Eraser, FileDown, LogOut, Upload } from 'lucide-react';
+import { ArrowRight, Camera, Check, Eraser, FileDown, LogOut, Upload } from 'lucide-react';
 import {
   Alert, Badge, Button, Tabs, TabsList, TabsTrigger, TabsContent,
 } from '../ui';
 import {
-  ESTADO_VERIFICACION, abrirPdf, firmarAcuerdo, getMiPdfContrato, partirMarcadores, solicitarContrato, subirDocumentosModerador,
+  ESTADO_VERIFICACION, abrirPdf, firmarAcuerdo, getMiPdfContrato, solicitarContrato, subirDocumentosModerador,
 } from '../../api/contrato';
 import { resolveStorageUrl } from '../../utils/storage';
 import { errorMessage, formatDate } from '../../utils/format';
+import { zonaLabelFrom } from '../../hooks/useZonas';
+import DocumentoContrato from './DocumentoContrato';
 import './ModeradorBloqueado.css';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const PASOS = ['Cédula', 'Rostro', 'Acuerdo', 'Firma'];
 const EDITABLE = ['sin_enviar', 'rechazado', 'vencido', 'suspendido'];
+// Las 3 etapas que ve el moderador de principio a fin (el asistente tiene sus propios pasos dentro).
+const ETAPAS = ['Sube tu cédula y una foto', 'Gerencia genera tu contrato', 'Lo firmas y quedas activo'];
+const ETAPA = { solicitado: 1, contrato_enviado: 2, activo: 3 };
+
+function Etapas({ actual }) {
+  return (
+    <ol className="modbloq__etapas" aria-label="Cómo activar tu acceso">
+      {ETAPAS.map((e, i) => (
+        <li key={e} className={i === actual ? 'is-actual' : i < actual ? 'is-hecho' : ''} aria-current={i === actual ? 'step' : undefined}>
+          <span className="modbloq__paso-num">{i < actual ? <Check size={12} /> : i + 1}</span>
+          <span>{e}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 /** Revisa tipo y tamaño antes de subir (el servidor vuelve a validar). */
 function validarImagen(file) {
@@ -118,7 +136,7 @@ function LienzoFirma({ onChange }) {
   );
 }
 
-function TextoAcuerdo({ texto, onFinal }) {
+function TextoAcuerdo({ data, onFinal }) {
   const ref = useRef(null);
   const revisar = () => {
     const el = ref.current;
@@ -128,8 +146,15 @@ function TextoAcuerdo({ texto, onFinal }) {
   useEffect(revisar);
   return (
     <div ref={ref} className="modbloq__acuerdo" onScroll={revisar} tabIndex={0}>
-      {partirMarcadores(texto).map((parte, i) =>
-        i % 2 === 1 ? <mark key={i} className="modbloq__marca">{parte}</mark> : parte)}
+      <DocumentoContrato
+        acuerdo={data.acuerdo}
+        numero={data.numeroContrato}
+        nombre={data.nombre}
+        cedula={data.cedula}
+        zona={data.zonaContrato || data.zona}
+        desde={data.contratoDesde}
+        hasta={data.contratoHasta}
+      />
     </div>
   );
 }
@@ -278,7 +303,7 @@ function Asistente({ data, onRefresh, fase }) {
         <section>
           <h3 className="modbloq__h">{acuerdo.titulo}</h3>
           <p className="modbloq__ayuda">Versión {acuerdo.version}. Léelo completo: el botón se activa al llegar al final.</p>
-          <TextoAcuerdo texto={acuerdo.texto} onFinal={() => setLeido(true)} />
+          <TextoAcuerdo data={data} onFinal={() => setLeido(true)} />
           <label className={`modbloq__check${leido ? '' : ' is-disabled'}`}>
             <input type="checkbox" disabled={!leido} checked={acepto} onChange={(e) => setAcepto(e.target.checked)} />
             Leí y acepto el acuerdo
@@ -343,6 +368,9 @@ export default function ModeradorBloqueado({ data, onRefresh, onLogout }) {
   const [errorPdf, setErrorPdf] = useState('');
   const estado = ESTADO_VERIFICACION[data.estado] || ESTADO_VERIFICACION.sin_enviar;
   const sinZona = data.bloqueo === 'MODERADOR_SIN_ZONA';
+  const [empezo, setEmpezo] = useState(data.estado !== 'sin_enviar');
+  const zona = zonaLabelFrom([], data.zona);
+  const nombre = (data.nombre || '').split(' ')[0];
 
   const verPdf = async () => {
     setDescargando(true);
@@ -366,18 +394,24 @@ export default function ModeradorBloqueado({ data, onRefresh, onLogout }) {
 
       <main className="modbloq__card">
         <div className="modbloq__titulo">
-          <h1>Comunícate con el administrador para que autorice tu acceso</h1>
+          <h1>{nombre ? `¡Hola, ${nombre}!` : '¡Hola!'}</h1>
           <div className="modbloq__chips">
             <Badge variant={estado.variant}>Contrato: {estado.label}</Badge>
             {sinZona && <Badge variant="danger">Sin zona asignada</Badge>}
           </div>
         </div>
-        <p className="modbloq__mensaje">{data.mensaje}</p>
-
-        {sinZona && (
-          <Alert variant="warning">
-            Tu cuenta no tiene una ciudad asignada (o tiene "general", que no es una ciudad). El administrador debe asignarte una zona.
+        {sinZona ? (
+          <Alert variant="warning" title="Todavía no tienes zona asignada">
+            El administrador aún no te asignó una zona (ciudad) para moderar. Cuando lo haga, aquí verás los pasos para empezar.
+            Si ya pasó un tiempo, comunícate con el administrador.
           </Alert>
+        ) : (
+          <>
+            <p className="modbloq__mensaje">
+              Fuiste asignado como moderador de la zona <strong>{zona}</strong>. Para empezar a trabajar completa tu solicitud:
+            </p>
+            <Etapas actual={ETAPA[data.estado] ?? 0} />
+          </>
         )}
         {(data.estado === 'rechazado' || data.estado === 'suspendido') && (
           <Alert variant="danger" title={data.estado === 'rechazado' ? 'Tu solicitud fue rechazada' : 'Tu contrato fue suspendido'}>
@@ -408,7 +442,10 @@ export default function ModeradorBloqueado({ data, onRefresh, onLogout }) {
           <Button variant="secondary" icon={<FileDown size={14} />} loading={descargando} onClick={verPdf}>Ver mi contrato firmado (PDF)</Button>
         )}
 
-        {EDITABLE.includes(data.estado) && <Asistente key="docs" data={data} onRefresh={onRefresh} fase="docs" />}
+        {!sinZona && !empezo && (
+          <Button icon={<ArrowRight size={16} />} onClick={() => setEmpezo(true)}>Empezar</Button>
+        )}
+        {!sinZona && empezo && EDITABLE.includes(data.estado) && <Asistente key="docs" data={data} onRefresh={onRefresh} fase="docs" />}
         {data.estado === 'contrato_enviado' && <Asistente key="firma" data={data} onRefresh={onRefresh} fase="firma" />}
       </main>
     </div>

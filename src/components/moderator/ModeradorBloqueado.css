@@ -48,12 +48,21 @@
 .modbloq__file { position: relative; cursor: pointer; min-height: 40px; }
 .modbloq__file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
 
+/* Mesa gris con la hoja del contrato encima (DocumentoContrato). */
 .modbloq__acuerdo {
-  max-height: 46dvh; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere;
-  border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-elevated);
-  padding: var(--space-4); font-size: var(--text-sm); line-height: 1.6;
+  max-height: 62dvh; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: var(--radius-lg); background: #e5e7eb;
+  padding: var(--space-4);
 }
-.modbloq__marca { background: rgba(245, 158, 11, 0.25); color: var(--warning); border-radius: 4px; padding: 0 3px; font-weight: 600; }
+.modbloq__etapas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+.modbloq__etapas li {
+  display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3);
+  border: 1px solid var(--border); border-radius: var(--radius-lg); color: var(--text-muted); font-size: var(--text-sm);
+}
+.modbloq__etapas li.is-actual { border-color: var(--primary); color: var(--text-primary); font-weight: 600; background: var(--bg-elevated); }
+.modbloq__etapas li.is-actual .modbloq__paso-num { background: var(--primary); border-color: var(--primary); color: #fff; }
+.modbloq__etapas li.is-hecho { color: var(--text-secondary); }
+.modbloq__etapas li.is-hecho .modbloq__paso-num { background: var(--success); border-color: var(--success); color: #fff; }
 .modbloq__check { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); min-height: 40px; cursor: pointer; }
 .modbloq__check input { width: 18px; height: 18px; }
 .modbloq__check.is-disabled { color: var(--text-muted); cursor: not-allowed; }
@@ -75,4 +84,7 @@
   .modbloq__paso-nombre { display: none; }
   .modbloq__pasos li.is-actual .modbloq__paso-nombre { display: inline; }
   .modbloq__nav .btn { flex: 1; }
+  .modbloq__etapas { grid-template-columns: 1fr; gap: var(--space-2); }
+  .modbloq__acuerdo { padding: var(--space-2); }
 }
+.modbloq__acuerdo--completo { max-height: none; overflow: visible; }

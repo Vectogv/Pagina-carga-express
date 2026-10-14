@@ -1,18 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import '../components/layout/Layout.css';
+import { getVerificacionesModeradores } from '../api/contrato';
 import { adminNav, findNavEntry, tituloPerfil } from '../components/layout/sidebarContent';
 
 export default function AdminLayout() {
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [solicitudes, setSolicitudes] = useState(0);
+  // Insignia de solicitudes de moderadores por revisar; se relee al cambiar de página.
+  useEffect(() => {
+    getVerificacionesModeradores({ estado: 'solicitado' })
+      .then(({ data }) => setSolicitudes(Array.isArray(data) ? data.length : 0))
+      .catch(() => {});
+  }, [pathname]);
   const { group, label } = tituloPerfil(pathname) || findNavEntry(adminNav, pathname);
 
   return (
     <div className="app-shell">
-      <Sidebar nav={adminNav} title="Carga Express" subtitle="Administración" open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <Sidebar nav={adminNav} title="Carga Express" subtitle="Administración" open={menuOpen} onClose={() => setMenuOpen(false)} badges={{ '/admin/moderadores-verificaciones': solicitudes }} />
       <div className="app-main">
         <Header section={group} title={label} onMenuToggle={() => setMenuOpen(true)} />
         <main className="app-content">

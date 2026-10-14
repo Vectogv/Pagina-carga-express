@@ -9,7 +9,7 @@ import {
   getVerificacionesModeradores, rechazarVerificacion,
 } from '../../api/contrato';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
-import { resolveStorageUrl } from '../../utils/storage';
+import { ImagenDocumento as Imagen } from '../../components/moderator/DocumentoContrato';
 import { errorMessage, formatDate, formatDateTime } from '../../utils/format';
 import './VerificacionesModeradoresPage.css';
 
@@ -38,19 +38,6 @@ const EstadoBadge = ({ estado }) => {
   const e = ESTADO_VERIFICACION[estado] || { label: estado, variant: 'neutral' };
   return <Badge variant={e.variant}>{e.label}</Badge>;
 };
-
-function Imagen({ titulo, src, blanco }) {
-  return (
-    <figure className="vermod__img">
-      <figcaption>{titulo}</figcaption>
-      {src ? (
-        <a href={resolveStorageUrl(src)} target="_blank" rel="noopener noreferrer" title="Abrir en grande">
-          <img src={resolveStorageUrl(src)} alt={titulo} className={blanco ? 'is-papel' : ''} />
-        </a>
-      ) : <div className="vermod__vacio">Sin subir</div>}
-    </figure>
-  );
-}
 
 function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
   const [d, setD] = useState(null);
@@ -112,7 +99,7 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
       {puedeRechazar && <Button variant="danger" icon={<X size={14} />} onClick={() => setModoNota('rechazar')}>Rechazar</Button>}
       {d.estado === 'activo' && <Button variant="danger" onClick={() => setModoNota('suspender')}>Suspender</Button>}
       {d.estado === 'solicitado' && (
-        <Button variant="success" icon={<Check size={14} />} loading={enviando === 'generar'} onClick={() => accion('generar')}>Generar contrato</Button>
+        <Button variant="success" icon={<Check size={14} />} loading={enviando === 'generar'} onClick={() => accion('generar')}>Aceptar y generar contrato</Button>
       )}
     </>
   ));
@@ -145,6 +132,24 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
             />
           )}
 
+          {d.estado === 'solicitado' ? (
+            <>
+              <h4 className="vermod__h">Solicitud</h4>
+              <dl className="vermod__datos">
+                <div><dt>Nombre</dt><dd>{d.nombre}</dd></div>
+                <div><dt>Cédula</dt><dd>{d.cedula || '—'}</dd></div>
+                <div><dt>Correo</dt><dd>{d.email || '—'}</dd></div>
+                <div><dt>Teléfono</dt><dd>{d.telefono || '—'}</dd></div>
+                <div><dt>Zona</dt><dd>{d.zona ? zonaLabelFrom(ZONAS, d.zona) : 'Sin zona'}</dd></div>
+              </dl>
+              <p className="vermod__ayuda">Compara el rostro con la foto de la cédula. Si todo coincide, acepta y se genera el contrato.</p>
+              <div className="vermod__grid vermod__grid--3">
+                <Imagen titulo="Cédula (frente)" src={d.documentos?.cedulaFrente} />
+                <Imagen titulo="Cédula (reverso)" src={d.documentos?.cedulaReverso} />
+                <Imagen titulo="Rostro" src={d.documentos?.rostro} />
+              </div>
+            </>
+          ) : (<>
           <h4 className="vermod__h">Cédula y firma</h4>
           <p className="vermod__ayuda">Compara la firma con la de la cédula y el rostro con la foto del documento.</p>
           <div className="vermod__grid">
@@ -153,6 +158,7 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
             <Imagen titulo="Cédula (reverso)" src={d.documentos?.cedulaReverso} />
             <Imagen titulo="Rostro" src={d.documentos?.rostro} />
           </div>
+          </>)}
 
           <h4 className="vermod__h">Firmas</h4>
           {d.firmas?.length ? (
@@ -243,8 +249,8 @@ export default function VerificacionesModeradoresPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Verificaciones de moderadores"
-        description="Cédula, rostro y contrato firmado. El moderador solicita; gerencia genera el contrato (3 meses) y el moderador lo firma."
+        title="Solicitudes de moderadores"
+        description="El moderador envía su cédula y una foto del rostro. Gerencia revisa, acepta y genera el contrato (3 meses); el moderador lo firma y queda activo."
       />
       <SegmentedFilter options={FILTROS} value={estado} onChange={setEstado} ariaLabel="Estado de la verificación" />
       {error && <Alert variant="danger">{error}</Alert>}

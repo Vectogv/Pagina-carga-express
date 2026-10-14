@@ -67,7 +67,7 @@ export const adminNav = [
     title: 'Administración',
     items: [
       { icon: ShieldCheck, label: 'Moderadores', to: '/admin/moderators' },
-      { icon: FileSignature, label: 'Verificaciones de moderadores', to: '/admin/moderadores-verificaciones' },
+      { icon: FileSignature, label: 'Solicitudes de moderadores', to: '/admin/moderadores-verificaciones' },
       { icon: ListChecks, label: 'Pendientes de moderadores', to: '/admin/pendientes' },
       { icon: Users, label: 'Cuentas de usuario', to: '/admin/users' },
       { icon: Settings, label: 'Configuración', to: '/admin/config' },
@@ -119,6 +119,7 @@ export const moderatorNav = [
     title: 'Mi zona',
     items: [
       { icon: UsersRound, label: 'Equipo de la zona', to: '/moderator/companeros' },
+      { icon: FileSignature, label: 'Mi contrato', to: '/moderator/mi-contrato' },
       { icon: UserRound, label: 'Mi perfil', to: '/moderator/profile' },
     ],
   },
