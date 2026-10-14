@@ -1,35 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Check, Eye, X } from 'lucide-react';
+import { Bell, Check, Eye, ShieldAlert, X } from 'lucide-react';
 import {
   getVerifications, approveVerification, rejectVerification, resolveSoatException,
+  notifyDriver, notificarModeradorVerificacion,
 } from '../../api/admin';
-import { resolveStorageUrl } from '../../utils/storage';
 import { faltantesDe, textoFaltantes } from '../../utils/documentos';
 import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
 import {
-  Avatar, Badge, Button, ConfirmDialog, DataTable, Modal, PageHeader, Textarea,
+  Avatar, Badge, Button, ConfirmDialog, DataTable, Modal, PageHeader, Textarea, Toast, ToastContainer,
 } from '../../components/ui';
+import DetalleVerificacion from '../../components/verificacion/DetalleVerificacion';
+import NotificarDocumentosDialog from '../moderator/NotificarDocumentosDialog';
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 const vencido = (fecha) => !!fecha && String(fecha).slice(0, 10) < hoy();
-
-function Photo({ label, path, vence }) {
-  if (!path) return null;
-  const url = resolveStorageUrl(path);
-  return (
-    <div className="stack">
-      <span className="detail-list__label">{label}</span>
-      <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${label} en una pestaña nueva`}>
-        <img src={url} alt={label} className="thumb thumb--link" loading="lazy" />
-      </a>
-      {vence !== undefined && (
-        <span className={vencido(vence) ? 'text-danger' : 'cell-user__meta'}>
-          {vence ? `Vence ${formatDate(vence)}${vencido(vence) ? ' (vencido)' : ''}` : 'Sin fecha de vencimiento'}
-        </span>
-      )}
-    </div>
-  );
-}
 
 const ESTADO_EXCEPCION = {
   pendiente: { label: 'En revisión', variant: 'warning' },
@@ -47,6 +31,10 @@ export default function VerificationsPage() {
   const [selected, setSelected] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
   const [nota, setNota] = useState('');
+  const [toast, setToast] = useState(null);
+  const [aviso, setAviso] = useState(null); // diálogo "Notificar al moderador de zona"
+  const [msgMod, setMsgMod] = useState('');
+  const [notificando, setNotificando] = useState(null); // diálogo "Notificar al conductor"
 
   const fetchVerifications = useCallback(async () => {
     setLoading(true);
@@ -69,6 +57,7 @@ export default function VerificationsPage() {
     try {
       await approveVerification(confirmAction.id);
       closeConfirm();
+      setSelected(null);
       await fetchVerifications();
     } catch (err) {
       setError(errorMessage(err, 'Error al aprobar verificación'));
@@ -80,6 +69,7 @@ export default function VerificationsPage() {
       const payload = nota.trim() ? { nota: nota.trim() } : {};
       await rejectVerification(confirmAction.id, payload);
       closeConfirm();
+      setSelected(null);
       await fetchVerifications();
     } catch (err) {
       setError(errorMessage(err, 'Error al rechazar verificación'));
@@ -101,6 +91,29 @@ export default function VerificationsPage() {
       await fetchVerifications();
     } catch (err) {
       setError(errorMessage(err, 'Error al resolver la excepción del SOAT'));
+    }
+  };
+
+  const avisarModerador = async () => {
+    const c = aviso;
+    setAviso(null);
+    try {
+      const res = await notificarModeradorVerificacion(c.id, msgMod.trim() ? { mensaje: msgMod.trim() } : {});
+      const n = res.data?.moderadoresAvisados ?? 1;
+      setToast({ msg: `Aviso enviado a ${n} moderador${n === 1 ? '' : 'es'} de ${res.data?.zona || c.ciudad || 'la zona'}`, variant: 'success' });
+    } catch (err) {
+      setToast({ msg: errorMessage(err, 'No se pudo avisar al moderador'), variant: 'danger' });
+    }
+  };
+
+  const notificarConductor = async (data) => {
+    const c = notificando;
+    setNotificando(null);
+    try {
+      await notifyDriver(c.id, data || {});
+      setToast({ msg: 'Conductor notificado', variant: 'success' });
+    } catch (err) {
+      setToast({ msg: errorMessage(err, 'No se pudo notificar al conductor'), variant: 'danger' });
     }
   };
 
@@ -193,49 +206,32 @@ export default function VerificationsPage() {
         onRowClick={setSelected}
       />
 
-      <Modal isOpen={!!selected} onClose={() => setSelected(null)} title="Detalle de verificación" size="lg">
+      <Modal
+        isOpen={!!selected}
+        onClose={() => setSelected(null)}
+        title="Detalle de verificación"
+        size="lg"
+        footer={selected && (
+          <div className="dv-pie">
+            <Button variant="secondary" onClick={() => setSelected(null)}>Cerrar</Button>
+            <Button variant="soft-danger" icon={<X size={14} />} onClick={ask(selected, 'reject')}>Rechazar</Button>
+            <Button variant="soft-primary" icon={<Bell size={14} />} onClick={() => setNotificando(selected)}>Notificar al conductor</Button>
+            <Button variant="soft-primary" icon={<ShieldAlert size={14} />} onClick={() => { setMsgMod(''); setAviso(selected); }}>Notificar al moderador de zona</Button>
+            <Button
+              variant="soft-success"
+              icon={<Check size={14} />}
+              disabled={!!textoFaltantes(faltantesDe(selected))}
+              title={textoFaltantes(faltantesDe(selected)) || undefined}
+              onClick={ask(selected, 'approve')}
+            >
+              Aprobar
+            </Button>
+          </div>
+        )}
+      >
         {selected && (
           <div className="stack">
-            <div className="detail-list">
-              <div className="detail-list__item">
-                <span className="detail-list__label">Conductor</span>
-                <span className="detail-list__value">{fullName(selected.usuario) || '—'}</span>
-              </div>
-              <div className="detail-list__item">
-                <span className="detail-list__label">Correo</span>
-                <span className="detail-list__value">{selected.usuario?.email || '—'}</span>
-              </div>
-              <div className="detail-list__item">
-                <span className="detail-list__label">Teléfono</span>
-                <span className="detail-list__value">{selected.usuario?.telefono || '—'}</span>
-              </div>
-              <div className="detail-list__item">
-                <span className="detail-list__label">Cédula</span>
-                <span className="detail-list__value">{selected.cedula || '—'}</span>
-              </div>
-              <div className="detail-list__item">
-                <span className="detail-list__label">Vehículo</span>
-                <span className="detail-list__value">{selected.tipoVehiculo || '—'} {selected.placa ? `· ${selected.placa}` : ''}</span>
-              </div>
-              <div className="detail-list__item">
-                <span className="detail-list__label">Capacidad</span>
-                <span className="detail-list__value">{selected.capacidad || '—'}</span>
-              </div>
-              <div className="detail-list__item">
-                <span className="detail-list__label">Fecha de solicitud</span>
-                <span className="detail-list__value">{formatDate(selected.createdAt)}</span>
-              </div>
-            </div>
-
-            <hr className="divider" />
-            <h3 className="section-title">Documentos cargados</h3>
-            <div className="form-grid">
-              <Photo label="Licencia" path={selected.fotoLicencia} />
-              <Photo label="Vehículo" path={selected.fotoVehiculo} />
-              <Photo label="Tarjeta de propiedad" path={selected.fotoTarjetaPropiedad} />
-              <Photo label="Técnico-mecánica" path={selected.fotoTecnomecanica} vence={selected.tecnomecanicaVence} />
-              <Photo label="SOAT" path={selected.fotoSoat} vence={selected.soatVence} />
-            </div>
+            <DetalleVerificacion c={selected} />
 
             {selected.excepcionSoatEstado && (
               <>
@@ -263,6 +259,36 @@ export default function VerificationsPage() {
         )}
       </Modal>
 
+      {notificando && (
+        <NotificarDocumentosDialog
+          onClose={() => setNotificando(null)}
+          faltantes={faltantesDe(notificando)}
+          destinatario={notificando.usuario?.email || fullName(notificando.usuario)}
+          onEnviar={notificarConductor}
+        />
+      )}
+      <ConfirmDialog
+        isOpen={!!aviso}
+        onClose={() => setAviso(null)}
+        onConfirm={avisarModerador}
+        title="Notificar al moderador de zona"
+        message={aviso ? `Se avisará a los moderadores activos de ${aviso.ciudad || 'la zona'} para que revisen a ${fullName(aviso.usuario)}.` : ''}
+        confirmText="Avisar"
+      >
+        {aviso && (
+          <div className="stack">
+            <span className="text-sm">
+              {textoFaltantes(faltantesDe(aviso)) || 'Tiene todos los documentos.'}
+            </span>
+            <Textarea label="Mensaje para el moderador (opcional)" value={msgMod} onChange={(e) => setMsgMod(e.target.value)} rows={2} maxLength={500} />
+          </div>
+        )}
+      </ConfirmDialog>
+      {toast && (
+        <ToastContainer>
+          <Toast message={toast.msg} variant={toast.variant} onClose={() => setToast(null)} duration={6000} />
+        </ToastContainer>
+      )}
       <ConfirmDialog
         isOpen={!!confirmAction}
         onClose={closeConfirm}

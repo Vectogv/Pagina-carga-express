@@ -4,6 +4,7 @@ import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import EmergencyBanner from '../components/moderator/EmergencyBanner';
 import AlertaViajeBanner from '../components/moderator/AlertaViajeBanner';
+import AvisoVerificacionBanner from '../components/moderator/AvisoVerificacionBanner';
 import '../components/layout/Layout.css';
 import { moderatorNav, findNavEntry, tituloPerfil } from '../components/layout/sidebarContent';
 import { useZonas, zonaLabelFrom } from '../hooks/useZonas';
@@ -85,6 +86,7 @@ function ModeratorShell() {
             <div className="app-emergency">
               <EmergencyBanner />
               <AlertaViajeBanner />
+              <AvisoVerificacionBanner />
             </div>
             <Outlet />
           </div>

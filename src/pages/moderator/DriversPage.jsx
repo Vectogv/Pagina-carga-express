@@ -1,19 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BellRing, Check, FileText, Flag, X } from 'lucide-react';
+import { Bell, BellRing, Check, FileText, Flag, X } from 'lucide-react';
 import { getModeratorDrivers, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
-import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
+import { errorMessage, fullName, toList } from '../../utils/format';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
-import { resolveStorageUrl } from '../../utils/storage';
 import { CeldaVehiculo } from './driverCells';
 import { TarjetaPersona } from '../../components/panel';
-import useDocumentosConductor from '../../hooks/useDocumentosConductor';
 import { textoCanales } from '../../utils/canales';
 import { faltantesDe, textoFaltantes } from '../../utils/documentos';
 import NotificarDocumentosDialog from './NotificarDocumentosDialog';
+import DetalleVerificacion from '../../components/verificacion/DetalleVerificacion';
 import {
   PageHeader, SearchInput, SegmentedFilter, DataTable, ConfirmDialog, Modal, Button, StatusBadge,
-  Textarea, Toast, ToastContainer, Pagination, Badge,
+  Textarea, Toast, ToastContainer, Pagination,
 } from '../../components/ui';
 
 const TABS = [
@@ -24,46 +23,12 @@ const TABS = [
 ];
 
 const LIMIT = 20;
-// Clave del documento (GET /api/config/documentos-conductor) -> campo con la foto en la fila del listado.
-// SOAT, tecnomecánica y tarjeta de propiedad solo vienen en la ficha; aquí se muestra si falta o no.
-const CAMPO_FOTO = {
-  licencia: 'fotoLicencia',
-  foto_vehiculo: 'fotoVehiculo',
-  foto_conductor: 'fotoConductor',
-};
-
 const driverName = (r) => fullName(r.usuario || r);
 const driverId = (r) => r.id || r.usuarioId;
-
-function Photo({ label, path }) {
-  const url = resolveStorageUrl(path);
-  return (
-    <div className="stack">
-      <span className="detail-list__label">{label}</span>
-      {url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${label} en una pestaña nueva`}>
-          <img src={url} alt={label} className="thumb thumb--link" loading="lazy" />
-        </a>
-      ) : (
-        <span className="text-muted text-sm">Sin cargar</span>
-      )}
-    </div>
-  );
-}
-
-function Detail({ label, children }) {
-  return (
-    <div className="detail-list__item">
-      <span className="detail-list__label">{label}</span>
-      <span className="detail-list__value">{children || '—'}</span>
-    </div>
-  );
-}
 
 export default function ModeratorDriversPage() {
   const { ciudadParams } = useModeratorCity();
   const zonas = useZonas();
-  const { documentos } = useDocumentosConductor();
   const [drivers, setDrivers] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -181,7 +146,6 @@ export default function ModeratorDriversPage() {
 
   const tabOptions = TABS.map(([value, label]) => ({ value, label, count: value === tab ? total : undefined }));
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
-  const faltanDocs = docs ? faltantesDe(docs) : [];
 
   const actionEmail = action?.usuario?.email || '';
 
@@ -213,6 +177,7 @@ export default function ModeratorDriversPage() {
         footer={docs && (
           <>
             <Button variant="secondary" onClick={() => setDocs(null)}>Cerrar</Button>
+            <Button variant="soft-primary" icon={<Bell size={14} />} onClick={() => openAction('notify', docs)}>Notificar al conductor</Button>
             {(docs.estadoVerificacion || 'pendiente') === 'pendiente' && (
               <>
                 <Button variant="soft-danger" icon={<X size={14} />} onClick={() => openAction('reject', docs)}>Rechazar</Button>
@@ -230,38 +195,7 @@ export default function ModeratorDriversPage() {
           </>
         )}
       >
-        {docs && (
-          <div className="stack">
-            <div className="detail-list">
-              <Detail label="Estado"><StatusBadge status={docs.estadoVerificacion || 'pendiente'} /></Detail>
-              <Detail label="Nombre">{docs.usuario?.nombre}</Detail>
-              <Detail label="Teléfono">{docs.usuario?.telefono}</Detail>
-              <Detail label="Correo">{docs.usuario?.email}</Detail>
-              <Detail label="Número de cédula">{docs.cedula}</Detail>
-              {motivoBloqueo(docs) && <Detail label="Para aprobar"><span className="text-warning">{motivoBloqueo(docs)}</span></Detail>}
-              <Detail label="Placa">{docs.placa && <span className="text-mono">{docs.placa}</span>}</Detail>
-              <Detail label="Tipo de vehículo">{docs.tipoVehiculo}</Detail>
-              <Detail label="Ciudad">{docs.ciudad}</Detail>
-              <Detail label="Fecha de registro">{docs.createdAt && formatDate(docs.createdAt)}</Detail>
-              {docs.notaRechazo && <Detail label="Nota de rechazo">{docs.notaRechazo}</Detail>}
-            </div>
-
-            <hr className="divider" />
-            <h3 className="section-title">Documentos cargados</h3>
-            <div className="form-grid">
-              {documentos.filter((d) => d.clave !== 'numero_cedula').map((d) => (CAMPO_FOTO[d.clave]
-                ? <Photo key={d.clave} label={d.etiqueta} path={docs[CAMPO_FOTO[d.clave]]} />
-                : (
-                  <div key={d.clave} className="stack">
-                    <span className="detail-list__label">{d.etiqueta}</span>
-                    <Badge variant={faltanDocs.includes(d.clave) ? 'warning' : 'success'} size="sm">
-                      {faltanDocs.includes(d.clave) ? 'Falta' : 'Cargado'}
-                    </Badge>
-                  </div>
-                )))}
-            </div>
-          </div>
-        )}
+        {docs && <DetalleVerificacion c={docs} />}
       </Modal>
 
       {action?.type === 'notify' && (

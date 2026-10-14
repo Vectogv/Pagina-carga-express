@@ -1,0 +1,11 @@
+.dv-cabecera { display: flex; gap: var(--space-4, 16px); align-items: center; }
+.dv-cabecera__texto { display: grid; gap: 6px; min-width: 0; }
+.dv-cabecera__nombre { font-size: var(--text-lg, 1.125rem); overflow-wrap: anywhere; }
+.dv-docs { display: grid; gap: var(--space-4, 16px); grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.dv-doc { min-width: 0; align-content: start; }
+@media (max-width: 480px) {
+  .dv-cabecera { flex-direction: column; align-items: flex-start; }
+  .dv-docs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.dv-pie { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; width: 100%; }
+@media (max-width: 480px) { .dv-pie > * { flex: 1 1 100%; } }
