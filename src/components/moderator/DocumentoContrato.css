@@ -41,8 +41,8 @@
 .doccon__firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 36px; font-family: var(--font-sans, system-ui, sans-serif); font-size: 13px; }
 .doccon__firma { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 /* La firma (PNG recortado y transparente) se asienta sobre la línea y la cruza un poco, como en papel. */
-.doccon__firma-espacio { position: relative; height: 72px; border-bottom: 1px solid #111827; margin-bottom: 20px; }
-.doccon__firma-espacio img { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); width: auto; height: auto; max-height: 82px; max-width: 100%; object-fit: contain; }
+.doccon__firma-espacio { position: relative; height: 76px; border-bottom: 1px solid #111827; margin-bottom: 24px; }
+.doccon__firma-espacio img { position: absolute; left: 0; right: 0; bottom: -14px; margin: 0 auto; width: 70%; height: 90px; object-fit: contain; object-position: center bottom; }
 .doccon__firma strong { color: #111827; }
 .doccon__firma span { color: #4b5563; }
 
