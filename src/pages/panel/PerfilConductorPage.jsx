@@ -160,6 +160,19 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
         </Card>
       )}
 
+      {driver.notificados30d != null && driver.ignorados30d != null && (() => {
+        const alto = driver.notificados30d >= 4 && driver.ignorados30d / driver.notificados30d > 0.5;
+        return (
+          <Card>
+            <div className="detail-list">
+              <Detail label="Servicios ignorados (30 días)">
+                <span className={alto ? 'text-warning' : undefined}>{driver.ignorados30d} de {driver.notificados30d}</span>
+              </Detail>
+            </div>
+          </Card>
+        );
+      })()}
+
       <Card>
         <div className="perfil-cab">
           <Avatar src={foto} name={nombre} size={112} className="perfil-cab__foto" />
