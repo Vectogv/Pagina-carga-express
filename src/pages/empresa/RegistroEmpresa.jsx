@@ -12,7 +12,7 @@ const TEL = /^\+?\d{7,15}$/;
 const MAX_ARCHIVO = 5 * 1024 * 1024;
 const VACIO = {
   nombre: '', apellido: '', email: '', telefono: '', edad: '', cedula: '', password: '', password2: '', acepta: false,
-  empresa: '', nit: '', direccion: '', telEmpresa: '',
+  empresa: '', sinNit: false, nit: '', direccion: '', telEmpresa: '',
 };
 
 function validarResponsable(f) {
@@ -63,11 +63,11 @@ export default function RegistroEmpresa() {
   const crear = async (ev) => {
     ev.preventDefault();
     const e = {};
-    if (!f.empresa.trim()) e.empresa = 'Escribe el nombre o razón social.';
-    if (f.nit.replace(/\D/g, '').length < 5) e.nit = 'Escribe el NIT con su dígito de verificación.';
+    if (!f.empresa.trim()) e.empresa = f.sinNit ? 'Escribe el nombre del emprendimiento.' : 'Escribe el nombre o razón social.';
+    if (!f.sinNit && f.nit.replace(/\D/g, '').length < 5) e.nit = 'Escribe el NIT con su dígito de verificación.';
     if (f.telEmpresa.trim() && !TEL.test(f.telEmpresa.trim())) e.telEmpresa = 'Teléfono de 7 a 15 dígitos.';
-    if (!rut) e.rut = 'Sube el RUT (PDF o imagen, máx. 5 MB).';
-    if (!camara) e.camara = 'Sube la Cámara de Comercio (PDF o imagen, máx. 5 MB).';
+    if (!f.sinNit && !rut) e.rut = 'Sube el RUT (PDF o imagen, máx. 5 MB).';
+    if (!f.sinNit && !camara) e.camara = 'Sube la Cámara de Comercio (PDF o imagen, máx. 5 MB).';
     setErrores(e);
     if (Object.keys(e).length) return;
 
@@ -99,11 +99,12 @@ export default function RegistroEmpresa() {
       }
       const fd = new FormData();
       fd.append('nombre', f.empresa.trim());
-      fd.append('nit', f.nit.trim());
+      if (f.sinNit) fd.append('sinNit', 'true');
+      else fd.append('nit', f.nit.trim());
       if (f.direccion.trim()) fd.append('direccion', f.direccion.trim());
       if (f.telEmpresa.trim()) fd.append('telefono', f.telEmpresa.trim());
-      fd.append('rut', rut);
-      fd.append('camara', camara);
+      if (rut) fd.append('rut', rut);
+      if (camara) fd.append('camara', camara);
       const { data } = await api.post('/api/empresas', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setEmpresa(data?.data || data);
       await refreshProfile().catch(() => {});
@@ -201,12 +202,16 @@ export default function RegistroEmpresa() {
               </>
             ) : (
               <>
-                <Input label="Nombre o razón social" value={f.empresa} onChange={set('empresa')} error={errores.empresa} maxLength={150} />
-                <Input label="NIT (con dígito de verificación)" placeholder="900123456-7" value={f.nit} onChange={set('nit')} error={errores.nit} maxLength={20} />
+                <label className="regemp__check">
+                  <input type="checkbox" checked={f.sinNit} onChange={set('sinNit')} />
+                  <span>Soy emprendimiento (no tengo NIT)</span>
+                </label>
+                <Input label={f.sinNit ? 'Nombre del emprendimiento' : 'Nombre o razón social'} value={f.empresa} onChange={set('empresa')} error={errores.empresa} maxLength={150} />
+                <Input label="NIT (con dígito de verificación)" placeholder="900123456-7" value={f.sinNit ? 'N/A' : f.nit} onChange={set('nit')} error={errores.nit} maxLength={20} disabled={f.sinNit} />
                 <Input label="Dirección (opcional)" value={f.direccion} onChange={set('direccion')} maxLength={200} />
                 <Input label="Teléfono de la empresa (opcional)" type="tel" value={f.telEmpresa} onChange={set('telEmpresa')} error={errores.telEmpresa} />
-                <Archivo label="RUT" archivo={rut} error={errores.rut} onChange={elegirArchivo(setRut, 'rut')} />
-                <Archivo label="Cámara de Comercio" archivo={camara} error={errores.camara} onChange={elegirArchivo(setCamara, 'camara')} />
+                <Archivo label={f.sinNit ? 'RUT (opcional)' : 'RUT'} archivo={rut} error={errores.rut} onChange={elegirArchivo(setRut, 'rut')} />
+                <Archivo label={f.sinNit ? 'Cámara de Comercio (opcional)' : 'Cámara de Comercio'} archivo={camara} error={errores.camara} onChange={elegirArchivo(setCamara, 'camara')} />
                 <Button type="submit" size="lg" fullWidth loading={enviando}>
                   {hecho.cuenta ? 'Reintentar' : 'Crear cuenta de empresa'}
                 </Button>

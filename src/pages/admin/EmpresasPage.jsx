@@ -90,7 +90,7 @@ export default function EmpresasPage() {
 
   const columns = [
     { key: 'nombre', label: 'Empresa', render: (v) => <strong>{v}</strong> },
-    { key: 'nit', label: 'NIT', render: (v) => v || '—' },
+    { key: 'nit', label: 'NIT', render: (v) => v || 'N/A (emprendimiento)' },
     {
       key: 'dueno',
       label: 'Dueño',
@@ -166,7 +166,7 @@ export default function EmpresasPage() {
           <div className="stack">
             <div className="detail-list">
               <Dato label="Empresa" value={selected.nombre} />
-              <Dato label="NIT" value={selected.nit} />
+              <Dato label="NIT" value={selected.nit || 'N/A (emprendimiento)'} />
               <Dato label="Dirección" value={selected.direccion} />
               <Dato label="Teléfono" value={selected.telefono} />
               <Dato label="Dueño" value={fullName(duenoSel)} />
