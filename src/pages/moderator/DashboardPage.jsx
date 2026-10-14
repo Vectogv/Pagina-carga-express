@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  ArrowRight, BadgeCheck, Clock, Gavel, Inbox, LifeBuoy, MapPin, Megaphone, MessageSquare, Navigation, RefreshCw, Siren, Truck,
+  ArrowRight, BadgeCheck, Clock, Gavel, Inbox, LifeBuoy, MapPin, MessageSquare, RefreshCw, Siren, Truck,
 } from 'lucide-react';
 import {
   getModeratorDashboard,
@@ -283,7 +283,7 @@ export default function ModeratorDashboard() {
         <Card
           title="Estado de conductores"
           description={`${asignados} conductores en tu zona (${ciudad})`}
-          actions={<SeeAll to="/moderator/drivers" />}
+          actions={<SeeAll to="/moderator/conductores" />}
         >
           <div className="ccop-bar" role="img" aria-label={`${online} en línea, ${offline} desconectados`}>
             {online > 0 && <div className="ccop-bar__seg ccop-bar__seg--online" style={{ flexBasis: `${onlinePct}%` }} />}
@@ -414,37 +414,24 @@ export default function ModeratorDashboard() {
         </Card>
       </div>
 
-      <div className="two-col">
-        <Card title="Actividad reciente" description="Últimos movimientos de la operación">
-          {activity.length === 0 ? (
-            <PanelEmpty icon={Clock} title="Sin actividad reciente" description="Los eventos aparecerán aquí conforme ocurran." />
-          ) : (
-            <ul className="ccop-list ccop-list--compact">
-              {activity.map((a, i) => {
-                const Icon = ACTIVITY_ICON[a.kind];
-                return (
-                  <li className="ccop-activity" key={`${a.time}-${i}`}>
-                    <span className={`ccop-activity__icon ccop-activity__icon--${a.kind}`}><Icon size={13} /></span>
-                    <p className="ccop-activity__text">{a.text}</p>
-                    <span className="ccop-item__time">{formatTime(a.time)}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Card>
-
-        <Card title="Acciones rápidas" description="Atajos a las secciones de moderación">
-          <div className="ccop-actions">
-            <Button variant="soft-danger" icon={<Siren size={15} />} onClick={() => navigate('/moderator/emergencies')}>Gestionar emergencias</Button>
-            <Button variant="soft-primary" icon={<Gavel size={15} />} onClick={() => navigate('/moderator/cierres')}>Resolver cierres</Button>
-            <Button variant="secondary" icon={<MessageSquare size={15} />} onClick={() => navigate('/moderator/conversations')}>Abrir conversatorio</Button>
-            <Button variant="secondary" icon={<Truck size={15} />} onClick={() => navigate('/moderator/drivers')}>Ver conductores</Button>
-            <Button variant="secondary" icon={<Navigation size={15} />} onClick={() => navigate('/moderator/trips')}>Ver viajes</Button>
-            <Button variant="secondary" icon={<Megaphone size={15} />} onClick={() => navigate('/moderator/comunicados')}>Comunicados</Button>
-          </div>
-        </Card>
-      </div>
+      <Card title="Actividad reciente" description="Últimos movimientos de la operación">
+        {activity.length === 0 ? (
+          <PanelEmpty icon={Clock} title="Sin actividad reciente" description="Los eventos aparecerán aquí conforme ocurran." />
+        ) : (
+          <ul className="ccop-list ccop-list--compact">
+            {activity.map((a, i) => {
+              const Icon = ACTIVITY_ICON[a.kind];
+              return (
+                <li className="ccop-activity" key={`${a.time}-${i}`}>
+                  <span className={`ccop-activity__icon ccop-activity__icon--${a.kind}`}><Icon size={13} /></span>
+                  <p className="ccop-activity__text">{a.text}</p>
+                  <span className="ccop-item__time">{formatTime(a.time)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
     </div>
   );
 }

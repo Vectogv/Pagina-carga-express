@@ -8,17 +8,18 @@ import {
   PageHeader, SearchInput, SegmentedFilter, DataTable, Avatar, Badge,
 } from '../../components/ui';
 
-// Sin clientes: el moderador solo los contacta desde un ticket, un SOS o una disputa.
+// Solo personal administrativo: moderadores y administración. Los conductores van en
+// Conductores → Directorio (su ficha tiene el botón de chat); a los clientes solo se les
+// escribe desde un ticket, un SOS o una disputa. El servidor filtra con ?rol=.
 const ROLE_FILTERS = [
-  { value: '', label: 'Todos' },
   { value: 'moderador', label: 'Moderadores' },
-  { value: 'conductor', label: 'Conductores' },
+  { value: 'admin', label: 'Administración' },
 ];
 
 // El backend manda `etiqueta` (MODERADOR / ADMIN / CONDUCTOR) como rol legible.
 const etiquetaDe = (r) => (r.etiqueta || (r.esModerador ? 'MODERADOR' : r.rol || '')).toUpperCase();
-const ROL_VARIANT = { MODERADOR: 'warning', CONDUCTOR: 'success' };
-const ROL_LABEL = { MODERADOR: 'Moderador', ADMIN: 'Administrador', CONDUCTOR: 'Conductor' };
+const ROL_VARIANT = { MODERADOR: 'warning', ADMIN: 'info' };
+const ROL_LABEL = { MODERADOR: 'Moderador', ADMIN: 'Administrador' };
 const rolVariant = (r) => ROL_VARIANT[etiquetaDe(r)] || 'neutral';
 const rolLabel = (r) => ROL_LABEL[etiquetaDe(r)] || 'Usuario';
 const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -31,15 +32,15 @@ export default function CompanerosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [q, setQ] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('moderador');
 
   const fetchContacts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getContactableUsers({ q: q.trim() || undefined, rol: roleFilter || undefined, limit: 100, ...ciudadParams });
-      // Defensa: si un backend viejo aún manda clientes, no se muestran.
-      setContacts(toList(res.data, 'users', 'contactableUsers').filter((c) => (c.rol || '') !== 'cliente'));
+      const res = await getContactableUsers({ q: q.trim() || undefined, rol: roleFilter, limit: 100, ...ciudadParams });
+      // Defensa: aquí solo va personal (nunca clientes ni conductores).
+      setContacts(toList(res.data, 'users', 'contactableUsers').filter((c) => c.esModerador || c.rol === 'admin'));
     } catch (err) {
       if (err.response?.status === 403) setError('No tienes permisos de moderador o ciudad no asignada');
       else setError(errorMessage(err, 'Error al cargar el equipo'));
@@ -82,13 +83,13 @@ export default function CompanerosPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Equipo"
-        description="Moderadores, administrador y conductores de tu zona con los que puedes chatear. A los clientes solo se les escribe desde un ticket, un SOS o una disputa."
+        title="Equipo de la zona"
+        description="Personal administrativo: moderadores y administración con los que puedes coordinar. Los conductores están en Conductores → Directorio."
       />
 
       <div className="toolbar">
         <SearchInput value={q} onChange={setQ} placeholder="Buscar nombre, correo o teléfono" />
-        <SegmentedFilter options={ROLE_FILTERS} value={roleFilter} onChange={setRoleFilter} ariaLabel="Filtrar por rol" />
+        <SegmentedFilter options={ROLE_FILTERS} value={roleFilter} onChange={setRoleFilter} ariaLabel="Filtrar por cargo" />
       </div>
 
       {error && <div className="page-error" role="alert">{error}</div>}
@@ -97,7 +98,7 @@ export default function CompanerosPage() {
         columns={columns}
         data={contacts}
         loading={loading}
-        emptyMessage={q ? `Sin resultados para “${q}”` : 'No hay contactos para mostrar'}
+        emptyMessage={q ? `Sin resultados para “${q}”` : (roleFilter === 'admin' ? 'No hay administradores para mostrar' : 'No hay otros moderadores para mostrar')}
       />
     </div>
   );

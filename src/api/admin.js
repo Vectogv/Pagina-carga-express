@@ -26,10 +26,6 @@ export const getUsers = (params) => api.get(`${BASE}/users`, { params })
 export const updateUser = (id, data) => api.put(`${BASE}/users/${id}`, data)
 export const suspendUser = (id) => api.put(`${BASE}/users/${id}/suspend`)
 export const deleteUser = (id) => api.delete(`${BASE}/users/${id}`)
-export const updateUserAvatar = (id, formData) =>
-  api.put(`${BASE}/users/${id}/avatar`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
 export const clearDebt = (id) => api.put(`${BASE}/users/${id}/clear-debt`)
 export const setUserRole = (id, data) => api.put(`${BASE}/users/${id}/role`, data)
 export const setModerator = (id, data) => api.put(`${BASE}/users/${id}/moderator`, data)
@@ -70,7 +66,6 @@ export const sendEmergencyMessage = (alertaId, mensaje) => api.post(`/api/emerge
 // usa ConversationsBoard con /api/moderator/conversations (el middleware moderator deja
 // pasar al admin y ahí sí se pueden crear conversaciones). Se dejan por compatibilidad.
 export const getConversations = () => api.get('/api/conversations')
-export const getConversationsUnreadCount = () => api.get('/api/conversations/unread-count')
 export const getConversationMessages = (id) => api.get(`/api/conversations/${id}/messages`)
 export const sendConversationMessage = (id, data) => api.post(`/api/conversations/${id}/messages`, data)
 
@@ -112,9 +107,6 @@ export const rejectPayment = (userId) => api.put(`${BASE}/payments/${userId}/rej
 // Config - doc: PUT {nequiNumero?,nequiNombre?,soporteTelefono?,soporteEmail?}, PUT coverage {zonasCobertura:[]}, PUT banner multipart banner_imagen
 export const updateConfig = (data) => api.put(`${BASE}/config`, data)
 export const getConfig = () => api.get(`${BASE}/config`)
-// El valor de Nequi que ve la app (mismo dato que GET /api/admin/config) se puede
-// leer también de payment_controller.ts#info; se deja por si algo más lo usa.
-export const getPaymentConfig = () => api.get('/api/payment/debt')
 export const getCoverage = () => api.get(`${BASE}/config/coverage`)
 export const updateCoverage = (data) => api.put(`${BASE}/config/coverage`, data)
 export const updateBanner = (formData) =>
