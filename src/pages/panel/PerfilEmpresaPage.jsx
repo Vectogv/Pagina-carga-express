@@ -56,7 +56,7 @@ export default function PerfilEmpresaPage() {
           <AvatarAmpliable name={e.nombre} size={112} className="perfil-cab__foto" />
           <div className="perfil-cab__info">
             <h2 className="perfil-cab__nombre">{e.nombre}</h2>
-            <span className="text-muted">NIT {e.nit || '—'}</span>
+            <span className="text-muted">NIT {e.nit || 'N/A'}{!e.nit && ' · Emprendimiento'}</span>
             <div className="perfil-cab__badges">
               <Badge variant={variante}>{etiqueta}</Badge>
               <Badge variant="neutral">Código {e.codigo || '—'}</Badge>
@@ -69,7 +69,7 @@ export default function PerfilEmpresaPage() {
         <Card title="Datos">
           <div className="detail-list">
             <Detail label="Razón social">{e.nombre}</Detail>
-            <Detail label="NIT">{e.nit}</Detail>
+            <Detail label="NIT">{e.nit || 'N/A (emprendimiento)'}</Detail>
             <Detail label="Dirección">{e.direccion}</Detail>
             <Detail label="Teléfono">{e.telefono}</Detail>
             <Detail label="Viajes totales">{e.totalViajes}</Detail>
