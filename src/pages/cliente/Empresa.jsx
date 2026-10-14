@@ -31,9 +31,10 @@ export default function Empresa() {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
   const [bajando, setBajando] = useState(false);
+  const enRevision = user?.empresa?.estado === 'pendiente';
 
   useEffect(() => {
-    if (!mes || !user?.empresa?.esDueno) return undefined; // sin empresa propia no se consulta (403) y se redirige abajo
+    if (!mes || !user?.empresa?.esDueno || enRevision) return undefined; // sin empresa propia no se consulta (403) y se redirige abajo
     let vivo = true;
     setDatos(null);
     setError(null);
@@ -41,9 +42,24 @@ export default function Empresa() {
       .then((r) => { if (vivo) setDatos(r.data?.data || r.data); })
       .catch((e) => { if (vivo) setError(errorMessage(e, 'No se pudo cargar el resumen')); });
     return () => { vivo = false; };
-  }, [mes, user?.empresa?.esDueno]);
+  }, [mes, user?.empresa?.esDueno, enRevision]);
 
   if (!user?.empresa?.esDueno) return <Navigate to="/cliente" replace />;
+
+  if (enRevision) {
+    return (
+      <section>
+        <div className="cli-titulo">
+          <h1>{user.empresa.nombre}</h1>
+          <span>En revisión</span>
+        </div>
+        <div className="cli-card" role="status">
+          <h2 className="cli-emp__h2">En revisión</h2>
+          <p>Tu empresa está en revisión. Te avisamos cuando gerencia la apruebe.</p>
+        </div>
+      </section>
+    );
+  }
 
   const pdf = async () => {
     setBajando(true);

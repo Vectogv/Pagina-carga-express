@@ -117,7 +117,7 @@ export default function RegistroEmpresa() {
         setCorreoRepetido(true);
         setError('Ese correo ya está registrado.');
         setPaso(1);
-      } else if (fase === 'empresa' && /NIT/i.test(msg)) {
+      } else if (fase === 'empresa' && (err?.response?.data?.field === 'nit' || /NIT/i.test(msg))) {
         setErrores({ nit: msg });
       } else {
         setError(fase === 'cuenta' ? msg : `${msg} Tu cuenta ya está creada: pulsa el botón para reintentar.`);
