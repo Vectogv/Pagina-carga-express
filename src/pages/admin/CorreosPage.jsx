@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getPlantillasCorreo, updatePlantillaCorreo, sendCorreo } from '../../api/correo';
 import { errorMessage, formatDateTime } from '../../utils/format';
 import { useZonas } from '../../hooks/useZonas';
 import { PageHeader, Card, Select, Input, Textarea, Alert, Button, LoadingState } from '../../components/ui';
 import VistaPreviaCorreo from '../../components/panel/VistaPreviaCorreo';
+import VariablesCorreo from '../../components/panel/VariablesCorreo';
 
 /** Gerencia edita las plantillas de correo y puede enviarlas a los conductores de una zona. */
 export default function CorreosPage() {
@@ -16,6 +17,7 @@ export default function CorreosPage() {
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(null);
+  const ultimo = useRef('cuerpo');
 
   const elegir = (lista, c) => {
     const p = lista.find((x) => x.clave === c) || lista[0];
@@ -37,7 +39,7 @@ export default function CorreosPage() {
   const actual = plantillas?.find((p) => p.clave === clave);
   const cambiado = actual && ['nombre', 'asunto', 'cuerpo', 'activo'].some((k) => actual[k] !== form[k]);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const insertar = (v) => setForm((f) => ({ ...f, cuerpo: `${f.cuerpo}{{${v}}}` }));
+  const insertar = (campo, fn) => setForm((f) => ({ ...f, [campo]: fn(f[campo]) }));
 
   const accion = async (fn, okMsg, errMsg) => {
     try {
@@ -88,14 +90,9 @@ export default function CorreosPage() {
             </Select>
             {actual?.updatedAt && <span className="text-sm text-muted">Última edición: {formatDateTime(actual.updatedAt)}</span>}
             <Input label="Nombre" value={form.nombre} maxLength={100} onChange={set('nombre')} />
-            <Input label="Asunto" value={form.asunto} maxLength={150} onChange={set('asunto')} />
-            <Textarea label="Mensaje" value={form.cuerpo} maxLength={5000} rows={10} onChange={set('cuerpo')} />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-              <span className="text-sm text-muted">Insertar:</span>
-              {variables.map((v) => (
-                <Button key={v} size="sm" variant="soft-primary" onClick={() => insertar(v)}>{`{{${v}}}`}</Button>
-              ))}
-            </div>
+            <Input id="correo-asunto" onFocus={() => { ultimo.current = 'asunto'; }} label="Asunto" value={form.asunto} maxLength={150} onChange={set('asunto')} />
+            <Textarea id="correo-cuerpo" onFocus={() => { ultimo.current = 'cuerpo'; }} label="Mensaje" value={form.cuerpo} maxLength={5000} rows={10} onChange={set('cuerpo')} />
+            <VariablesCorreo variables={variables} ids={{ asunto: 'correo-asunto', cuerpo: 'correo-cuerpo' }} ultimo={ultimo} onInsert={insertar} />
             <label className="text-sm" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input type="checkbox" checked={form.activo} onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))} />
               Activa (se puede elegir al enviar)

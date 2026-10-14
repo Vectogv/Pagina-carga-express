@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getPlantillasCorreo, sendCorreo } from '../../api/correo';
 import { errorMessage } from '../../utils/format';
 import { Modal, Select, Input, Textarea, Button, Alert } from '../ui';
 import VistaPreviaCorreo from './VistaPreviaCorreo';
+import VariablesCorreo from './VariablesCorreo';
 
 /**
  * Correo con la marca a un usuario (userId). Se elige una plantilla y se puede ajustar
@@ -16,6 +17,9 @@ export default function EnviarCorreoDialog({ area, userId, destinatario, onClose
   const [cuerpo, setCuerpo] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+  const ultimo = useRef('cuerpo');
+  // Solo el admin edita el texto; el moderador elige plantilla, previsualiza y envía.
+  const puedeEditar = area === 'admin';
 
   useEffect(() => {
     getPlantillasCorreo(area)
@@ -36,7 +40,7 @@ export default function EnviarCorreoDialog({ area, userId, destinatario, onClose
     try {
       setEnviando(true);
       setError(null);
-      const { data } = await sendCorreo(area, { userId, asunto, cuerpo, ...(clave ? { plantilla: clave } : {}) });
+      const { data } = await sendCorreo(area, puedeEditar ? { userId, asunto, cuerpo, ...(clave ? { plantilla: clave } : {}) } : { userId, plantilla: clave });
       if (data.enviados > 0) {
         onEnviado?.(`Correo enviado a ${destinatario}`);
         onClose();
@@ -60,7 +64,7 @@ export default function EnviarCorreoDialog({ area, userId, destinatario, onClose
       footer={(
         <>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button onClick={enviar} disabled={enviando || !asunto.trim() || !cuerpo.trim()}>
+          <Button onClick={enviar} disabled={enviando || !asunto.trim() || !cuerpo.trim() || (!puedeEditar && !clave)}>
             {enviando ? 'Enviando...' : 'Enviar correo'}
           </Button>
         </>
@@ -72,10 +76,19 @@ export default function EnviarCorreoDialog({ area, userId, destinatario, onClose
           <option value="">Elige una plantilla…</option>
           {plantillas.map((p) => <option key={p.clave} value={p.clave}>{p.nombre}</option>)}
         </Select>
-        <Input label="Asunto" value={asunto} maxLength={150} onChange={(e) => setAsunto(e.target.value)} />
-        <Textarea label="Mensaje" value={cuerpo} maxLength={5000} rows={6} onChange={(e) => setCuerpo(e.target.value)} />
-        {variables.length > 0 && (
-          <span className="text-sm text-muted">Puedes usar: {variables.map((v) => `{{${v}}}`).join(', ')}</span>
+        {puedeEditar ? (
+          <>
+            <Input id="correo-asunto" onFocus={() => { ultimo.current = 'asunto'; }} label="Asunto" value={asunto} maxLength={150} onChange={(e) => setAsunto(e.target.value)} />
+            <Textarea id="correo-cuerpo" onFocus={() => { ultimo.current = 'cuerpo'; }} label="Mensaje" value={cuerpo} maxLength={5000} rows={6} onChange={(e) => setCuerpo(e.target.value)} />
+            <VariablesCorreo
+              variables={variables}
+              ids={{ asunto: 'correo-asunto', cuerpo: 'correo-cuerpo' }}
+              ultimo={ultimo}
+              onInsert={(campo, fn) => (campo === 'asunto' ? setAsunto : setCuerpo)(fn)}
+            />
+          </>
+        ) : (
+          <span className="text-sm text-muted">El texto de la plantilla lo define gerencia; las variables se rellenan con los datos del conductor.</span>
         )}
         <VistaPreviaCorreo area={area} asunto={asunto} cuerpo={cuerpo} userId={userId} alto={380} />
       </div>
