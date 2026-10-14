@@ -149,3 +149,15 @@ export const reemplazarOptimista = (list, tmpId, msg) => {
   if (!actual.some((m) => sameId(m.id, tmpId))) return mergeMensaje(actual, msg);
   return ordenarPorFecha(actual.map((m) => (sameId(m.id, tmpId) ? { ...msg } : m)));
 };
+
+/** "hoy 3:45 p. m.", "ayer 10:20 a. m." o "12 oct 3:45 p. m." (siempre 12 h). */
+const hora12Format = new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true });
+const diaCortoFormat = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' });
+export const formatUltimaConexion = (v) => {
+  if (!esValida(v)) return '';
+  const d = new Date(v);
+  const dias = diasDesde(d);
+  const hora = hora12Format.format(d).replace(/\s/g, ' ').toLowerCase();
+  const dia = dias <= 0 ? 'hoy' : dias === 1 ? 'ayer' : diaCortoFormat.format(d).replace('.', '');
+  return `${dia} ${hora}`;
+};

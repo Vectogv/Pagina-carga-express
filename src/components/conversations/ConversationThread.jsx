@@ -1,12 +1,15 @@
-import { Fragment, useEffect, useLayoutEffect, useRef } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, ArrowLeft, Check, CheckCheck, Clock, Loader2, MapPin, MessagesSquare, Plus, RotateCcw, Send,
-  Trash2, Truck, UserRound,
+  Trash2, Truck, UserRound, UserRoundSearch,
 } from 'lucide-react';
+import { timeAgo } from '../../utils/format';
+import { getModeratorDrivers } from '../../api/moderator';
 import { CONEXION, ETIQUETA_CONEXION } from '../../hooks/useConversationSocket';
 import { Avatar, Badge, Button, EmptyState, StatusBadge } from '../ui';
 import {
-  ROL_BADGE, ciudadDe, formatDia, formatFechaCompleta, formatHora, getRolEtiqueta, isSameDay, sameId, viajeCorto,
+  ROL_BADGE, ciudadDe, formatDia, formatFechaCompleta, formatHora, formatUltimaConexion, getRolEtiqueta, isSameDay, sameId, viajeCorto,
 } from './conversationUtils';
 
 const MAX_CHARS = 500;
@@ -19,7 +22,7 @@ function ConnectionDot({ estado }) {
   return (
     <span className={`chat__conn chat__conn--${valor}`} title={ETIQUETA_CONEXION[valor] || valor}>
       <span className="chat__conn-dot" aria-hidden="true" />
-      <span className="chat__conn-label">{ETIQUETA_CONEXION[valor] || valor}</span>
+      <span className="chat__conn-label">Tu conexión: {ETIQUETA_CONEXION[valor] || valor}</span>
     </span>
   );
 }
@@ -78,6 +81,9 @@ export default function ConversationThread({
   conversation, contact, messages, loading, loadError, myId, draft, onDraftChange, onSend,
   onRetry, onDiscard, sending, sendError, estadoConexion, onBack, canCreate, onNew, ciudadLabel, atendidoPor,
 }) {
+  const navigate = useNavigate();
+  const area = useLocation().pathname.startsWith('/admin') ? 'admin' : 'moderator';
+  const [abriendoPerfil, setAbriendoPerfil] = useState(false);
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const convIdRef = useRef(null);
@@ -104,6 +110,22 @@ export default function ConversationThread({
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, [draft, convId]);
 
+  // Presencia real solo de conductores (online/ultimaActividadAt del directorio); el resto no la expone el servidor.
+  const [filaConductor, setFilaConductor] = useState(null);
+  const contactoId = contact?.id;
+  const esConductor = getRolEtiqueta(contact) === 'CONDUCTOR';
+  const nombreContacto = contact?.nombre || conversation?.nombre;
+  useEffect(() => {
+    setFilaConductor(null);
+    if (!esConductor || !contactoId || !nombreContacto) return undefined;
+    let vivo = true;
+    const cargar = () => getModeratorDrivers({ buscar: nombreContacto, limit: 100 })
+      .then((res) => { if (vivo) setFilaConductor((res.data?.data || []).find((c) => sameId(c.usuarioId, contactoId)) || null); })
+      .catch(() => {});
+    cargar();
+    const t = setInterval(cargar, 30000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [esConductor, contactoId, nombreContacto]);
   if (!conversation) {
     return (
       <div className="chat__thread chat__thread--empty">
@@ -129,6 +151,26 @@ export default function ConversationThread({
   // No se bloquea por un envío lento: cada mensaje lleva su propio estado.
   const canSend = Boolean(draft.trim());
 
+  // Conductores: la ficha usa el id del conductor, no el del usuario; se resuelve por el directorio.
+  const rolContacto = getRolEtiqueta(contact);
+  const puedeVerPerfil = Boolean(contact?.id) && (rolContacto === 'CONDUCTOR' || rolContacto === 'CLIENTE' || (rolContacto === 'MODERADOR' && area === 'admin'));
+  const verPerfil = async () => {
+    if (rolContacto === 'CLIENTE') return navigate(`/${area}/clients/${contact.id}`);
+    if (rolContacto === 'MODERADOR') return navigate(`/admin/moderators/${contact.id}`);
+    if (filaConductor) return navigate(`/${area}/drivers/${filaConductor.id}`);
+    setAbriendoPerfil(true);
+    try {
+      const res = await getModeratorDrivers({ buscar: nombre, limit: 100 });
+      const fila = (res.data?.data || []).find((c) => sameId(c.usuarioId, contact.id));
+      if (fila) navigate(`/${area}/drivers/${fila.id}`);
+      else window.alert('No se encontró el perfil de este conductor.');
+    } catch {
+      window.alert('No se pudo abrir el perfil.');
+    } finally {
+      setAbriendoPerfil(false);
+    }
+  };
+
   const handleKeyDown = (e) => {
     if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
     e.preventDefault();
@@ -144,10 +186,22 @@ export default function ConversationThread({
         <Avatar src={conversation.avatar || contact?.avatar} name={nombre} size={40} />
         <div className="chat__thread-title">
           <div className="chat__thread-name">
-            <span className="truncate">{nombre}</span>
+            {puedeVerPerfil ? (
+              <button type="button" className="truncate" style={{ all: 'unset', cursor: 'pointer', fontWeight: 'inherit' }} onClick={verPerfil} title="Ver perfil">{nombre}</button>
+            ) : <span className="truncate">{nombre}</span>}
             <Badge variant={rol.variant} size="sm">{rol.label}</Badge>
           </div>
           <div className="chat__thread-sub">
+            {filaConductor && (() => {
+              const enLinea = filaConductor.online && !filaConductor.sinSenal;
+              const hace = timeAgo(filaConductor.ultimaActividadAt);
+              return (
+                <span className="chat__thread-meta" title="Estado del conductor">
+                  <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: enLinea ? 'var(--success)' : '#9ca3af' }} />
+                  {enLinea ? 'En línea' : (filaConductor.ultimaActividadAt ? `Desconectado · Última conexión: ${formatUltimaConexion(filaConductor.ultimaActividadAt)} (${hace.toLowerCase()})` : 'Desconectado')}
+                </span>
+              );
+            })()}
             {ciudad && <span className="chat__thread-meta"><MapPin size={12} aria-hidden="true" />{ciudad}</span>}
             {contactoDato && <span className="chat__thread-meta truncate">{contactoDato}</span>}
             {atendidoPor && (
@@ -158,6 +212,11 @@ export default function ConversationThread({
           </div>
         </div>
         <div className="chat__thread-actions">
+          {puedeVerPerfil && (
+            <Button size="sm" variant="ghost" icon={<UserRoundSearch size={14} />} onClick={verPerfil} disabled={abriendoPerfil} aria-label="Ver perfil">
+              <span className="chat__profile-label">Ver perfil</span>
+            </Button>
+          )}
           {viaje?.id != null && (
             <span
               className="chat__trip"
