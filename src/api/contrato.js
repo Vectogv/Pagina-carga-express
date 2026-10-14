@@ -10,7 +10,8 @@ export const getMiVerificacion = () => api.get('/api/moderator/verificacion')
 // FormData con cedulaFrente, cedulaReverso y/o rostro (JPG o PNG hasta 5 MB). Se pueden mandar por partes.
 export const subirDocumentosModerador = (form) => api.post('/api/moderator/verificacion/documentos', form, MULTIPART)
 // FormData: acuerdoId, hashTexto, tipoFirma ('dibujada' | 'foto') y el archivo `firma`.
-export const solicitarContrato = () => api.post('/api/moderator/verificacion/solicitar')
+// { cedula }: número de cédula, solo dígitos (6 a 10).
+export const solicitarContrato = (cedula) => api.post('/api/moderator/verificacion/solicitar', { cedula })
 export const firmarAcuerdo = (form) => api.post('/api/moderator/verificacion/firmar', form, MULTIPART)
 export const getMiPdfContrato = () => api.get('/api/moderator/verificacion/pdf', { responseType: 'blob' })
 
@@ -19,11 +20,17 @@ const BASE = '/api/admin/moderadores/verificaciones'
 export const getVerificacionesModeradores = (params) => api.get(BASE, { params })
 export const getVerificacionModerador = (userId) => api.get(`${BASE}/${userId}`)
 export const getPdfVerificacion = (userId) => api.get(`${BASE}/${userId}/pdf`, { responseType: 'blob' })
-export const generarContrato = (userId) => api.put(`${BASE}/${userId}/generar-contrato`)
+// El admin confirma que comparó el número de cédula con la foto.
+export const generarContrato = (userId) => api.put(`${BASE}/${userId}/generar-contrato`, { cedulaVerificada: true })
 export const suspenderVerificacion = (userId, nota) => api.put(`${BASE}/${userId}/suspender`, { nota })
 export const rechazarVerificacion = (userId, nota) => api.put(`${BASE}/${userId}/reject`, { nota })
 export const getAcuerdos = () => api.get('/api/admin/acuerdos')
 export const publicarAcuerdo = (data) => api.post('/api/admin/acuerdos', data)
+// Datos de gerencia para el contrato: nombre, cédula opcional, % del moderador, cláusula penal y firma.
+export const getConfigAcuerdo = () => api.get('/api/admin/acuerdos/config')
+export const guardarConfigAcuerdo = (data) => api.put('/api/admin/acuerdos/config', data)
+// FormData con el archivo `firma` (JPG o PNG hasta 2 MB).
+export const subirFirmaGerencia = (form) => api.post('/api/admin/acuerdos/config/firma', form, MULTIPART)
 
 /** Abre un PDF (blob) en otra pestaña; si el navegador lo bloquea, lo descarga. */
 export function abrirPdf(blob, nombre = 'contrato.pdf') {

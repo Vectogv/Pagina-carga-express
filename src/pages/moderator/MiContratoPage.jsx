@@ -97,8 +97,7 @@ export default function MiContratoPage() {
           zona={zona}
           desde={d.contratoDesde}
           hasta={d.contratoHasta}
-          firmaUrl={firma?.firmaUrl}
-          firmadoAt={firma?.firmadoAt}
+          firmas={d.firmasContrato}
         />
       </div>
     </div>

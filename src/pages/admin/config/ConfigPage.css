@@ -103,6 +103,7 @@
   .config__zone { flex-direction: column; align-items: flex-start; }
   .config__zone-badges { justify-content: flex-start; }
   .config__section .card__header { flex-direction: column; }
+  .config__section .card__header-text { flex-basis: auto; }
   .config__section .card__actions { flex-wrap: wrap; }
 }
 

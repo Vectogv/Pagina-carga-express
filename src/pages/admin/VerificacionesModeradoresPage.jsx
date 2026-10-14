@@ -9,7 +9,8 @@ import {
   getVerificacionesModeradores, rechazarVerificacion,
 } from '../../api/contrato';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
-import { ImagenDocumento as Imagen } from '../../components/moderator/DocumentoContrato';
+import DocumentoContrato, { ImagenDocumento as Imagen } from '../../components/moderator/DocumentoContrato';
+import '../../components/moderator/ModeradorBloqueado.css';
 import { errorMessage, formatDate, formatDateTime } from '../../utils/format';
 import './VerificacionesModeradoresPage.css';
 
@@ -45,6 +46,7 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
   const [modoNota, setModoNota] = useState(''); // 'rechazar' | 'suspender'
   const [nota, setNota] = useState('');
   const [enviando, setEnviando] = useState('');
+  const [cedulaOk, setCedulaOk] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -99,7 +101,7 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
       {puedeRechazar && <Button variant="danger" icon={<X size={14} />} onClick={() => setModoNota('rechazar')}>Rechazar</Button>}
       {d.estado === 'activo' && <Button variant="danger" onClick={() => setModoNota('suspender')}>Suspender</Button>}
       {d.estado === 'solicitado' && (
-        <Button variant="success" icon={<Check size={14} />} loading={enviando === 'generar'} onClick={() => accion('generar')}>Aceptar y generar contrato</Button>
+        <Button variant="success" icon={<Check size={14} />} disabled={!cedulaOk || !d.cedula} loading={enviando === 'generar'} onClick={() => accion('generar')}>Aceptar y generar contrato</Button>
       )}
     </>
   ));
@@ -142,12 +144,21 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
                 <div><dt>Teléfono</dt><dd>{d.telefono || '—'}</dd></div>
                 <div><dt>Zona</dt><dd>{d.zona ? zonaLabelFrom(ZONAS, d.zona) : 'Sin zona'}</dd></div>
               </dl>
-              <p className="vermod__ayuda">Compara el rostro con la foto de la cédula. Si todo coincide, acepta y se genera el contrato.</p>
+              <p className="vermod__ayuda">Compara el rostro y el número con la foto de la cédula. Si todo coincide, acepta y se genera el contrato.</p>
               <div className="vermod__grid vermod__grid--3">
-                <Imagen titulo="Cédula (frente)" src={d.documentos?.cedulaFrente} />
+                <div>
+                  <Imagen titulo="Cédula (frente)" src={d.documentos?.cedulaFrente} />
+                  <p className="vermod__ayuda">Número escrito: <strong>{d.cedula || 'No lo escribió'}</strong></p>
+                </div>
                 <Imagen titulo="Cédula (reverso)" src={d.documentos?.cedulaReverso} />
                 <Imagen titulo="Rostro" src={d.documentos?.rostro} />
               </div>
+              {d.cedula ? (
+                <label className="modbloq__check">
+                  <input type="checkbox" checked={cedulaOk} onChange={(e) => setCedulaOk(e.target.checked)} />
+                  Verifiqué que el número de cédula coincide con la foto
+                </label>
+              ) : <Alert variant="warning">El moderador no escribió su número de cédula: recházalo con una nota para que lo escriba.</Alert>}
             </>
           ) : (<>
           <h4 className="vermod__h">Cédula y firma</h4>
@@ -159,6 +170,24 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
             <Imagen titulo="Rostro" src={d.documentos?.rostro} />
           </div>
           </>)}
+
+          {d.acuerdo && (
+            <>
+              <h4 className="vermod__h">Contrato</h4>
+              <div className="modbloq__acuerdo">
+                <DocumentoContrato
+                  acuerdo={d.acuerdo}
+                  numero={d.numeroContrato}
+                  nombre={d.nombre}
+                  cedula={d.cedula}
+                  zona={d.zonaContrato || d.zona}
+                  desde={d.contratoDesde}
+                  hasta={d.contratoHasta}
+                  firmas={d.firmasContrato}
+                />
+              </div>
+            </>
+          )}
 
           <h4 className="vermod__h">Firmas</h4>
           {d.firmas?.length ? (

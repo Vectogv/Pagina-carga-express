@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Camera, Check, Eraser, FileDown, LogOut, Upload } from 'lucide-react';
 import {
-  Alert, Badge, Button, Tabs, TabsList, TabsTrigger, TabsContent,
+  Alert, Badge, Button, Input, Tabs, TabsList, TabsTrigger, TabsContent,
 } from '../ui';
 import {
   ESTADO_VERIFICACION, abrirPdf, firmarAcuerdo, getMiPdfContrato, solicitarContrato, subirDocumentosModerador,
@@ -154,6 +154,7 @@ function TextoAcuerdo({ data, onFinal }) {
         zona={data.zonaContrato || data.zona}
         desde={data.contratoDesde}
         hasta={data.contratoHasta}
+        firmas={data.firmasContrato}
       />
     </div>
   );
@@ -164,6 +165,7 @@ function Asistente({ data, onRefresh, fase }) {
   const acuerdo = data.acuerdo;
   const [paso, setPaso] = useState(fase === 'firma' ? 2 : 0);
   const [archivos, setArchivos] = useState({ cedulaFrente: null, cedulaReverso: null, rostro: null });
+  const [numCedula, setNumCedula] = useState(data.cedula || '');
   const [leido, setLeido] = useState(false);
   const [acepto, setAcepto] = useState(false);
   const [modoFirma, setModoFirma] = useState('dibujada');
@@ -213,11 +215,11 @@ function Asistente({ data, onRefresh, fase }) {
       const form = new FormData();
       if (archivos.rostro) form.append('rostro', archivos.rostro);
       if ([...form.keys()].length) await subirDocumentosModerador(form);
-      await solicitarContrato();
+      await solicitarContrato(numCedula);
       await onRefresh();
     } catch (err) {
       setError(errorMessage(err, 'No se pudo solicitar el contrato'));
-      if (err?.response?.data?.code === 'FALTAN_DOCUMENTOS') setPaso(0);
+      if (['FALTAN_DOCUMENTOS', 'CEDULA_INVALIDA'].includes(err?.response?.data?.code)) setPaso(0);
     } finally {
       setEnviando(false);
     }
@@ -249,7 +251,8 @@ function Asistente({ data, onRefresh, fase }) {
     }
   };
 
-  const cedulaLista = (archivos.cedulaFrente || docs.cedulaFrente) && (archivos.cedulaReverso || docs.cedulaReverso);
+  const numeroValido = /^\d{6,10}$/.test(numCedula);
+  const cedulaLista = numeroValido && (archivos.cedulaFrente || docs.cedulaFrente) && (archivos.cedulaReverso || docs.cedulaReverso);
   const rostroListo = archivos.rostro || docs.rostro;
   const firmaLista = modoFirma === 'dibujada' ? Boolean(lienzo) : Boolean(fotoFirma);
 
@@ -274,6 +277,16 @@ function Asistente({ data, onRefresh, fase }) {
         <section>
           <h3 className="modbloq__h">Tu cédula, por los dos lados</h3>
           <p className="modbloq__ayuda">Foto nítida, sin reflejos y con los cuatro bordes visibles. JPG o PNG, hasta 5 MB.</p>
+          <Input
+            label="Número de cédula"
+            required
+            inputMode="numeric"
+            maxLength={10}
+            value={numCedula}
+            onChange={(e) => setNumCedula(e.target.value.replace(/\D/g, ''))}
+            error={numCedula && !numeroValido ? 'Solo números, de 6 a 10 dígitos' : ''}
+            helperText="Tal como aparece en la cédula. Va en tu contrato."
+          />
           <div className="modbloq__grid">
             <CampoImagen label="Frente" file={archivos.cedulaFrente} actual={docs.cedulaFrente} onChange={elegir('cedulaFrente')} capture="environment" />
             <CampoImagen label="Reverso" file={archivos.cedulaReverso} actual={docs.cedulaReverso} onChange={elegir('cedulaReverso')} capture="environment" />

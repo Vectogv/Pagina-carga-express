@@ -87,9 +87,12 @@ function Bloque({ b }) {
 /**
  * Contrato del moderador como hoja de papel (se parece al PDF del servidor).
  * Sin `nombre` (vista previa de gerencia) no muestra los datos del moderador.
+ * `firmas` = firmasContrato del servidor: { contratante, moderador } con nombre, cédula y firmaUrl.
  */
-export default function DocumentoContrato({ acuerdo, numero, nombre, cedula, zona, desde, hasta, firmaUrl, firmadoAt }) {
+export default function DocumentoContrato({ acuerdo, numero, nombre, cedula, zona, desde, hasta, firmas }) {
   if (!acuerdo) return null;
+  const g = firmas?.contratante;
+  const m = firmas?.moderador;
   const datos = nombre && [
     ['Moderador', nombre],
     ['Cédula', cedula],
@@ -125,17 +128,18 @@ export default function DocumentoContrato({ acuerdo, numero, nombre, cedula, zon
 
       <footer className="doccon__firmas">
         <div className="doccon__firma">
-          <div className="doccon__firma-espacio">{firmaUrl && <img src={resolveStorageUrl(firmaUrl)} alt="Firma del moderador" />}</div>
-          <strong>EL MODERADOR</strong>
-          <span>{nombre || 'Nombre del moderador'}</span>
-          <span>C.C. {cedula || '__________'}</span>
-          {firmadoAt && <span>Firmado el {formatDate(firmadoAt)}</span>}
+          <div className="doccon__firma-espacio">{g?.firmaUrl && <img src={resolveStorageUrl(g.firmaUrl)} alt="Firma de gerencia" />}</div>
+          <strong>EL CONTRATANTE</strong>
+          <span><Linea txt={g?.nombre || '[NOMBRE DEL CONTRATANTE]'} /></span>
+          {g?.cedula && <span>C.C. {g.cedula}</span>}
+          <span>Titular de CargaExpress</span>
         </div>
         <div className="doccon__firma">
-          <div className="doccon__firma-espacio" />
-          <strong>CARGAEXPRESS</strong>
-          <span><Linea txt="[RAZÓN SOCIAL]" /></span>
-          <span>Representante legal</span>
+          <div className="doccon__firma-espacio">{m?.firmaUrl && <img src={resolveStorageUrl(m.firmaUrl)} alt="Firma del moderador" />}</div>
+          <strong>EL MODERADOR</strong>
+          <span>{m?.nombre || nombre || 'Nombre del moderador'}</span>
+          <span>C.C. {m?.cedula || cedula || '__________'}</span>
+          {m?.firmadoAt && <span>Firmado el {formatDate(m.firmadoAt)}</span>}
         </div>
       </footer>
     </article>
