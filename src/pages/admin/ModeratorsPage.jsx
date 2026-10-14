@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Pencil, Search, UserMinus, UserPlus } from 'lucide-react';
 import { getUsers, setModerator } from '../../api/admin';
 import { errorMessage, fullName, toList } from '../../utils/format';
@@ -147,6 +148,7 @@ export default function ModeratorsPage() {
       align: 'right',
       render: (_, u) => (
         <div className="row row--end">
+          <Link className="btn btn--soft-primary btn--sm" to={`/admin/moderators/${userId(u)}`}>Ver perfil</Link>
           <Button size="sm" variant="secondary" icon={<Pencil size={14} />} onClick={() => openEdit(u)}>Modificar</Button>
           <Button size="sm" variant="soft-danger" icon={<UserMinus size={14} />} onClick={() => setRemoveTarget(u)}>Quitar</Button>
         </div>

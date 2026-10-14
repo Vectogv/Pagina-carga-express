@@ -4,7 +4,7 @@ import { ArrowLeft, MessageSquare } from 'lucide-react';
 import { getClientProfile } from '../../api/moderator';
 import { errorMessage, formatCurrency, formatDate, fullName } from '../../utils/format';
 import { resolveStorageUrl } from '../../utils/storage';
-import { TarjetaPersona } from '../../components/panel';
+import { TarjetaPersona, AvatarAmpliable } from '../../components/panel';
 import {
   PageHeader, Card, DataTable, Avatar, Badge, StatusBadge, LoadingState, StatCard,
 } from '../../components/ui';
@@ -113,7 +113,7 @@ export default function PerfilClientePage({ area = 'moderator' }) {
 
       <Card>
         <div className="perfil-cab">
-          <Avatar src={foto} name={nombre} size={112} className="perfil-cab__foto" />
+          <AvatarAmpliable src={foto} name={nombre} size={112} className="perfil-cab__foto" />
           <div className="perfil-cab__info">
             <h2 className="perfil-cab__nombre">{nombre}</h2>
             <span className="text-muted">{[c.email, c.telefono].filter(Boolean).join(' · ')}</span>

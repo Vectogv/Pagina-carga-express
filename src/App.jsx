@@ -26,6 +26,8 @@ const admin = {
   mapa: lazy(() => import('./pages/panel/MapaVivoPage')),
   'drivers/:id': lazy(() => import('./pages/panel/PerfilConductorPage').then((m) => ({ default: () => <m.default area="admin" /> }))),
   'clients/:id': lazy(() => import('./pages/panel/PerfilClientePage').then((m) => ({ default: () => <m.default area="admin" /> }))),
+  'moderators/:id': lazy(() => import('./pages/panel/PerfilModeradorPage')),
+  'empresas/:id': lazy(() => import('./pages/panel/PerfilEmpresaPage')),
   trips: lazy(() => import('./pages/admin/TripsPage')),
   earnings: lazy(() => import('./pages/admin/EarningsPage')),
   commissions: lazy(() => import('./pages/admin/CommissionsPage')),

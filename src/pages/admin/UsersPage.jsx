@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Ban, CircleCheck, KeyRound, Pencil, Shield, Star, Trash2, Unlock, UserPlus } from 'lucide-react';
 import { getUsers, suspendUser, deleteUser, setLeader, resetPassword, clearDebt } from '../../api/admin';
 import { getRolUsuario } from '../../utils/roles';
@@ -61,6 +62,15 @@ const debtLabel = (u) => {
   if (info.estadoCuenta === 'esperando_confirmacion') return 'Pago en revisión';
   return info.monto > 0 ? `Debe ${formatCurrency(info.monto)}` : 'Cuenta no activa';
 };
+
+/** Ruta del perfil del usuario según su rol (conductor solo si el listado trae su id de conductor). */
+function perfilUrl(u) {
+  const rol = getRolUsuario(u);
+  if (rol === 'cliente') return `/admin/clients/${userId(u)}`;
+  if (rol === 'conductor') return u.conductorId ? `/admin/drivers/${u.conductorId}` : null;
+  if (rol === 'moderador' || rol === 'moderador_lider') return `/admin/moderators/${userId(u)}`;
+  return null;
+}
 
 export default function UsersPage() {
   const zonas = useZonas();
@@ -232,6 +242,7 @@ export default function UsersPage() {
         const isAdmin = u.rol === 'admin';
         return (
           <div className="acciones-tabla">
+            {perfilUrl(u) && <Link className="btn btn--soft-primary btn--sm" to={perfilUrl(u)}>Ver perfil</Link>}
             <Button size="icon" variant="ghost" onClick={() => setEditUser(u)} aria-label={`Editar a ${name}`} title="Editar">
               <Pencil size={15} />
             </Button>

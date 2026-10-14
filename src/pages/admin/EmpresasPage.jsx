@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Check, Eye, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Check, X } from 'lucide-react';
 import { getEmpresas, approveEmpresa, rejectEmpresa } from '../../api/admin';
 import { resolveStorageUrl } from '../../utils/storage';
 import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
@@ -42,6 +43,7 @@ const Dato = ({ label, value }) => (
 const duenoDe = (e) => e?.dueno || e?.['dueño'];
 
 export default function EmpresasPage() {
+  const navigate = useNavigate();
   const [empresas, setEmpresas] = useState([]);
   const [estado, setEstado] = useState('pendiente');
   const [page, setPage] = useState(1);
@@ -111,7 +113,7 @@ export default function EmpresasPage() {
       align: 'right',
       render: (_, row) => (
         <div className="row row--end" style={{ flexWrap: 'nowrap' }}>
-          <Button size="sm" variant="ghost" icon={<Eye size={14} />} onClick={(e) => { e.stopPropagation(); setSelected(row); }}>Ver</Button>
+          <Link className="btn btn--soft-primary btn--sm" to={`/admin/empresas/${row.id}`} onClick={(e) => e.stopPropagation()}>Ver perfil</Link>
           {row.estado === 'pendiente' && (
             <>
               <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={ask(row, 'approve')}>Aprobar</Button>
@@ -150,7 +152,7 @@ export default function EmpresasPage() {
         data={empresas}
         loading={loading}
         emptyMessage="No hay empresas en este estado"
-        onRowClick={setSelected}
+        onRowClick={(row) => navigate(`/admin/empresas/${row.id}`)}
       />
       <Pagination
         page={page}

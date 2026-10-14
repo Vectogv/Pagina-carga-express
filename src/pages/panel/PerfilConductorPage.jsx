@@ -12,9 +12,9 @@ import useDocumentosConductor from '../../hooks/useDocumentosConductor';
 import NotificarDocumentosDialog from '../moderator/NotificarDocumentosDialog';
 import EnviarCorreoDialog from '../../components/panel/EnviarCorreoDialog';
 import { ConnectionBadge } from '../admin/drivers/DriverBadges';
-import { TarjetaPersona, Encuadre, posicionDe } from '../../components/panel';
+import { TarjetaPersona, Encuadre, posicionDe, DocumentoFoto, AvatarAmpliable } from '../../components/panel';
 import {
-  PageHeader, Card, DataTable, ConfirmDialog, Avatar, Button, Badge, StatusBadge, LoadingState,
+  PageHeader, Card, DataTable, ConfirmDialog, Button, Badge, StatusBadge, LoadingState,
   Textarea, Toast, ToastContainer,
 } from '../../components/ui';
 
@@ -24,21 +24,6 @@ const PIN = L.divIcon({ className: '', html: '<div class="panel-pin panel-pin--o
 
 // Un documento puede llegar como string (URL firmada) o como objeto {url, ruta}.
 const docUrl = (d) => (typeof d === 'string' ? d : d?.url || d?.ruta || null);
-
-function Documento({ label, path, extra }) {
-  const url = resolveStorageUrl(path);
-  return (
-    <div className="perfil-doc">
-      <span className="detail-list__label">{label}</span>
-      {url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${label} en una pestaña nueva`}>
-          <img src={url} alt={label} className="perfil-doc__img" loading="lazy" />
-        </a>
-      ) : <span className="perfil-doc__vacio">Sin cargar</span>}
-      {extra}
-    </div>
-  );
-}
 
 function Detail({ label, children }) {
   return (
@@ -175,7 +160,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
 
       <Card>
         <div className="perfil-cab">
-          <Avatar src={foto} name={nombre} size={112} className="perfil-cab__foto" />
+          <AvatarAmpliable src={foto} name={nombre} size={112} className="perfil-cab__foto" />
           <div className="perfil-cab__info">
             <h2 className="perfil-cab__nombre">{nombre}</h2>
             <span className="text-muted">{[driver.placa, driver.tipoVehiculo, driver.ciudad].filter(Boolean).join(' · ') || 'Conductor'}</span>
@@ -285,7 +270,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
               : clave === 'foto_vehiculo' ? (docUrl(docDe(clave)) || driver.fotoVehiculo)
                 : docUrl(docDe(clave));
             return (
-              <Documento
+              <DocumentoFoto
                 key={clave}
                 label={etiqueta}
                 path={path}
