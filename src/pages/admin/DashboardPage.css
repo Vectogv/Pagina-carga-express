@@ -1,11 +1,5 @@
 .dashboard__city { min-width: 200px; }
 
-.dashboard__panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-4);
-}
-
 .dashboard__card-title { display: inline-flex; align-items: center; gap: var(--space-2); }
 
 .dashboard__card-icon {
@@ -18,24 +12,6 @@
   background: var(--primary-subtle);
   color: var(--primary);
 }
-
-.dashboard__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.dashboard__list-item {
-  padding: var(--space-2) 0;
-  font-size: var(--text-base);
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-subtle);
-  overflow-wrap: anywhere;
-}
-
-.dashboard__list-item:last-child { border-bottom: none; }
 
 .dashboard__shortcuts {
   display: grid;
