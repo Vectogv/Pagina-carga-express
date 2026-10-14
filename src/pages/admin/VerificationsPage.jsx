@@ -172,7 +172,7 @@ export default function VerificationsPage() {
               <Button size="sm" variant="soft-success" icon={<Check size={14} />} disabled={!!bloqueado} title={bloqueado || undefined} onClick={ask(row, 'approve')}>Aprobar</Button>
               <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={ask(row, 'reject')}>Rechazar</Button>
             </div>
-            {bloqueado && <span className="acciones-fila__aviso">{bloqueado}</span>}
+            {bloqueado && <span className="acciones-fila__aviso" title={bloqueado}>{bloqueado}</span>}
           </div>
         );
       },

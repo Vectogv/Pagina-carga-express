@@ -33,7 +33,7 @@ export default function Avatar({ src, name = '', size = 32, className = '' }) {
       style={{ '--avatar-size': `${size}px`, '--avatar-bg': bg, '--avatar-fg': fg }}
       title={name || undefined}
     >
-      {url ? <img className="avatar__img" src={url} alt={name} onError={() => setFailed(true)} /> : initialsOf(name)}
+      {url ? <img className="avatar__img" src={url} alt={name} onError={() => setFailed(true)} onLoad={(e) => e.currentTarget.naturalWidth <= 1 && setFailed(true)} /> : initialsOf(name)}
     </span>
   );
 }

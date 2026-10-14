@@ -1,6 +1,6 @@
-.sst { overflow-x: auto; padding-bottom: var(--space-1); -webkit-overflow-scrolling: touch; }
-.sst__track { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-start; min-width: 640px; }
-.sst__step { display: flex; align-items: center; flex: 1; }
+.sst { padding-bottom: var(--space-1); }
+.sst__track { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-start; flex-wrap: wrap; row-gap: var(--space-3); }
+.sst__step { display: flex; align-items: center; flex: 1; min-width: 72px; }
 .sst__step:last-child { flex: 0 0 auto; }
 .sst__node { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 64px; }
 .sst__dot {
