@@ -68,7 +68,7 @@ export const adminNav = [
     items: [
       { icon: ShieldCheck, label: 'Moderadores', to: '/admin/moderators' },
       { icon: FileSignature, label: 'Solicitudes de moderadores', to: '/admin/moderadores-verificaciones' },
-      { icon: ListChecks, label: 'Pendientes de moderadores', to: '/admin/pendientes' },
+      { icon: ListChecks, label: 'Pendientes', to: '/admin/pendientes' },
       { icon: Users, label: 'Cuentas de usuario', to: '/admin/users' },
       { icon: Settings, label: 'Configuración', to: '/admin/config' },
       { icon: DatabaseBackup, label: 'Backups', to: '/admin/backups' },

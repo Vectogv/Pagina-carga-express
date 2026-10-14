@@ -3,14 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Users, Truck, ShieldCheck, Route, Wallet, Siren, FileCheck, Scale, CreditCard, Percent,
   TriangleAlert, Ban, Megaphone, Settings, DatabaseBackup, UserRound,
-  Wifi, Moon, ChevronRight, PackageCheck, CircleCheck, ListChecks,
+  Wifi, Moon, ChevronRight, PackageCheck, ListChecks,
 } from 'lucide-react';
 import { getDashboard, getUsers, getPendientes } from '../../api/admin';
 import { getModeratorDashboard } from '../../api/moderator';
 import useSocketPanel from '../../hooks/useSocketPanel';
-import { errorMessage, formatCurrency, formatDate } from '../../utils/format';
-import { PageHeader, StatCard, Card, EmptyState, SkeletonCard, Button } from '../../components/ui';
+import { errorMessage, formatCurrency } from '../../utils/format';
+import { PageHeader, StatCard, Card, SkeletonCard, Button } from '../../components/ui';
 import { FiltroZona } from '../../components/panel';
+import { useZonas } from '../../hooks/useZonas';
+import PendientesResumen from './PendientesResumen';
 import './DashboardPage.css';
 
 const ICON = 18;
@@ -25,20 +27,6 @@ const SHORTCUTS = [
   { title: 'Mi perfil', icon: <UserRound size={16} />, to: '/admin/profile' },
 ];
 
-// Pantalla donde se resuelve cada categoría de GET /api/admin/pendientes (gerencia_controller.ts).
-const DESTINO = {
-  verificaciones: '/admin/verifications',
-  soat: '/admin/verifications',
-  disputas: '/admin/disputes',
-  cierres: '/admin/trips',
-  cancelaciones: '/admin/cancellation-requests',
-  tickets: '/admin/tickets',
-  emergencias: '/admin/emergencies',
-  reportes: '/admin/reports',
-  comunicados: '/admin/comunicados',
-  pagos: '/admin/payments',
-};
-
 // GET /api/admin/users manda el total real en la cabecera X-Total-Count.
 const totalOf = (res) => {
   const raw = res?.headers?.['x-total-count'];
@@ -48,6 +36,7 @@ const totalOf = (res) => {
 
 function DashboardPage() {
   const socket = useSocketPanel();
+  const zonas = useZonas();
   const navigate = useNavigate();
   const [zona, setZona] = useState('');
   const [data, setData] = useState(null);
@@ -127,7 +116,6 @@ function DashboardPage() {
 
   const z = data.zona || {};
   const cat = (clave) => data.categorias.find((c) => c.clave === clave)?.total;
-  const urgentes = data.categorias.filter((c) => c.total > 0);
   const alcance = zona ? 'En esta zona' : undefined;
 
   const stats = [
@@ -163,38 +151,11 @@ function DashboardPage() {
       </div>
 
       <Card
-        title="Pendientes urgentes"
-        description="Lo que más tiempo lleva esperando, por categoría."
+        title="Pendientes"
+        description="Lo que está esperando una acción tuya."
         actions={<Button variant="secondary" size="sm" icon={<ListChecks size={14} />} onClick={() => navigate('/admin/pendientes')}>Ver todos</Button>}
       >
-        {urgentes.length === 0 ? (
-          <EmptyState
-            icon={<CircleCheck size={22} />}
-            title="Nada pendiente"
-            description={zona ? 'En esta zona no hay nada esperando revisión.' : 'No hay nada esperando revisión.'}
-          />
-        ) : (
-          <div className="dashboard__panels">
-            {urgentes.map((c) => (
-              <div key={c.clave} className="stack" style={{ gap: 'var(--space-2)' }}>
-                <Link to={DESTINO[c.clave] || '/admin/pendientes'} className="dashboard__card-title">
-                  <span className="dashboard__card-icon"><ChevronRight size={14} /></span>
-                  <strong>{c.titulo}</strong>
-                  <span className="text-muted">· {c.total}</span>
-                </Link>
-                <ul className="dashboard__list">
-                  {c.items.map((i) => (
-                    <li key={`${c.clave}-${i.id}`} className="dashboard__list-item row" style={{ justifyContent: 'space-between' }}>
-                      <span>{i.titulo}</span>
-                      {i.createdAt && <span className="text-muted nowrap">{formatDate(i.createdAt)}</span>}
-                    </li>
-                  ))}
-                  {c.total > c.items.length && <li className="dashboard__list-item text-muted">y {c.total - c.items.length} más</li>}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
+        <PendientesResumen categorias={data.categorias} zonas={zonas} />
       </Card>
 
       <Card title="Accesos directos" description="Otras secciones del panel.">
