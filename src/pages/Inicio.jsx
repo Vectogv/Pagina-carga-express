@@ -349,6 +349,7 @@ export default function Inicio() {
           <nav onClick={(e) => e.target.closest('a') && e.currentTarget.parentElement.removeAttribute('open')}>
             {MENU.map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
             <Link to="/ingresar">Ingresar</Link>
+            <Link to="/empresas/registro">Crear cuenta de empresa</Link>
           </nav>
         </details>
         <Link to="/ingresar" className="inicio__ingresar" aria-label="Ingresar"><User size={16} /><span>Ingresar</span></Link>
@@ -365,6 +366,7 @@ export default function Inicio() {
           <div className="inicio__ctas">
             <a href="#solicitar" className="inicio__btn"><Package size={18} />Solicitar transporte</a>
             <a href="#como-funciona" className="inicio__btn inicio__btn--claro">Conocer Carga Express</a>
+            <Link to="/empresas/registro" className="inicio__btn inicio__btn--claro">Crear cuenta de empresa</Link>
           </div>
         </div>
         <div className="inicio__hero-visual">
