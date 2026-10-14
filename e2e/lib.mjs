@@ -74,7 +74,7 @@ export async function resolverId(ruta, tokens, rol) {
 export async function abrir(browser, ruta, ancho, { tokens, esperados = [], espera = 1200 } = {}) {
   const page = await browser.newPage();
   await page.setViewport({ width: ancho, height: ALTO[ancho] || 900, deviceScaleFactor: 1 });
-  if (tokens) await page.evaluateOnNewDocument((t) => { localStorage.setItem('accessToken', t.access); localStorage.setItem('refreshToken', t.refresh); localStorage.setItem('user', JSON.stringify(t.user)); }, tokens);
+  if (tokens) await page.evaluateOnNewDocument((t) => { try { localStorage.setItem('accessToken', t.access); localStorage.setItem('refreshToken', t.refresh); localStorage.setItem('user', JSON.stringify(t.user)); } catch { /* iframe con sandbox: sin storage */ } }, tokens);
   const errores = [];
   // En dev y en Vercel la API va por el proxy `/api` de la propia web; en el servidor, por su URL absoluta.
   const esApi = (u) => u.startsWith(API) || u.startsWith(BASE + '/api');
