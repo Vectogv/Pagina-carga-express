@@ -332,9 +332,9 @@
   font-family: var(--font-mono, monospace); font-weight: var(--font-semibold); letter-spacing: 0.06em;
 }
 .acciones-fila { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.acciones-fila__botones { display: flex; align-items: center; gap: var(--space-2); flex-wrap: nowrap; }
+.acciones-fila__botones { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-end; }
 .acciones-fila__sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
-.acciones-fila__aviso { font-size: var(--text-xs); color: var(--text-muted); max-width: 320px; text-align: right; line-height: 1.4; }
+.acciones-fila__aviso { font-size: var(--text-xs); color: var(--text-muted); max-width: 320px; text-align: right; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 640px) {
   .acciones-fila { align-items: flex-end; width: 100%; }
   .acciones-fila__botones { flex-wrap: wrap; justify-content: flex-end; }
