@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
@@ -11,6 +11,10 @@ import '../components/panel/panel.css';
 import { ModeratorBadgesProvider, useModeratorBadges } from '../contexts/ModeratorBadgesContext';
 import { ModeratorCityProvider, useModeratorCity } from '../contexts/ModeratorCityContext';
 import { useAuth } from '../contexts/AuthContext';
+import ModeradorBloqueado from '../components/moderator/ModeradorBloqueado';
+import { getMiVerificacion } from '../api/contrato';
+import { Button, LoadingState } from '../components/ui';
+import { errorMessage } from '../utils/format';
 
 // Admin: elige la ciudad. Moderador real: ve su zona fija (el backend la impone).
 function CitySelector() {
@@ -43,12 +47,7 @@ function ModeratorShell() {
     emergencyBadge, closuresBadge, unreadBadge, ticketBadge, pendingDriversBadge, clearUnread,
   } = useModeratorBadges();
   const { isAdmin, ciudadLabel } = useModeratorCity();
-  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  // Un moderador sin zona asignada recibe 403 en casi todos los endpoints
-  // (el backend lo exige). Se avisa una sola vez aquí, en el layout, en vez
-  // de repetir el manejo del 403 en cada página.
-  const sinZona = !isAdmin && Boolean(user?.esModerador) && !user?.zonaModerador;
 
   // Al entrar al Conversatorio su badge se pone en 0 (los hilos leídos se marcan en el backend).
   // Emergencias, Cierres y Tickets NO se limpian al entrar: cuentan casos abiertos y bajan
@@ -87,12 +86,6 @@ function ModeratorShell() {
               <EmergencyBanner />
               <AlertaViajeBanner />
             </div>
-            {sinZona && (
-              <div className="page-error" role="alert">
-                Tu cuenta de moderador no tiene una ciudad asignada. La mayoría de las secciones no van a
-                cargar datos hasta que un administrador te asigne una zona.
-              </div>
-            )}
             <Outlet />
           </div>
         </main>
@@ -101,7 +94,51 @@ function ModeratorShell() {
   );
 }
 
+/**
+ * Puerta del panel: un moderador sin zona o sin contrato aprobado y vigente ve la
+ * pantalla de bloqueo (con el asistente de verificación) en vez del panel. El admin pasa directo.
+ * Si una llamada responde 403 MODERADOR_* (p. ej. el contrato venció con el panel abierto),
+ * axios avisa con el evento 'moderador-bloqueado' y se vuelve a consultar.
+ */
 export default function ModeratorLayout() {
+  const { isAdmin, logout } = useAuth();
+  const [verif, setVerif] = useState(null);
+  const [error, setError] = useState('');
+
+  const cargar = useCallback(async () => {
+    try {
+      const { data } = await getMiVerificacion();
+      setVerif(data);
+      setError('');
+    } catch (err) {
+      setError(errorMessage(err, 'No se pudo comprobar tu acceso'));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin) return undefined;
+    cargar();
+    window.addEventListener('moderador-bloqueado', cargar);
+    return () => window.removeEventListener('moderador-bloqueado', cargar);
+  }, [isAdmin, cargar]);
+
+  if (!isAdmin) {
+    if (error && !verif) {
+      return (
+        <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 16, textAlign: 'center' }}>
+          <div>
+            <p className="page-error" role="alert">{error}</p>
+            <Button onClick={cargar}>Reintentar</Button>
+          </div>
+        </div>
+      );
+    }
+    if (!verif) {
+      return <div style={{ height: '100dvh', display: 'grid', placeItems: 'center' }}><LoadingState message="Comprobando tu acceso…" /></div>;
+    }
+    if (verif.bloqueo) return <ModeradorBloqueado data={verif} onRefresh={cargar} onLogout={logout} />;
+  }
+
   return (
     // La ciudad va por fuera: los badges (cierres) usan la ciudad elegida por el admin.
     <ModeratorCityProvider>

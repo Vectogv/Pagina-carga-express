@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, TrendingUp, BadgeCheck,
   Flag, Scale, Siren, CircleX, CreditCard, Megaphone, Pin, MessagesSquare,
   ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, LifeBuoy,
-  CalendarClock, Gavel, ChartLine, Send, Mail, ListChecks, MapPinned, Gift, Building2,
+  CalendarClock, Gavel, ChartLine, Send, Mail, ListChecks, MapPinned, Gift, Building2, FileSignature,
 } from 'lucide-react';
 
 // Navegación agrupada como panel de seguridad y administración. Cada item: { icon, label, to, end? }
@@ -67,6 +67,7 @@ export const adminNav = [
     title: 'Administración',
     items: [
       { icon: ShieldCheck, label: 'Moderadores', to: '/admin/moderators' },
+      { icon: FileSignature, label: 'Verificaciones de moderadores', to: '/admin/moderadores-verificaciones' },
       { icon: ListChecks, label: 'Pendientes de moderadores', to: '/admin/pendientes' },
       { icon: Users, label: 'Cuentas de usuario', to: '/admin/users' },
       { icon: Settings, label: 'Configuración', to: '/admin/config' },
