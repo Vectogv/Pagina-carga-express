@@ -134,6 +134,8 @@ export default function LoginPage() {
               : '¿Olvidaste tu contraseña? Escríbenos a cargaexpressgv@gmail.com.'}
           </p>
 
+          {!isStaffLogin && <p className="login__hint">¿Eres empresa? <Link to="/empresas/registro">Crea tu cuenta</Link></p>}
+
           <p className="login__hint"><Link to="/">Inicio</Link> · <Link to="/privacidad">Privacidad</Link> · <Link to="/terminos">Términos</Link></p>
 
         </form>

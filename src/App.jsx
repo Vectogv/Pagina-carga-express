@@ -6,6 +6,7 @@ import LoadingState from './components/ui/LoadingState/LoadingState';
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const ModeratorLayout = lazy(() => import('./layouts/ModeratorLayout'));
 const LoginPage = lazy(() => import('./pages/admin/LoginPage'));
+const RegistroEmpresa = lazy(() => import('./pages/empresa/RegistroEmpresa'));
 const Legal = lazy(() => import('./pages/Legal'));
 const Inicio = lazy(() => import('./pages/Inicio'));
 const ClienteLayout = lazy(() => import('./pages/cliente/ClientePage'));
@@ -118,6 +119,7 @@ export default function App() {
             <Route path="/terminos" element={<Legal tipo="terminos" />} />
             <Route path="/eliminar-cuenta" element={<Legal tipo="eliminar" />} />
             <Route path="/ingresar" element={<LoginPage />} />
+            <Route path="/empresas/registro" element={<RegistroEmpresa />} />
             <Route path="/admin/login" element={<LoginPage />} />
             <Route path="/moderator/login" element={<LoginPage />} />
 
