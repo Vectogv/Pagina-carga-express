@@ -361,3 +361,19 @@
   .page-header { row-gap: var(--space-3); }
   .page-header__actions { padding-bottom: var(--space-1); }
 }
+
+/* ── Pantallas táctiles: enlaces de tabla y zoom del mapa de mínimo 40×40 ───── */
+@media (pointer: coarse), (max-width: 900px) {
+  .dtable__td a:not(.btn) { display: inline-flex; align-items: center; min-height: 40px; min-width: 40px; }
+  html .leaflet-touch .leaflet-bar a { width: 40px; height: 40px; line-height: 40px; font-size: 20px; }
+}
+
+/* Táctil: botones de icono y ← del chat de 40 px, enlaces de texto con área, mapas que no atrapan el dedo */
+@media (pointer: coarse), (max-width: 900px) {
+  .btn--icon, .chat__back { width: 40px; height: 40px; min-width: 40px; }
+  .regemp__check a { display: inline-block; padding: 12px 2px; margin: -12px 0; }
+  .leaflet-container.leaflet-touch-drag { touch-action: pan-y pinch-zoom; }
+  .panel-mapa { height: min(480px, 60vh); }
+  .mapa-vivo { height: 60vh; min-height: 320px; }
+  .opsmap .leaflet-container, .cli-mapa { max-height: 60vh; }
+}

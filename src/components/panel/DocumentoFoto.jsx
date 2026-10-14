@@ -29,11 +29,11 @@ export function DocumentoFoto({ label, path, extra, obligatorio = true }) {
   } else if (esPdf) {
     cuerpo = <a href={url} target="_blank" rel="noopener noreferrer">Ver PDF</a>;
   } else if (roto) {
-    cuerpo = <span className="perfil-doc__vacio">No se pudo cargar</span>;
+    cuerpo = <span className="perfil-doc__vacio">Sin cargar</span>;
   } else {
     cuerpo = (
       <button type="button" className="perfil-doc__btn" onClick={() => setAbierto(true)} aria-label={`Ampliar ${label}`}>
-        <img src={url} alt={label} className="perfil-doc__img" loading="lazy" onError={() => setRoto(true)} />
+        <img src={url} alt={label} className="perfil-doc__img" loading="lazy" onError={() => setRoto(true)} onLoad={(e) => e.currentTarget.naturalWidth <= 1 && setRoto(true)} />
       </button>
     );
   }
