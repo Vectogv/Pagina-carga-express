@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, TrendingUp, BadgeCheck,
   Flag, Scale, Siren, CircleX, CreditCard, Megaphone, Pin, MessagesSquare,
   ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, LifeBuoy,
-  CalendarClock, Gavel, ChartLine, Send, ListChecks, MapPinned, Gift, Building2,
+  CalendarClock, Gavel, ChartLine, Send, ListChecks, MapPinned, Gift, Building2, FileSignature,
 } from 'lucide-react';
 
 // Navegación agrupada por tarea. Cada item: { icon, label, to, end? }
@@ -31,6 +31,7 @@ export const adminNav = [
       { icon: Truck, label: 'Conductores', to: '/admin/drivers' },
       { icon: BadgeCheck, label: 'Verificaciones', to: '/admin/verifications' },
       { icon: ShieldCheck, label: 'Moderadores', to: '/admin/moderators' },
+      { icon: FileSignature, label: 'Verificaciones de moderadores', to: '/admin/moderadores-verificaciones' },
       { icon: Building2, label: 'Empresas', to: '/admin/empresas' },
       { icon: Gift, label: 'Referidos', to: '/admin/referidos' },
     ],

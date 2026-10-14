@@ -21,6 +21,7 @@ const admin = {
   users: lazy(() => import('./pages/admin/UsersPage')),
   clients: lazy(() => import('./pages/admin/ClientsPage')),
   moderators: lazy(() => import('./pages/admin/ModeratorsPage')),
+  'moderadores-verificaciones': lazy(() => import('./pages/admin/VerificacionesModeradoresPage')),
   drivers: lazy(() => import('./pages/admin/DriversPage')),
   mapa: lazy(() => import('./pages/panel/MapaVivoPage')),
   'drivers/:id': lazy(() => import('./pages/panel/PerfilConductorPage').then((m) => ({ default: () => <m.default area="admin" /> }))),

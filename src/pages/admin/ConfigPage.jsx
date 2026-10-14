@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Gift, Image, MapPin, Search, Wallet } from 'lucide-react';
+import { FileSignature, Gift, Image, MapPin, Search, Wallet } from 'lucide-react';
 import {
   PageHeader, Tabs, TabsList, TabsTrigger, TabsContent, Toast, ToastContainer,
 } from '../../components/ui';
@@ -8,6 +8,7 @@ import CoverageConfig from './config/CoverageConfig';
 import BannerConfig from './config/BannerConfig';
 import EscaleraConfig from './config/EscaleraConfig';
 import ReferidosConfig from './config/ReferidosConfig';
+import AcuerdoConfig from './config/AcuerdoConfig';
 import './config/ConfigPage.css';
 
 export default function ConfigPage() {
@@ -32,6 +33,7 @@ export default function ConfigPage() {
           <TabsTrigger value="banner"><Image size={14} aria-hidden="true" /> Banner</TabsTrigger>
           <TabsTrigger value="escalera"><Search size={14} aria-hidden="true" /> Búsqueda</TabsTrigger>
           <TabsTrigger value="referidos"><Gift size={14} aria-hidden="true" /> Referidos</TabsTrigger>
+          <TabsTrigger value="acuerdo"><FileSignature size={14} aria-hidden="true" /> Acuerdo</TabsTrigger>
         </TabsList>
         <div className="config__content">
           <TabsContent value="general"><GeneralConfig notify={notify} /></TabsContent>
@@ -39,6 +41,7 @@ export default function ConfigPage() {
           <TabsContent value="banner"><BannerConfig notify={notify} /></TabsContent>
           <TabsContent value="escalera"><EscaleraConfig notify={notify} /></TabsContent>
           <TabsContent value="referidos"><ReferidosConfig notify={notify} /></TabsContent>
+          <TabsContent value="acuerdo"><AcuerdoConfig notify={notify} /></TabsContent>
         </div>
       </Tabs>
 

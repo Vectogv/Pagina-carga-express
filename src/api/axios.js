@@ -52,6 +52,12 @@ api.interceptors.response.use(
     const original = error.config
     const isAuthCall = AUTH_PATHS.some((p) => original?.url?.startsWith(p))
 
+    // Moderador bloqueado (sin zona o sin contrato vigente): el layout muestra la pantalla de bloqueo.
+    const code = error.response?.data?.code
+    if (error.response?.status === 403 && typeof code === 'string' && code.startsWith('MODERADOR_')) {
+      window.dispatchEvent(new CustomEvent('moderador-bloqueado', { detail: code }))
+    }
+
     if (error.response?.status !== 401 || !original || original._retry || isAuthCall) {
       return Promise.reject(error)
     }
