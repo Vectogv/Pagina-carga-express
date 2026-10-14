@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Badge, Button, Card, Input, LoadingState, Textarea } from '../../../components/ui';
+import { Alert, Badge, Button, Card, ConfirmDialog, Input, LoadingState, Textarea } from '../../../components/ui';
 import {
-  getAcuerdos, getConfigAcuerdo, guardarConfigAcuerdo, partirMarcadores, publicarAcuerdo, subirFirmaGerencia,
+  getAcuerdos, getConfigAcuerdo, getVerificacionesModeradores, guardarConfigAcuerdo, partirMarcadores, publicarAcuerdo, subirFirmaGerencia,
 } from '../../../api/contrato';
 import { resolveStorageUrl } from '../../../utils/storage';
+import { limpiarFirma } from '../../../utils/limpiarFirma';
 import { errorMessage, formatDateTime } from '../../../utils/format';
 import DocumentoContrato from '../../../components/moderator/DocumentoContrato';
 import '../../../components/moderator/ModeradorBloqueado.css';
@@ -58,10 +59,10 @@ function DatosGerencia({ notify }) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    const fd = new FormData();
-    fd.append('firma', file);
     setGuardando('firma');
     try {
+      const fd = new FormData();
+      fd.append('firma', await limpiarFirma(file), 'firma.png');
       const { data } = await subirFirmaGerencia(fd);
       aplicar(data);
       notify('Firma de gerencia cargada');
@@ -121,6 +122,7 @@ export default function AcuerdoConfig({ notify }) {
   const [verId, setVerId] = useState(null);
   const [form, setForm] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [aFirmar, setAFirmar] = useState(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -138,11 +140,29 @@ export default function AcuerdoConfig({ notify }) {
   const largo = form?.texto.trim().length || 0;
   const valido = form && /^[\w.-]{1,20}$/.test(form.version.trim()) && form.titulo.trim().length >= 5 && largo >= 200;
 
+  const editar = () => {
+    if (!vigente) return setForm(VACIO);
+    const [mayor, menor] = vigente.version.replace(/^v/i, '').split('.').map(Number);
+    const sig = Number.isFinite(mayor) && Number.isFinite(menor) ? `v${mayor}.${menor + 1}` : '';
+    setForm({ version: sig, titulo: vigente.titulo, texto: vigente.texto });
+  };
+
+  const pedirConfirmacion = async () => {
+    try {
+      const listas = await Promise.all(['activo', 'contrato_enviado'].map((estado) => getVerificacionesModeradores({ estado })));
+      setAFirmar(listas.reduce((n, { data }) => n + (Array.isArray(data) ? data.length : 0), 0));
+    } catch {
+      setAFirmar(0);
+    }
+  };
+
   const publicar = async () => {
+    setAFirmar(null);
     setGuardando(true);
     try {
-      await publicarAcuerdo({ version: form.version.trim(), titulo: form.titulo.trim(), texto: form.texto });
-      notify(`Acuerdo ${form.version.trim()} publicado`);
+      const { data } = await publicarAcuerdo({ version: form.version.trim(), titulo: form.titulo.trim(), texto: form.texto });
+      const n = data?.firmanDeNuevo || 0;
+      notify(`Acuerdo ${form.version.trim()} publicado${n ? `: ${n} moderador${n === 1 ? '' : 'es'} firman de nuevo` : ''}`);
       setForm(null);
       cargar();
     } catch (err) {
@@ -167,10 +187,10 @@ export default function AcuerdoConfig({ notify }) {
 
       <Card
         title="Acuerdo del moderador"
-        description="El moderador lo lee y lo firma al verificarse. Una versión nueva queda activa al publicarla: quien firme desde ese momento firma la nueva. Los contratos ya aprobados siguen vigentes hasta su vencimiento."
+        description="El moderador lo lee y lo firma al verificarse. Al publicar una versión nueva, todos los moderadores con contrato deben firmarla de nuevo para seguir operando; conservan su número y vigencia."
         actions={!form && (
-          <Button size="sm" onClick={() => setForm(vigente ? { version: '', titulo: vigente.titulo, texto: vigente.texto } : VACIO)}>
-            Nueva versión
+          <Button size="sm" onClick={editar}>
+            Editar contrato
           </Button>
         )}
       >
@@ -181,7 +201,7 @@ export default function AcuerdoConfig({ notify }) {
             <Textarea label="Texto" required rows={14} value={form.texto} onChange={set('texto')} helperText={`${largo.toLocaleString('es-CO')} caracteres (mínimo 200). Los datos que falten van entre corchetes, p. ej. [NIT].`} />
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <Button variant="ghost" onClick={() => setForm(null)}>Cancelar</Button>
-              <Button disabled={!valido} loading={guardando} onClick={publicar}>Publicar y dejar activa</Button>
+              <Button disabled={!valido} loading={guardando} onClick={pedirConfirmacion}>Publicar y dejar activa</Button>
             </div>
           </div>
         ) : (
@@ -208,6 +228,16 @@ export default function AcuerdoConfig({ notify }) {
           </ul>
         )}
       </Card>
+      <ConfirmDialog
+        isOpen={aFirmar !== null}
+        onClose={() => setAFirmar(null)}
+        onConfirm={publicar}
+        title="Publicar nueva versión"
+        confirmText="Publicar"
+        message={aFirmar
+          ? `${aFirmar} moderador${aFirmar === 1 ? ' tendrá' : 'es tendrán'} que firmar de nuevo y quedarán bloqueados hasta hacerlo.`
+          : 'Ningún moderador tiene contrato vigente: nadie debe firmar de nuevo.'}
+      />
     </div>
   );
 }

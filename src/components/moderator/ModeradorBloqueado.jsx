@@ -7,6 +7,7 @@ import {
   ESTADO_VERIFICACION, abrirPdf, firmarAcuerdo, getMiPdfContrato, solicitarContrato, subirDocumentosModerador,
 } from '../../api/contrato';
 import { resolveStorageUrl } from '../../utils/storage';
+import { limpiarFirma } from '../../utils/limpiarFirma';
 import { errorMessage, formatDate } from '../../utils/format';
 import { zonaLabelFrom } from '../../hooks/useZonas';
 import DocumentoContrato from './DocumentoContrato';
@@ -229,14 +230,14 @@ function Asistente({ data, onRefresh, fase }) {
     setError('');
     setEnviando(true);
     try {
-      const firma = modoFirma === 'dibujada'
+      const firma = await limpiarFirma(modoFirma === 'dibujada'
         ? await new Promise((ok) => lienzo.toBlob(ok, 'image/png'))
-        : fotoFirma;
+        : fotoFirma);
       const form = new FormData();
       form.append('acuerdoId', String(acuerdo.id));
       form.append('hashTexto', acuerdo.hash);
       form.append('tipoFirma', modoFirma);
-      form.append('firma', firma, modoFirma === 'dibujada' ? 'firma.png' : fotoFirma.name);
+      form.append('firma', firma, 'firma.png');
       await firmarAcuerdo(form);
       await onRefresh();
     } catch (err) {
@@ -429,6 +430,11 @@ export default function ModeradorBloqueado({ data, onRefresh, onLogout }) {
         {(data.estado === 'rechazado' || data.estado === 'suspendido') && (
           <Alert variant="danger" title={data.estado === 'rechazado' ? 'Tu solicitud fue rechazada' : 'Tu contrato fue suspendido'}>
             {data.notaRechazo || 'Sin nota.'}{data.estado === 'rechazado' ? ' Corrige lo indicado y vuelve a solicitarlo.' : ''}
+          </Alert>
+        )}
+        {data.estado === 'archivado' && (
+          <Alert variant="warning" title="Tu contrato terminó">
+            Tu contrato terminó y tu información quedó archivada. Comunícate con gerencia para renovarlo.
           </Alert>
         )}
         {data.estado === 'vencido' && (

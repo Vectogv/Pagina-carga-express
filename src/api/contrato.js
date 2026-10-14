@@ -53,6 +53,7 @@ export const ESTADO_VERIFICACION = {
   rechazado: { label: 'Rechazado', variant: 'danger' },
   suspendido: { label: 'Suspendido', variant: 'danger' },
   vencido: { label: 'Vencido', variant: 'danger' },
+  archivado: { label: 'Archivado', variant: 'neutral' },
 }
 
 // Marca visible para los datos legales que faltan en el texto ([RAZÓN SOCIAL], [NIT]…).

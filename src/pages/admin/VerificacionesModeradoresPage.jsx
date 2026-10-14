@@ -20,7 +20,7 @@ const FILTROS = [
   { value: 'activo', label: 'Activos' },
   { value: 'rechazado', label: 'Rechazados' },
   { value: 'suspendido', label: 'Suspendidos' },
-  { value: 'vencido', label: 'Vencidos' },
+  { value: 'archivado', label: 'Archivados' },
   { value: 'sin_enviar', label: 'Sin enviar' },
   { value: '', label: 'Todos' },
 ];
@@ -33,6 +33,8 @@ const ACCIONES = {
   rechazo: 'Rechazó',
   suspendio: 'Suspendió',
   vencio: 'Venció',
+  archivo: 'Contrato archivado',
+  pidio_nueva_firma: 'Se le pidió firmar de nuevo',
 };
 
 const EstadoBadge = ({ estado }) => {
@@ -48,6 +50,7 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
   const [enviando, setEnviando] = useState('');
   const [cedulaOk, setCedulaOk] = useState(false);
 
+  const [ahora] = useState(() => Date.now());
   const cargar = useCallback(async () => {
     try {
       const { data } = await getVerificacionModerador(userId);
@@ -61,10 +64,10 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
   const accion = async (tipo) => {
     setEnviando(tipo);
     try {
-      if (tipo === 'generar') await generarContrato(userId);
+      if (tipo === 'generar' || tipo === 'renovar') await generarContrato(userId);
       else if (tipo === 'suspender') await suspenderVerificacion(userId, nota.trim());
       else await rechazarVerificacion(userId, nota.trim());
-      notify({ generar: 'Contrato generado y enviado al moderador', suspender: 'Contrato suspendido', rechazar: 'Verificación rechazada' }[tipo]);
+      notify({ generar: 'Contrato generado y enviado al moderador', renovar: 'Contrato renovado y enviado al moderador', suspender: 'Contrato suspendido', rechazar: 'Verificación rechazada' }[tipo]);
       onCambio();
       onClose();
     } catch (err) {
@@ -88,6 +91,8 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
 
   const firma = d?.firmas?.[0]; // la más reciente primero
   const notaOk = nota.trim().length >= 5 && nota.trim().length <= 1000;
+  const puedeRenovar = d?.estado === 'archivado' || d?.estado === 'vencido'
+    || (d?.estado === 'activo' && d.contratoHasta && new Date(d.contratoHasta) - ahora < 30 * 864e5);
   const puedeRechazar = ['solicitado', 'contrato_enviado'].includes(d?.estado);
   const footer = d && (modoNota ? (
     <>
@@ -100,6 +105,9 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
     <>
       {puedeRechazar && <Button variant="danger" icon={<X size={14} />} onClick={() => setModoNota('rechazar')}>Rechazar</Button>}
       {d.estado === 'activo' && <Button variant="danger" onClick={() => setModoNota('suspender')}>Suspender</Button>}
+      {puedeRenovar && (
+        <Button variant="success" loading={enviando === 'renovar'} onClick={() => accion('renovar')}>Renovar contrato</Button>
+      )}
       {d.estado === 'solicitado' && (
         <Button variant="success" icon={<Check size={14} />} disabled={!cedulaOk || !d.cedula} loading={enviando === 'generar'} onClick={() => accion('generar')}>Aceptar y generar contrato</Button>
       )}
