@@ -4,7 +4,7 @@ import {
   Alert, Badge, Button, Tabs, TabsList, TabsTrigger, TabsContent,
 } from '../ui';
 import {
-  ESTADO_VERIFICACION, abrirPdf, firmarAcuerdo, getMiPdfContrato, partirMarcadores, subirDocumentosModerador,
+  ESTADO_VERIFICACION, abrirPdf, firmarAcuerdo, getMiPdfContrato, partirMarcadores, solicitarContrato, subirDocumentosModerador,
 } from '../../api/contrato';
 import { resolveStorageUrl } from '../../utils/storage';
 import { errorMessage, formatDate } from '../../utils/format';
@@ -12,7 +12,7 @@ import './ModeradorBloqueado.css';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const PASOS = ['Cédula', 'Rostro', 'Acuerdo', 'Firma'];
-const EDITABLE = ['sin_enviar', 'rechazado', 'vencido'];
+const EDITABLE = ['sin_enviar', 'rechazado', 'vencido', 'suspendido'];
 
 /** Revisa tipo y tamaño antes de subir (el servidor vuelve a validar). */
 function validarImagen(file) {
@@ -134,10 +134,10 @@ function TextoAcuerdo({ texto, onFinal }) {
   );
 }
 
-function Asistente({ data, onRefresh }) {
+function Asistente({ data, onRefresh, fase }) {
   const docs = data.documentos || {};
   const acuerdo = data.acuerdo;
-  const [paso, setPaso] = useState(0);
+  const [paso, setPaso] = useState(fase === 'firma' ? 2 : 0);
   const [archivos, setArchivos] = useState({ cedulaFrente: null, cedulaReverso: null, rostro: null });
   const [leido, setLeido] = useState(false);
   const [acepto, setAcepto] = useState(false);
@@ -181,6 +181,23 @@ function Asistente({ data, onRefresh }) {
     setPaso((p) => p + 1);
   };
 
+  const solicitar = async () => {
+    setError('');
+    setEnviando(true);
+    try {
+      const form = new FormData();
+      if (archivos.rostro) form.append('rostro', archivos.rostro);
+      if ([...form.keys()].length) await subirDocumentosModerador(form);
+      await solicitarContrato();
+      await onRefresh();
+    } catch (err) {
+      setError(errorMessage(err, 'No se pudo solicitar el contrato'));
+      if (err?.response?.data?.code === 'FALTAN_DOCUMENTOS') setPaso(0);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   const firmar = async () => {
     setError('');
     setEnviando(true);
@@ -202,7 +219,6 @@ function Asistente({ data, onRefresh }) {
         await onRefresh();
         setPaso(2); setLeido(false); setAcepto(false);
       }
-      if (err?.response?.data?.code === 'FALTAN_DOCUMENTOS') setPaso(0);
     } finally {
       setEnviando(false);
     }
@@ -219,7 +235,7 @@ function Asistente({ data, onRefresh }) {
   return (
     <div className="modbloq__asistente">
       <ol className="modbloq__pasos" aria-label="Pasos de la verificación">
-        {PASOS.map((p, i) => (
+        {PASOS.map((p, i) => (fase === 'firma' ? i >= 2 : i < 2) && (
           <li key={p} className={i === paso ? 'is-actual' : i < paso ? 'is-hecho' : ''} aria-current={i === paso ? 'step' : undefined}>
             <span className="modbloq__paso-num">{i < paso ? <Check size={12} /> : i + 1}</span>
             <span className="modbloq__paso-nombre">{p}</span>
@@ -253,7 +269,7 @@ function Asistente({ data, onRefresh }) {
           </div>
           <div className="modbloq__nav">
             <Button variant="ghost" onClick={() => setPaso(0)}>Atrás</Button>
-            <Button disabled={!rostroListo} loading={enviando} onClick={() => subirYSeguir(['rostro'])}>Continuar</Button>
+            <Button disabled={!rostroListo} loading={enviando} onClick={solicitar}>Solicitar contrato</Button>
           </div>
         </section>
       )}
@@ -268,7 +284,7 @@ function Asistente({ data, onRefresh }) {
             Leí y acepto el acuerdo
           </label>
           <div className="modbloq__nav">
-            <Button variant="ghost" onClick={() => setPaso(1)}>Atrás</Button>
+            <span />
             <Button disabled={!leido || !acepto} onClick={() => setPaso(3)}>Continuar</Button>
           </div>
         </section>
@@ -291,7 +307,8 @@ function Asistente({ data, onRefresh }) {
                 <Upload size={14} aria-hidden="true" /> {fotoFirma ? 'Cambiar foto' : 'Elegir foto de la firma'}
                 <input
                   type="file"
-                  accept="image/jpeg,image/png"
+                  accept="image/*"
+                  capture="environment"
                   onChange={(e) => {
                     const f = e.target.files?.[0] || null;
                     e.target.value = '';
@@ -362,34 +379,37 @@ export default function ModeradorBloqueado({ data, onRefresh, onLogout }) {
             Tu cuenta no tiene una ciudad asignada (o tiene "general", que no es una ciudad). El administrador debe asignarte una zona.
           </Alert>
         )}
-        {data.estado === 'rechazado' && (
-          <Alert variant="danger" title="Tu verificación fue rechazada">
-            {data.notaRechazo || 'Sin nota.'} Corrige lo indicado y vuelve a enviarla.
+        {(data.estado === 'rechazado' || data.estado === 'suspendido') && (
+          <Alert variant="danger" title={data.estado === 'rechazado' ? 'Tu solicitud fue rechazada' : 'Tu contrato fue suspendido'}>
+            {data.notaRechazo || 'Sin nota.'}{data.estado === 'rechazado' ? ' Corrige lo indicado y vuelve a solicitarlo.' : ''}
           </Alert>
         )}
         {data.estado === 'vencido' && (
           <Alert variant="warning" title="Tu contrato venció">
-            {data.contratoHasta ? `Venció el ${formatDate(data.contratoHasta)}. ` : ''}Firma de nuevo para renovarlo por 3 meses.
+            {data.contratoHasta ? `Venció el ${formatDate(data.contratoHasta)}. ` : ''}Vuelve a solicitar tu contrato para renovarlo.
           </Alert>
         )}
 
-        {data.estado === 'pendiente' && (
-          <div className="modbloq__revision">
-            <Alert variant="info" title="En revisión">
-              Recibimos tus documentos y tu firma. El administrador los revisa y, al aprobarlos, tu contrato queda vigente por 3 meses.
-            </Alert>
-            {errorPdf && <Alert variant="danger">{errorPdf}</Alert>}
-            <Button variant="secondary" icon={<FileDown size={14} />} loading={descargando} onClick={verPdf}>
-              Ver mi contrato firmado (PDF)
-            </Button>
-          </div>
+        {data.estado === 'solicitado' && (
+          <Alert variant="info" title="En revisión">
+            Tu solicitud está en revisión por gerencia. Cuando generen tu contrato podrás leerlo y firmarlo aquí.
+          </Alert>
+        )}
+        {data.estado === 'contrato_enviado' && (
+          <Alert variant="success" title={`Tu contrato N.º ${data.numeroContrato || ''} está listo`}>
+            Léelo completo y fírmalo para activar tu acceso.
+          </Alert>
+        )}
+        {data.estado === 'activo' && !sinZona && (
+          <Alert variant="success">Tu contrato está activo. Actualiza la página.</Alert>
+        )}
+        {data.estado === 'activo' && errorPdf && <Alert variant="danger">{errorPdf}</Alert>}
+        {data.estado === 'activo' && (
+          <Button variant="secondary" icon={<FileDown size={14} />} loading={descargando} onClick={verPdf}>Ver mi contrato firmado (PDF)</Button>
         )}
 
-        {data.estado === 'aprobado' && !sinZona && (
-          <Alert variant="success">Tu contrato está aprobado. Actualiza la página.</Alert>
-        )}
-
-        {EDITABLE.includes(data.estado) && <Asistente data={data} onRefresh={onRefresh} />}
+        {EDITABLE.includes(data.estado) && <Asistente key="docs" data={data} onRefresh={onRefresh} fase="docs" />}
+        {data.estado === 'contrato_enviado' && <Asistente key="firma" data={data} onRefresh={onRefresh} fase="firma" />}
       </main>
     </div>
   );

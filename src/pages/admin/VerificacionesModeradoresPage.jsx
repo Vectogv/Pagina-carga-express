@@ -5,7 +5,7 @@ import {
   Toast, ToastContainer,
 } from '../../components/ui';
 import {
-  ESTADO_VERIFICACION, abrirPdf, aprobarVerificacion, getPdfVerificacion, getVerificacionModerador,
+  ESTADO_VERIFICACION, abrirPdf, generarContrato, getPdfVerificacion, suspenderVerificacion, getVerificacionModerador,
   getVerificacionesModeradores, rechazarVerificacion,
 } from '../../api/contrato';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
@@ -14,19 +14,23 @@ import { errorMessage, formatDate, formatDateTime } from '../../utils/format';
 import './VerificacionesModeradoresPage.css';
 
 const FILTROS = [
-  { value: 'pendiente', label: 'En revisión' },
-  { value: '', label: 'Todos' },
-  { value: 'aprobado', label: 'Aprobados' },
+  { value: 'solicitado', label: 'Solicitados' },
+  { value: 'contrato_enviado', label: 'Contrato enviado' },
+  { value: 'activo', label: 'Activos' },
   { value: 'rechazado', label: 'Rechazados' },
+  { value: 'suspendido', label: 'Suspendidos' },
   { value: 'vencido', label: 'Vencidos' },
   { value: 'sin_enviar', label: 'Sin enviar' },
+  { value: '', label: 'Todos' },
 ];
 
 const ACCIONES = {
   envio_documentos: 'Subió documentos',
+  solicito: 'Solicitó el contrato',
+  genero_contrato: 'Generó el contrato',
   firmo: 'Firmó',
-  aprobo: 'Aprobó',
   rechazo: 'Rechazó',
+  suspendio: 'Suspendió',
   vencio: 'Venció',
 };
 
@@ -48,10 +52,10 @@ function Imagen({ titulo, src, blanco }) {
   );
 }
 
-function Detalle({ userId, onClose, onCambio, notify }) {
+function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
   const [d, setD] = useState(null);
   const [error, setError] = useState('');
-  const [rechazando, setRechazando] = useState(false);
+  const [modoNota, setModoNota] = useState(''); // 'rechazar' | 'suspender'
   const [nota, setNota] = useState('');
   const [enviando, setEnviando] = useState('');
 
@@ -68,9 +72,10 @@ function Detalle({ userId, onClose, onCambio, notify }) {
   const accion = async (tipo) => {
     setEnviando(tipo);
     try {
-      if (tipo === 'aprobar') await aprobarVerificacion(userId);
+      if (tipo === 'generar') await generarContrato(userId);
+      else if (tipo === 'suspender') await suspenderVerificacion(userId, nota.trim());
       else await rechazarVerificacion(userId, nota.trim());
-      notify(tipo === 'aprobar' ? 'Contrato aprobado por 3 meses' : 'Verificación rechazada');
+      notify({ generar: 'Contrato generado y enviado al moderador', suspender: 'Contrato suspendido', rechazar: 'Verificación rechazada' }[tipo]);
       onCambio();
       onClose();
     } catch (err) {
@@ -94,19 +99,23 @@ function Detalle({ userId, onClose, onCambio, notify }) {
 
   const firma = d?.firmas?.[0]; // la más reciente primero
   const notaOk = nota.trim().length >= 5 && nota.trim().length <= 1000;
-  const footer = d?.estado === 'pendiente' && (
-    rechazando ? (
-      <>
-        <Button variant="ghost" onClick={() => setRechazando(false)}>Volver</Button>
-        <Button variant="danger" disabled={!notaOk} loading={enviando === 'rechazar'} onClick={() => accion('rechazar')}>Rechazar</Button>
-      </>
-    ) : (
-      <>
-        <Button variant="danger" icon={<X size={14} />} onClick={() => setRechazando(true)}>Rechazar</Button>
-        <Button variant="success" icon={<Check size={14} />} loading={enviando === 'aprobar'} onClick={() => accion('aprobar')}>Aprobar 3 meses</Button>
-      </>
-    )
-  );
+  const puedeRechazar = ['solicitado', 'contrato_enviado'].includes(d?.estado);
+  const footer = d && (modoNota ? (
+    <>
+      <Button variant="ghost" onClick={() => setModoNota('')}>Volver</Button>
+      <Button variant="danger" disabled={!notaOk} loading={enviando === modoNota} onClick={() => accion(modoNota)}>
+        {modoNota === 'suspender' ? 'Suspender' : 'Rechazar'}
+      </Button>
+    </>
+  ) : (
+    <>
+      {puedeRechazar && <Button variant="danger" icon={<X size={14} />} onClick={() => setModoNota('rechazar')}>Rechazar</Button>}
+      {d.estado === 'activo' && <Button variant="danger" onClick={() => setModoNota('suspender')}>Suspender</Button>}
+      {d.estado === 'solicitado' && (
+        <Button variant="success" icon={<Check size={14} />} loading={enviando === 'generar'} onClick={() => accion('generar')}>Generar contrato</Button>
+      )}
+    </>
+  ));
 
   return (
     <Modal isOpen onClose={onClose} size="xl" title={d ? d.nombre : 'Verificación'} description={d?.email} footer={footer || null}>
@@ -117,14 +126,16 @@ function Detalle({ userId, onClose, onCambio, notify }) {
           <div className="vermod__resumen">
             <EstadoBadge estado={d.estado} />
             {d.telefono && <span>Tel. {d.telefono}</span>}
-            {d.contratoHasta && <span>Vigente {formatDate(d.contratoDesde)} – {formatDate(d.contratoHasta)}</span>}
-            {d.aprobadoPor && <span>Aprobó {d.aprobadoPor} · {formatDateTime(d.aprobadoAt)}</span>}
+            {d.numeroContrato && <span>Contrato {d.numeroContrato}</span>}
+            {d.zonaContrato && <span>Zona {zonaLabelFrom(ZONAS, d.zonaContrato)}</span>}
+            {d.contratoHasta && <span>Vigencia {formatDate(d.contratoDesde)} – {formatDate(d.contratoHasta)}</span>}
+            {d.generadoPor && <span>Generó {d.generadoPor} · {formatDateTime(d.generadoAt)}</span>}
           </div>
-          {d.notaRechazo && <Alert variant="danger" title="Nota del último rechazo">{d.notaRechazo}</Alert>}
+          {d.notaRechazo && <Alert variant="danger" title="Nota del último rechazo o suspensión">{d.notaRechazo}</Alert>}
 
-          {rechazando && (
+          {modoNota && (
             <Textarea
-              label="¿Qué debe corregir? (la ve el moderador)"
+              label={modoNota === 'suspender' ? 'Motivo de la suspensión (lo ve el moderador)' : '¿Qué debe corregir? (la ve el moderador)'}
               required
               rows={3}
               maxLength={1000}
@@ -186,7 +197,7 @@ function Detalle({ userId, onClose, onCambio, notify }) {
 
 export default function VerificacionesModeradoresPage() {
   const ZONAS = useZonas();
-  const [estado, setEstado] = useState('pendiente');
+  const [estado, setEstado] = useState('solicitado');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -223,6 +234,7 @@ export default function VerificacionesModeradoresPage() {
       ),
     },
     { key: 'zona', label: 'Zona', render: (z) => (z ? zonaLabelFrom(ZONAS, z) : <Badge variant="danger">Sin zona</Badge>) },
+    { key: 'numeroContrato', label: 'Contrato', render: (v) => v || '—' },
     { key: 'estado', label: 'Estado', render: (e) => <EstadoBadge estado={e} /> },
     { key: 'contratoHasta', label: 'Vence', render: (v) => (v ? formatDate(v) : '—') },
     { key: 'actualizadoAt', label: 'Último cambio', render: (v) => (v ? formatDateTime(v) : '—') },
@@ -232,7 +244,7 @@ export default function VerificacionesModeradoresPage() {
     <div className="page">
       <PageHeader
         title="Verificaciones de moderadores"
-        description="Cédula, rostro y contrato firmado. Al aprobar, el moderador opera 3 meses; al vencer, debe firmar de nuevo."
+        description="Cédula, rostro y contrato firmado. El moderador solicita; gerencia genera el contrato (3 meses) y el moderador lo firma."
       />
       <SegmentedFilter options={FILTROS} value={estado} onChange={setEstado} ariaLabel="Estado de la verificación" />
       {error && <Alert variant="danger">{error}</Alert>}
@@ -243,9 +255,9 @@ export default function VerificacionesModeradoresPage() {
         rowKey="userId"
         onRowClick={(r) => setAbierto(r.userId)}
         emptyMessage="No hay verificaciones en este estado"
-        emptyDescription="Cuando un moderador envíe sus documentos y firme, aparece aquí."
+        emptyDescription="Cuando un moderador solicite su contrato, aparece aquí."
       />
-      {abierto && <Detalle userId={abierto} onClose={() => setAbierto(null)} onCambio={cargar} notify={notify} />}
+      {abierto && <Detalle ZONAS={ZONAS} userId={abierto} onClose={() => setAbierto(null)} onCambio={cargar} notify={notify} />}
       {toast && (
         <ToastContainer>
           <Toast key={toast.id} message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
