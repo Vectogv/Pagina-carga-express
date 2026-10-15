@@ -354,7 +354,7 @@
 
 /* ── Móvil: objetivos táctiles de 36–40 px en filtros, enlaces de tabla y mapas ───── */
 @media (max-width: 900px) {
-  .segmented { padding: 4px; }
+  .segmented { padding: 4px; flex-wrap: wrap; }
   .segmented__item { min-height: 36px; padding: 0 14px; }
   .dtable__td a:not(.btn) { display: inline-flex; align-items: center; min-height: 36px; }
   .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 40px; height: 40px; line-height: 40px; font-size: 20px; }
