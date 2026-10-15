@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapContainer, Marker, Polyline, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { rumboEntre } from './VehiculoMarcador';
-import MarcadorConductor from '../../components/panel/MarcadorConductor';
+import { iconoVehiculo, rumboEntre, setRumbo } from './VehiculoMarcador';
 
 const pin = (clase, texto) => L.divIcon({
   className: '',
@@ -33,6 +32,8 @@ function Encuadre({ puntos, clave }) {
 
 /** Mapa del viaje activo: origen, destino, conductor en vivo y la ruta que sigue. */
 export default function MapaViaje({ viaje, conductor, ruta }) {
+  const icono = useMemo(() => iconoVehiculo(viaje.conductor?.tipoVehiculo), [viaje.conductor?.tipoVehiculo]);
+  const marcador = useRef(null);
   const previa = useRef(null);
   const [rumbo, setRumboState] = useState(0);
   const lat = Number(conductor?.lat);
@@ -44,6 +45,8 @@ export default function MapaViaje({ viaje, conductor, ruta }) {
     if (r != null) setRumboState(r);
     previa.current = nueva;
   }, [lat, lng]);
+  // El ícono se recrea al cambiar el tipo: se vuelve a girar.
+  useEffect(() => { setRumbo(marcador.current, rumbo); }, [rumbo, icono, lat, lng]);
   const puntos = [viaje.origen, viaje.destino, conductor].filter(valido).map(punto);
   if (puntos.length === 0) return null;
   const clave = `${viaje.id}-${viaje.estado}-${valido(conductor) ? 1 : 0}`;
@@ -55,7 +58,7 @@ export default function MapaViaje({ viaje, conductor, ruta }) {
         {ruta?.length > 1 && <Polyline positions={ruta} pathOptions={{ color: '#1656d6', weight: 5, opacity: 0.85 }} />}
         {valido(viaje.origen) && <Marker position={punto(viaje.origen)} icon={ICONO.origen} />}
         {valido(viaje.destino) && <Marker position={punto(viaje.destino)} icon={ICONO.destino} />}
-        {valido(conductor) && <MarcadorConductor persona={viaje.conductor || {}} position={punto(conductor)} rumbo={rumbo} zIndexOffset={1000} />}
+        {valido(conductor) && <Marker ref={marcador} position={punto(conductor)} icon={icono} zIndexOffset={1000} />}
         <Encuadre puntos={puntos} clave={clave} />
       </MapContainer>
     </div>

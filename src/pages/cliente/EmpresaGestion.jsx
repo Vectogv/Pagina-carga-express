@@ -5,7 +5,6 @@ import { clienteApi } from '../../api/cliente';
 import { errorMessage } from '../../utils/format';
 import { Encuadre, posicionDe } from '../../components/panel';
 import { PINES } from '../../components/panel/pines';
-import MarcadorConductor from '../../components/panel/MarcadorConductor';
 
 const REFRESCO_MS = 20000;
 const pesos = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`;
@@ -129,7 +128,7 @@ function ViajesActivos({ setError }) {
                   const c = posicionDe(v.conductor);
                   return [
                     o && <Marker key={`o${v.id}`} position={o} icon={PINES.A}><Popup>Viaje #{v.id}: origen</Popup></Marker>,
-                    c && <MarcadorConductor key={`c${v.id}`} persona={v.conductor} position={c} />,
+                    c && <Marker key={`c${v.id}`} position={c} icon={PINES.conductor}><Popup>{v.conductor.nombre}</Popup></Marker>,
                   ];
                 })}
               </MapContainer>
