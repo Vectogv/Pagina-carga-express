@@ -282,8 +282,8 @@ export default function VerificationsPage() {
               {textoFaltantes(faltantesDe(aviso)) || 'Tiene todos los documentos.'}
             </span>
             <Textarea label="Mensaje para el moderador (opcional)" value={msgMod} onChange={(e) => setMsgMod(e.target.value)} rows={2} maxLength={500} />
-            <VistaAviso tipo="bandeja" titulo="Conductor por verificar" mensaje={`${fullName(aviso.usuario)} (${aviso.ciudad || 'tu zona'}) necesita revisión. ${textoFaltantes(faltantesDe(aviso)) || ''}${msgMod.trim() ? `
-${msgMod.trim()}` : ''}`} />
+            <VistaAviso tipo="bandeja" titulo="Revisar solicitud de conductor" mensaje={`Gerencia pide revisar a ${fullName(aviso.usuario)}${faltantesDe(aviso).length ? ` (${textoFaltantes(faltantesDe(aviso)).toLowerCase()})` : ''}. Notifica al conductor o elimina la solicitud.${msgMod.trim() ? `
+Nota de gerencia: ${msgMod.trim()}` : ''}`} />
           </div>
         )}
       </ConfirmDialog>

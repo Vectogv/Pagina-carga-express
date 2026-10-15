@@ -1,7 +1,7 @@
 import { Megaphone, Users, RefreshCw, Bell } from 'lucide-react';
 import MarcoCelular from './MarcoCelular';
 
-const POR_DEFECTO = 'Hay una versión nueva de CargaExpress. Actualiza para tener las últimas mejoras.';
+const POR_DEFECTO = 'Descarga la última versión desde Play Store.';
 
 /**
  * Cómo le llega al usuario: notificación push arriba y el diálogo de la app debajo.
