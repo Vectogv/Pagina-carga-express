@@ -14,6 +14,8 @@ export default function CorreosPage() {
   const [clave, setClave] = useState('');
   const [form, setForm] = useState({ nombre: '', asunto: '', cuerpo: '', activo: true });
   const [zona, setZona] = useState('');
+  const [para, setPara] = useState('');
+  const [nombreLibre, setNombreLibre] = useState('');
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(null);
@@ -64,6 +66,15 @@ export default function CorreosPage() {
     accion(async () => {
       const { data } = await sendCorreo('admin', { asunto: form.asunto, cuerpo: form.cuerpo, zona, destino: 'conductores' });
       return `Enviados: ${data.enviados} de ${data.total}. Omitidos: ${data.omitidos} (sin correo o sin cupo). Cupo restante hoy: ${data.cupoRestante}.`;
+    }, '', 'No se pudo enviar el correo');
+  };
+
+  const enviarLibre = () => {
+    if (!window.confirm(`¿Enviar "${form.asunto}" a ${para.trim()}?`)) return;
+    accion(async () => {
+      const { data } = await sendCorreo('admin', { asunto: form.asunto, cuerpo: form.cuerpo, email: para.trim(), nombre: nombreLibre.trim() });
+      if (!data.enviados) throw new Error('No se envió: se acabó el cupo del día o el servicio de correo falló.');
+      return `Correo enviado a ${para.trim()}. Cupo restante hoy: ${data.cupoRestante}.`;
     }, '', 'No se pudo enviar el correo');
   };
 
@@ -121,6 +132,20 @@ export default function CorreosPage() {
           </Button>
         </div>
         <p className="text-sm text-muted" style={{ marginTop: 8 }}>Máximo 100 correos por envío. Se envía el texto tal como está en el editor, aunque no lo hayas guardado.</p>
+      </Card>
+      <Card title="Enviar a cualquier correo" style={{ marginTop: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+          <div style={{ minWidth: 240, flex: '1 1 240px' }}>
+            <Input label="Para" type="email" required maxLength={254} placeholder="persona@gmail.com" value={para} onChange={(e) => setPara(e.target.value)} />
+          </div>
+          <div style={{ minWidth: 200, flex: '1 1 200px' }}>
+            <Input label="Nombre (opcional, para {{nombre}})" maxLength={100} value={nombreLibre} onChange={(e) => setNombreLibre(e.target.value)} />
+          </div>
+          <Button onClick={enviarLibre} disabled={ocupado || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(para.trim()) || !form.asunto.trim() || !form.cuerpo.trim()}>
+            Enviar el texto de arriba
+          </Button>
+        </div>
+        <p className="text-sm text-muted" style={{ marginTop: 8 }}>Sirve para cualquier dirección, aunque no sea usuaria. Usa la plantilla, el asunto y el mensaje del editor de arriba (la vista previa muestra cómo se verá).</p>
       </Card>
     </div>
   );
