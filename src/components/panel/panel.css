@@ -84,7 +84,7 @@
 .visor-foto__img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: var(--radius-md, 8px); }
 
 /* Vehículo del conductor + tarjeta (MarcadorConductor) */
-.vm-punto { position: absolute; top: 2px; right: -2px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.vm-punto { position: absolute; top: 0; right: -4px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 .vm-punto--on { background: var(--on, #16a34a); }
 .vm-punto--sin-senal { background: var(--sin-senal, #f59e0b); }
 .tarjeta-cond { display: flex; align-items: center; gap: 10px; min-width: 190px; }

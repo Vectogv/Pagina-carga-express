@@ -3,6 +3,9 @@ import { Marker, Popup, Tooltip } from 'react-leaflet';
 import { Avatar } from '../ui';
 import { iconoVehiculo, setRumbo } from '../../pages/cliente/VehiculoMarcador';
 
+// Tamaño en el panel: proporcionado a calles con varios conductores a la vista.
+const ANCHO_PANEL = 18;
+
 const nombreDe = (p) => p.nombre || [p.usuario?.nombre, p.usuario?.apellido].filter(Boolean).join(' ') || 'Conductor';
 
 /** Contenido compacto: solo foto, nombre, placa y calificación (lo que existe; lo que no llega no se pinta). */
@@ -29,7 +32,7 @@ export function TarjetaConductorMapa({ persona }) {
  * y al tocar (Popup). props: { persona, position, rumbo?, estado?: 'on'|'sin-senal', onPerfil?, extra? (nodo bajo la tarjeta), zIndexOffset? }
  */
 export default function MarcadorConductor({ persona, position, rumbo = 0, estado, onPerfil, extra, zIndexOffset = 300 }) {
-  const icono = useMemo(() => iconoVehiculo(persona.tipoVehiculo, estado), [persona.tipoVehiculo, estado]);
+  const icono = useMemo(() => iconoVehiculo(persona.tipoVehiculo, estado, ANCHO_PANEL), [persona.tipoVehiculo, estado]);
   const ref = useRef(null);
   useEffect(() => { setRumbo(ref.current, rumbo); }, [rumbo, icono, position]);
   return (
@@ -43,7 +46,7 @@ export default function MarcadorConductor({ persona, position, rumbo = 0, estado
         popupopen: (e) => e.target.closeTooltip(),
       }}
     >
-      <Tooltip direction="top" offset={[0, -26]} className="tarjeta-cond-tip"><TarjetaConductorMapa persona={persona} /></Tooltip>
+      <Tooltip direction="top" offset={[0, -18]} className="tarjeta-cond-tip"><TarjetaConductorMapa persona={persona} /></Tooltip>
       <Popup>
         <div className="stack">
           {extra}

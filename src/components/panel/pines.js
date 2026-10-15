@@ -14,7 +14,7 @@ export const PINES = {
   A: pin('A', 'panel-pin--letra panel-pin--on', 26),
   B: pin('B', 'panel-pin--letra panel-pin--fin', 26),
   ultimo: pin('', 'panel-pin--ultimo', 16),
-  conductor: iconoVehiculo('camioneta'), // sin identidad ni tipo (p. ej. SOS): dibujo genérico
+  conductor: iconoVehiculo('camioneta', undefined, 18), // sin identidad ni tipo (p. ej. SOS): dibujo genérico
   sos: pin('!', 'panel-pin--sos', 26),
   cierre: pin('⚑', 'panel-pin--cierre', 26),
 };

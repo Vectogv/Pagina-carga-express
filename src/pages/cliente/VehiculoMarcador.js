@@ -95,12 +95,15 @@ export const vehiculoSvg = (tipo, color = COLOR_VEHICULO, ancho = 30) => {
  * Icono Leaflet del vehículo; el giro se aplica después con setRumbo sobre `.cli-veh`.
  * estado: 'on' (punto verde) | 'sin-senal' (amarillo) | undefined (sin punto).
  */
-export const iconoVehiculo = (tipo, estado) => L.divIcon({
-  className: 'cli-veh-icono',
-  html: `<div class="cli-veh">${vehiculoSvg(tipo)}</div>${estado ? `<i class="vm-punto vm-punto--${estado}"></i>` : ''}`,
-  iconSize: [30, 55],
-  iconAnchor: [15, 27],
-});
+export const iconoVehiculo = (tipo, estado, ancho = 30) => {
+  const alto = Math.round(ancho * 1.1 / 0.6);
+  return L.divIcon({
+    className: 'cli-veh-icono',
+    html: `<div class="cli-veh" style="width:${ancho}px;height:${alto}px">${vehiculoSvg(tipo, COLOR_VEHICULO, ancho)}</div>${estado ? `<i class="vm-punto vm-punto--${estado}"></i>` : ''}`,
+    iconSize: [ancho, alto],
+    iconAnchor: [ancho / 2, alto / 2],
+  });
+};
 
 export const setRumbo = (marker, grados) => {
   const el = marker?.getElement()?.querySelector('.cli-veh');
