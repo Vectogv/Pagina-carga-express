@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import L from 'leaflet';
-import { MapContainer, Marker, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import { ArrowLeft, Eye, BellRing, Check, Flag, Mail, MessageSquare, X } from 'lucide-react';
 import { getModeratorDriver, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
 import { errorMessage, formatCurrency, formatDate, formatDateTime, fullName } from '../../utils/format';
@@ -13,6 +12,7 @@ import useDocumentosConductor from '../../hooks/useDocumentosConductor';
 import NotificarDocumentosDialog from '../moderator/NotificarDocumentosDialog';
 import EnviarCorreoDialog from '../../components/panel/EnviarCorreoDialog';
 import { ConnectionBadge } from '../admin/drivers/DriverBadges';
+import MarcadorConductor from '../../components/panel/MarcadorConductor';
 import { TarjetaPersona, Encuadre, posicionDe, DocumentoFoto, AvatarAmpliable } from '../../components/panel';
 import {
   PageHeader, Card, DataTable, ConfirmDialog, Button, Badge, StatusBadge, LoadingState,
@@ -21,7 +21,6 @@ import {
 
 // Claves viejas de `documentos` (camelCase) por si el servidor aún las manda así.
 const LEGADO = { licencia: 'fotoLicencia', soat: 'fotoSoat', tecnomecanica: 'fotoTecnomecanica', tarjeta_propiedad: 'fotoTarjetaPropiedad', foto_vehiculo: 'fotoVehiculo', foto_conductor: 'fotoConductor' };
-const PIN = L.divIcon({ className: '', html: '<div class="panel-pin panel-pin--on"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
 
 // Un documento puede llegar como string (URL firmada) o como objeto {url, ruta}.
 const docUrl = (d) => (typeof d === 'string' ? d : d?.url || d?.ruta || null);
@@ -247,7 +246,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
                 <MapContainer center={ubicacion} zoom={14} scrollWheelZoom={false}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} attribution="&copy; OpenStreetMap" />
                   <Encuadre puntos={[ubicacion]} />
-                  <Marker position={ubicacion} icon={PIN} />
+                  <MarcadorConductor persona={driver} position={ubicacion} estado={driver.sinSenal ? 'sin-senal' : 'on'} />
                 </MapContainer>
               </div>
               <span className="text-sm text-muted">Actualizada {formatDateTime(driver.ultimaUbicacion?.actualizadaEn)}</span>

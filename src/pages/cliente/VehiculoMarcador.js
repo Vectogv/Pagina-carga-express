@@ -1,14 +1,13 @@
 import L from 'leaflet';
 
-// Mismas reglas que tipoVehiculoMapaDe (app Flutter, lib/widgets/vehiculo_mapa.dart).
+// Mismas reglas y orden que tipoVehiculoMapaDe (app Flutter, lib/widgets/vehiculo_mapa.dart).
+// Devuelve 'piaggio' | 'furgon' | 'camioneta'; cualquier otro texto o vacío cae en camioneta.
 export function tipoVehiculoMapaDe(tipo) {
-  const t = String(tipo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_-]+/g, ' ').trim();
-  if (!t) return 'camion';
-  if (t.includes('moto')) return 'moto';
+  const t = String(tipo || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[_-]+/g, ' ').trim();
+  if (/piaggio|mini camion|moto|estacas/.test(t)) return 'piaggio';
   if (/camioneta|pickup|pick up/.test(t)) return 'camioneta';
-  if (/furgon|\bvan\b/.test(t)) return 'furgon';
-  if (/sedan|carro|automovil|hatchback|taxi|\bauto\b/.test(t)) return 'carro';
-  return 'camion';
+  if (/furgon|camion|\bvan\b/.test(t)) return 'furgon';
+  return 'camioneta';
 }
 
 /** Rumbo en grados (0 = norte, horario) de a hacia b; null si se movió menos de ~5 m. */
@@ -20,32 +19,87 @@ export function rumboEntre(a, b) {
   return (Math.atan2(dLng, dLat) * 180) / Math.PI;
 }
 
-// Siluetas vistas desde arriba (frente hacia arriba), viewBox 40x64, con degradados para dar volumen.
-const DEFS = `<defs>
-<linearGradient id="vm-c" x1="0" x2="1"><stop offset="0" stop-color="#1e4fc4"/><stop offset=".45" stop-color="#4f86f0"/><stop offset="1" stop-color="#173f9e"/></linearGradient>
-<linearGradient id="vm-b" x1="0" x2="1"><stop offset="0" stop-color="#e8edf6"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#c9d3e6"/></linearGradient>
-<linearGradient id="vm-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d7494"/><stop offset="1" stop-color="#1b2a44"/></linearGradient>
-</defs>`;
-const SOMBRA = '<ellipse cx="20" cy="36" rx="17" ry="29" fill="#0a2259" opacity=".22"/>';
-const RUEDAS = (ys) => ys.map((y) => `<rect x="2" y="${y}" width="5" height="10" rx="2" fill="#111"/><rect x="33" y="${y}" width="5" height="10" rx="2" fill="#111"/>`).join('');
+// Dibujos portados de vehiculo_mapa.dart: vista cenital, frente hacia arriba, unidades relativas
+// a s=1 (viewBox -.3 -.55 .6 1.1). Mismos colores y formas que la app.
+export const COLOR_VEHICULO = '#2563EB'; // colorVehiculoAsignado de la app
+const BLANCO = '#F8FAFC';
+const CARPA = '#2B3442';
+const COSTILLA = '#45505F';
+const VERDE = '#16A34A';
 
-const DIBUJO = {
-  furgon: `${SOMBRA}${RUEDAS([12, 44])}<rect x="6" y="4" width="28" height="56" rx="7" fill="url(#vm-b)" stroke="#9fb0cf"/><path d="M9 6h22v10H9z" fill="url(#vm-g)"/><rect x="9" y="20" width="22" height="36" rx="3" fill="#f4f7fc"/><path d="M20 20v36M9 38h22" stroke="#d3dbea"/><rect x="12" y="25" width="16" height="6" rx="2" fill="#1656d6"/>`,
-  camion: `${SOMBRA}${RUEDAS([10, 36, 50])}<rect x="7" y="3" width="26" height="16" rx="5" fill="url(#vm-c)"/><path d="M10 6h20v7H10z" fill="url(#vm-g)"/><rect x="6" y="21" width="28" height="41" rx="3" fill="url(#vm-b)" stroke="#9fb0cf"/><path d="M12 25v33M20 25v33M28 25v33" stroke="#d3dbea"/>`,
-  camioneta: `${SOMBRA}${RUEDAS([10, 44])}<rect x="7" y="3" width="26" height="58" rx="8" fill="url(#vm-c)"/><path d="M10 8h20l-2 9H12z" fill="url(#vm-g)"/><rect x="10" y="30" width="20" height="28" rx="3" fill="#173f9e"/><rect x="12" y="32" width="16" height="24" rx="2" fill="#d9a441" opacity=".85"/><path d="M12 32l16 24M28 32L12 56" stroke="#a97a22"/>`,
-  carro: `${SOMBRA}${RUEDAS([12, 42])}<rect x="8" y="5" width="24" height="54" rx="10" fill="url(#vm-c)"/><path d="M11 17h18l-1.5 8h-15z" fill="url(#vm-g)"/><rect x="11" y="27" width="18" height="12" rx="3" fill="#2d62d6"/><path d="M12 42h16l1.5 8h-19z" fill="url(#vm-g)"/>`,
-  moto: `<ellipse cx="20" cy="36" rx="8" ry="27" fill="#0a2259" opacity=".22"/><rect x="17" y="3" width="6" height="14" rx="3" fill="#111"/><rect x="17" y="47" width="6" height="14" rx="3" fill="#111"/><rect x="14" y="16" width="12" height="32" rx="6" fill="url(#vm-c)"/><path d="M8 17h24" stroke="#111" stroke-width="3" stroke-linecap="round"/><circle cx="20" cy="30" r="4.5" fill="#f4f7fc"/>`,
+const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+const mezcla = (a, b, t) => {
+  const A = hex(a); const B = hex(b);
+  return `#${A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
 };
 
-export const vehiculoSvg = (tipo) =>
-  `<svg viewBox="0 0 40 64" width="30" height="48" aria-hidden="true">${DEFS}${DIBUJO[tipoVehiculoMapaDe(tipo)]}</svg>`;
+const rr = (l, t, r, b, rad, fill, extra = '') =>
+  `<rect x="${l}" y="${t}" width="${+(r - l).toFixed(4)}" height="${+(b - t).toFixed(4)}" rx="${rad}" fill="${fill}" ${extra}/>`;
+const ln = (x1, y1, x2, y2, stroke, w, op = 1) =>
+  `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${w}" stroke-opacity="${op}"/>`;
+const faros = (x, y) => [-x, x].map((cx) => `<circle cx="${cx}" cy="${y}" r=".024" fill="#FFF4C2"/>`).join('');
+const espejos = (y, x, c) => rr(-x - 0.06, y, -x, y + 0.04, 0.012, c) + rr(x, y, x + 0.06, y + 0.04, 0.012, c);
+const costillas = (l, r, ys) => ys.map((y) => ln(l + 0.015, y, r - 0.015, y, COSTILLA, 0.014)).join('');
 
-/** Icono Leaflet del vehículo; el giro se aplica después con setRumbo sobre `.cli-veh`. */
-export const iconoVehiculo = (tipo) => L.divIcon({
+// Silueta exterior (contorno blanco y sombra).
+const SILUETA = {
+  piaggio: [[-0.14, -0.33, 0.14, -0.12, 0.07], [-0.17, -0.11, 0.17, 0.31, 0.03]],
+  furgon: [[-0.2, -0.46, 0.2, -0.22, 0.08], [-0.23, -0.23, 0.23, 0.46, 0.035]],
+  camioneta: [[-0.2, -0.42, 0.2, 0.42, 0.09]],
+};
+const siluetaSvg = (tipo, extra) => SILUETA[tipo].map((a) => rr(...a, 'none', extra)).join('');
+
+function cuerpo(tipo, color) {
+  const oscuro = mezcla(color, '#000000', 0.38);
+  const claro = mezcla(color, '#FFFFFF', 0.22);
+  const vidrio = mezcla('#FFFFFF', color, 0.14);
+  if (tipo === 'piaggio') {
+    return rr(-0.14, -0.33, 0.14, -0.12, 0.07, BLANCO, `stroke="${color}" stroke-width=".024"`)
+      + rr(-0.09, -0.29, 0.09, -0.23, 0.025, mezcla(color, '#FFFFFF', 0.55))
+      + `<circle cx="0" cy="-.315" r=".024" fill="#FFF4C2"/>`
+      + rr(-0.17, -0.11, 0.17, 0.31, 0.03, BLANCO, `stroke="${oscuro}" stroke-opacity=".45" stroke-width=".012"`)
+      + rr(-0.165, -0.09, -0.14, 0.29, 0, VERDE) + rr(0.14, -0.09, 0.165, 0.29, 0, VERDE)
+      + rr(-0.13, -0.08, 0.13, 0.28, 0.03, CARPA) + costillas(-0.13, 0.13, [0.03, 0.14]);
+  }
+  if (tipo === 'furgon') {
+    return espejos(-0.36, 0.2, oscuro)
+      + rr(-0.2, -0.46, 0.2, -0.22, 0.08, color)
+      + rr(-0.15, -0.42, 0.15, -0.35, 0.03, vidrio)
+      + rr(-0.15, -0.33, 0.15, -0.27, 0.03, claro)
+      + rr(-0.23, -0.23, 0.23, 0.46, 0.035, BLANCO, `stroke="${oscuro}" stroke-opacity=".55" stroke-width=".016"`)
+      + rr(-0.23, -0.2, 0.23, -0.15, 0, color)
+      + [0, 0.14, 0.28].map((y) => ln(-0.2, y, 0.2, y, '#CBD5E1', 0.012)).join('')
+      + faros(0.13, -0.43);
+  }
+  return espejos(-0.2, 0.2, oscuro)
+    + rr(-0.2, -0.42, 0.2, 0.42, 0.09, color)
+    + ln(0, -0.38, 0, -0.27, oscuro, 0.012, 0.35)
+    + rr(-0.16, -0.25, 0.16, -0.17, 0.03, vidrio)
+    + rr(-0.16, -0.15, 0.16, 0, 0.04, claro)
+    + rr(-0.15, 0.01, 0.15, 0.04, 0.015, vidrio)
+    + rr(-0.165, 0.07, 0.165, 0.39, 0.03, CARPA) + costillas(-0.165, 0.165, [0.15, 0.23, 0.31])
+    + faros(0.13, -0.39);
+}
+
+const DEFS = '<defs><filter id="vm-sombra" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation=".025"/></filter></defs>';
+
+export const vehiculoSvg = (tipo, color = COLOR_VEHICULO, ancho = 30) => {
+  const t = tipoVehiculoMapaDe(tipo);
+  return `<svg viewBox="-.3 -.55 .6 1.1" width="${ancho}" height="${Math.round(ancho * 1.1 / 0.6)}" aria-hidden="true">${DEFS}`
+    + `<g transform="translate(0 .045)" filter="url(#vm-sombra)" opacity=".35">${siluetaSvg(t, 'fill="#000"').replace(/fill="none"/g, 'fill="#000"')}</g>`
+    + siluetaSvg(t, 'stroke="#fff" stroke-width=".06" stroke-linejoin="round"')
+    + cuerpo(t, color) + '</svg>';
+};
+
+/**
+ * Icono Leaflet del vehículo; el giro se aplica después con setRumbo sobre `.cli-veh`.
+ * estado: 'on' (punto verde) | 'sin-senal' (amarillo) | undefined (sin punto).
+ */
+export const iconoVehiculo = (tipo, estado) => L.divIcon({
   className: 'cli-veh-icono',
-  html: `<div class="cli-veh">${vehiculoSvg(tipo)}</div>`,
-  iconSize: [30, 48],
-  iconAnchor: [15, 24],
+  html: `<div class="cli-veh">${vehiculoSvg(tipo)}</div>${estado ? `<i class="vm-punto vm-punto--${estado}"></i>` : ''}`,
+  iconSize: [30, 55],
+  iconAnchor: [15, 27],
 });
 
 export const setRumbo = (marker, grados) => {

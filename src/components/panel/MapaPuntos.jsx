@@ -5,6 +5,7 @@ import { EmptyState } from '../ui';
 import Encuadre from './mapaBase';
 import { posicionDe } from './geo';
 import { PINES } from './pines';
+import { vehiculoSvg } from '../../pages/cliente/VehiculoMarcador';
 
 /**
  * Mapa simple de puntos (OpenStreetMap) para un SOS sin viaje asociado: el "!" donde se
@@ -34,7 +35,7 @@ export default function MapaPuntos({ sos, conductor, origen, destino, alturaPx }
       </div>
       <div className="mapa-leyenda text-xs text-muted">
         {pSos && <span><i className="panel-pin panel-pin--sos mapa-leyenda__pin">!</i> SOS</span>}
-        {pConductor && <span><i className="panel-pin panel-pin--vehiculo mapa-leyenda__pin">🚚</i> Conductor</span>}
+        {pConductor && <span><i className="mapa-leyenda__veh" dangerouslySetInnerHTML={{ __html: vehiculoSvg('camioneta', undefined, 12) }} /> Conductor</span>}
         <span>Sin viaje asociado: no hay ruta que mostrar.</span>
       </div>
     </div>

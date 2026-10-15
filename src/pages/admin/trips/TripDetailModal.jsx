@@ -144,7 +144,7 @@ export default function TripDetailModal({ trip, onClose, onResolved }) {
 
           <Section title="Ruta">
             {/* Planeada en azul, recorrido real en rojo: GET /api/admin/trips/:id/recorrido. */}
-            <MapaRecorrido key={trip.id} area="admin" viajeId={trip.id} alturaPx={280} modo="viaje" />
+            <MapaRecorrido persona={detail?.conductor} key={trip.id} area="admin" viajeId={trip.id} alturaPx={280} modo="viaje" />
             <div className="trip-route">
               <div className="trip-route__point">
                 <span className="trip-route__dot" aria-hidden="true" />

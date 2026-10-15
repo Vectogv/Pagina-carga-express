@@ -1,23 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
-import L from 'leaflet';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getDrivers } from '../../api/admin';
 import { getModeratorDrivers } from '../../api/moderator';
 import useSondeo from '../../hooks/useSondeo';
 import { errorMessage, timeAgo, toList } from '../../utils/format';
 import { Button } from '../ui';
-import TarjetaPersona from './TarjetaPersona';
+import MarcadorConductor from './MarcadorConductor';
 import FiltroZona from './FiltroZona';
 import Encuadre from './mapaBase';
 import { POPAYAN, posicionDe } from './geo';
 
 const REFRESCO_MS = 10000;
-
-const icono = (clase) => L.divIcon({ className: '', html: `<div class="panel-pin ${clase}"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] });
-const ICONO_ON = icono('panel-pin--on');
-const ICONO_SIN_SENAL = icono('panel-pin--sin-senal');
 
 /**
  * Conductores conectados con ubicación, en vivo (sondeo cada 10 s). Los desconectados no salen
@@ -69,15 +64,14 @@ export default function MapaVivo({ area, paramsExtra }) {
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} attribution="&copy; OpenStreetMap" />
           <Encuadre puntos={visibles.map((x) => x.pos)} />
           {visibles.map(({ d, pos }) => (
-            <Marker key={d.id} position={pos} icon={d.sinSenal ? ICONO_SIN_SENAL : ICONO_ON}>
-              <Popup>
-                <div className="stack">
-                  {d.sinSenal && <span className="text-sm text-warning">Sin señal{d.ultimaSenalAt ? ` · ${timeAgo(d.ultimaSenalAt).toLowerCase()}` : ''}</span>}
-                  <TarjetaPersona persona={d} tipo="conductor" area={area} />
-                  <Button size="sm" variant="secondary" onClick={() => navigate(`/${area}/drivers/${d.id}`)}>Ver perfil</Button>
-                </div>
-              </Popup>
-            </Marker>
+            <MarcadorConductor
+              key={d.id}
+              persona={d}
+              position={pos}
+              estado={d.sinSenal ? 'sin-senal' : 'on'}
+              onPerfil={() => navigate(`/${area}/drivers/${d.id}`)}
+              extra={d.sinSenal && <span className="text-sm text-warning">Sin señal{d.ultimaSenalAt ? ` · ${timeAgo(d.ultimaSenalAt).toLowerCase()}` : ''}</span>}
+            />
           ))}
         </MapContainer>
       </div>

@@ -15,11 +15,11 @@ import {
 } from '../../../components/ui';
 
 /** Ruta planeada (azul), recorrido real (rojo) y el SOS del viaje si lo hubo: GET /api/moderator/trips/:id/recorrido. */
-function MapaViaje({ viajeId, origen, destino, marcaSos }) {
+function MapaViaje({ viajeId, origen, destino, marcaSos, conductor }) {
   return (
     <section className="trip-detail__section">
       <h4 className="section-title">Ruta</h4>
-      <MapaRecorrido area="moderator" viajeId={viajeId} alturaPx={280} modo="viaje" marcaSos={marcaSos} />
+      <MapaRecorrido persona={conductor} area="moderator" viajeId={viajeId} alturaPx={280} modo="viaje" marcaSos={marcaSos} />
       <div className="trip-detail__route">
         <div className="trip-detail__stop">
           <MapPin size={14} className="text-success" />
@@ -141,7 +141,7 @@ export default function TripDetailModal({
             )}
           </section>
 
-          <MapaViaje key={detail.id} viajeId={detail.id} origen={detail.origen} destino={detail.destino} marcaSos={marcaSos} />
+          <MapaViaje key={detail.id} viajeId={detail.id} origen={detail.origen} destino={detail.destino} marcaSos={marcaSos} conductor={conductor} />
 
           <div className="two-col">
             <section className="trip-detail__card">

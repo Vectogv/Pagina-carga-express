@@ -207,7 +207,7 @@
 .cli-pin-mapa--destino { background: #dc2626; }
 .cli-veh-icono { transition: transform 1s linear; }
 .leaflet-zoom-anim .cli-veh-icono { transition: none; }
-.cli-veh { width: 30px; height: 48px; transition: transform .6s ease; filter: drop-shadow(0 3px 4px rgba(10, 34, 89, .35)); }
+.cli-veh { width: 30px; height: 55px; transition: transform .6s ease; filter: drop-shadow(0 3px 4px rgba(10, 34, 89, .35)); }
 .cli-veh svg { display: block; }
 
 @media (prefers-reduced-motion: reduce) {

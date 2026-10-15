@@ -8,6 +8,8 @@ import { Button, EmptyState, LoadingState } from '../ui';
 import Encuadre from './mapaBase';
 import { distanciaM, posicionDe, tramosDe } from './geo';
 import { PINES } from './pines';
+import MarcadorConductor from './MarcadorConductor';
+import { vehiculoSvg } from '../../pages/cliente/VehiculoMarcador';
 
 const REFRESCO_MS = 10000;
 const AZUL = '#3B82F6';
@@ -22,7 +24,7 @@ function textoDistancia(m) {
 
 /**
  * Mapa de un viaje (OpenStreetMap, sin Mapbox) desde GET /api/{admin|moderator}/trips/:id/recorrido.
- * props: { area: 'admin'|'moderator', viajeId, alturaPx?, modo?: 'viaje'|'sos'|'disputa', marcaSos?: {lat,lng,at,id?} }
+ * props: { persona?: conductor del viaje (nombre, avatar, placa, tipoVehiculo, calificacion) para la tarjeta, area: 'admin'|'moderator', viajeId, alturaPx?, modo?: 'viaje'|'sos'|'disputa', marcaSos?: {lat,lng,at,id?} }
  * - viaje (por defecto): A, B, recorrido real (rojo), planeada (azul) y el conductor si está activo.
  *   El "!" solo si `marcaSos` viene (el viaje tuvo SOS), rotulado "SOS (alerta #N)".
  * - sos: A, B y el "!" donde se activó; rojo = A→SOS (recorrido), azul = SOS→B (pendiente).
@@ -32,7 +34,7 @@ function textoDistancia(m) {
  *   distancia al destino. Sin marca de SOS.
  * Si el viaje está activo se refresca cada 10 s; si no, carga una sola vez.
  */
-export default function MapaRecorrido({ area, viajeId, alturaPx, modo = 'viaje', marcaSos }) {
+export default function MapaRecorrido({ persona, area, viajeId, alturaPx, modo = 'viaje', marcaSos }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -102,7 +104,9 @@ export default function MapaRecorrido({ area, viajeId, alturaPx, modo = 'viaje',
           {origen && <Marker position={origen} icon={PINES.A} zIndexOffset={200}><Popup>Origen{data.origen?.direccion ? ` · ${data.origen.direccion}` : ''}</Popup></Marker>}
           {destino && <Marker position={destino} icon={PINES.B} zIndexOffset={200}><Popup>Destino{data.destino?.direccion ? ` · ${data.destino.direccion}` : ''}</Popup></Marker>}
           {mostrarUltimo && <Marker position={ultimo} icon={PINES.ultimo}><Popup>Último punto · {formatDateTime(data.ultimoPunto.at)}</Popup></Marker>}
-          {conductor && <Marker position={conductor} icon={PINES.conductor} zIndexOffset={300}><Popup>Conductor ahora · {formatDateTime(data.conductorUbicacion.actualizadaEn)}</Popup></Marker>}
+          {conductor && (persona
+            ? <MarcadorConductor persona={persona} position={conductor} extra={<span className="text-sm">Conductor ahora · {formatDateTime(data.conductorUbicacion.actualizadaEn)}</span>} />
+            : <Marker position={conductor} icon={PINES.conductor} zIndexOffset={300}><Popup>Conductor ahora · {formatDateTime(data.conductorUbicacion.actualizadaEn)}</Popup></Marker>)}
           {cierre && (
             <Marker position={cierre} icon={PINES.cierre} zIndexOffset={400}>
               <Popup>
@@ -120,7 +124,7 @@ export default function MapaRecorrido({ area, viajeId, alturaPx, modo = 'viaje',
         {sos && <span><i className="panel-pin panel-pin--sos mapa-leyenda__pin">!</i> {etiquetaSos}</span>}
         {cierre && <span><i className="panel-pin panel-pin--cierre mapa-leyenda__pin">⚑</i> {etiquetaCierre}</span>}
         {mostrarUltimo && <span><i className="panel-pin panel-pin--ultimo mapa-leyenda__pin" /> Último punto</span>}
-        {conductor && <span><i className="panel-pin panel-pin--vehiculo mapa-leyenda__pin">🚚</i> Conductor ahora</span>}
+        {conductor && <span><i className="mapa-leyenda__veh" dangerouslySetInnerHTML={{ __html: vehiculoSvg(persona?.tipoVehiculo, undefined, 12) }} /> Conductor ahora</span>}
         {activo && <span className="text-success">· En vivo</span>}
       </div>
       {modo === 'disputa' && (
