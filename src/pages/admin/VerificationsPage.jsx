@@ -1,5 +1,6 @@
 import VistaAviso from '../../components/VistaAviso';
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Bell, Check, Eye, ShieldAlert, X } from 'lucide-react';
 import {
   getVerifications, approveVerification, rejectVerification, resolveSoatException,
@@ -8,8 +9,9 @@ import {
 import { faltantesDe, textoFaltantes } from '../../utils/documentos';
 import { errorMessage, formatDate, fullName, toList } from '../../utils/format';
 import {
-  Avatar, Badge, Button, ConfirmDialog, DataTable, Modal, PageHeader, Textarea, Toast, ToastContainer,
+  Avatar, Badge, Button, ConfirmDialog, DataTable, Modal, PageHeader, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, Toast, ToastContainer,
 } from '../../components/ui';
+import ExcepcionesSoat from '../../components/verificacion/ExcepcionesSoat';
 import DetalleVerificacion from '../../components/verificacion/DetalleVerificacion';
 import NotificarDocumentosDialog from '../moderator/NotificarDocumentosDialog';
 
@@ -26,6 +28,8 @@ const ESTADO_EXCEPCION = {
 // trae conductores con estadoVerificacion 'pendiente' y no incluye estado por
 // documento; la única acción posible es aprobar o rechazar al conductor entero.
 export default function VerificationsPage() {
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'soat' ? 'soat' : 'documentacion';
   const [verifications, setVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -80,19 +84,6 @@ export default function VerificationsPage() {
   const ask = (row, type) => (e) => {
     e.stopPropagation();
     setConfirmAction({ ...row, type });
-  };
-
-  const handleSoat = async () => {
-    try {
-      const payload = { aprobar: confirmAction.type === 'soat-approve' };
-      if (nota.trim()) payload.nota = nota.trim();
-      await resolveSoatException(confirmAction.id, payload);
-      closeConfirm();
-      setSelected(null);
-      await fetchVerifications();
-    } catch (err) {
-      setError(errorMessage(err, 'Error al resolver la excepción del SOAT'));
-    }
   };
 
   const avisarModerador = async () => {
@@ -181,10 +172,7 @@ export default function VerificationsPage() {
   ];
 
   const isApprove = confirmAction?.type === 'approve';
-  const isSoat = confirmAction?.type === 'soat-approve' || confirmAction?.type === 'soat-reject';
-  const isSoatApprove = confirmAction?.type === 'soat-approve';
   const confirmName = fullName(confirmAction?.usuario) || 'este conductor';
-  const soatSel = selected ? ESTADO_EXCEPCION[selected.excepcionSoatEstado] : null;
 
   return (
     <div className="page">
@@ -199,13 +187,24 @@ export default function VerificationsPage() {
         </div>
       )}
 
-      <DataTable
-        columns={columns}
-        data={verifications}
-        loading={loading}
-        emptyMessage="No hay verificaciones pendientes"
-        onRowClick={setSelected}
-      />
+      <Tabs value={tab} onValueChange={(v) => setParams(v === 'soat' ? { tab: 'soat' } : {}, { replace: true })}>
+        <TabsList>
+          <TabsTrigger value="documentacion">Documentación</TabsTrigger>
+          <TabsTrigger value="soat">Excepciones de SOAT</TabsTrigger>
+        </TabsList>
+        <TabsContent value="documentacion">
+          <DataTable
+            columns={columns}
+            data={verifications}
+            loading={loading}
+            emptyMessage="No hay verificaciones pendientes"
+            onRowClick={setSelected}
+          />
+        </TabsContent>
+        <TabsContent value="soat">
+          <ExcepcionesSoat cargar={getVerifications} resolver={resolveSoatException} />
+        </TabsContent>
+      </Tabs>
 
       <Modal
         isOpen={!!selected}
@@ -233,29 +232,6 @@ export default function VerificationsPage() {
         {selected && (
           <div className="stack">
             <DetalleVerificacion c={selected} />
-
-            {selected.excepcionSoatEstado && (
-              <>
-                <hr className="divider" />
-                <h3 className="section-title">Excepción del SOAT</h3>
-                <div className="detail-list">
-                  <div className="detail-list__item">
-                    <span className="detail-list__label">Estado</span>
-                    <span className="detail-list__value"><Badge variant={soatSel.variant}>{soatSel.label}</Badge></span>
-                  </div>
-                  <div className="detail-list__item">
-                    <span className="detail-list__label">{selected.excepcionSoatEstado === 'pendiente' ? 'Comentario del conductor' : 'Nota'}</span>
-                    <span className="detail-list__value">{selected.excepcionSoatNota || '—'}</span>
-                  </div>
-                </div>
-                {selected.excepcionSoatEstado === 'pendiente' && (
-                  <div className="row row--end">
-                    <Button size="sm" variant="soft-success" icon={<Check size={14} />} onClick={ask(selected, 'soat-approve')}>Aprobar excepción</Button>
-                    <Button size="sm" variant="soft-danger" icon={<X size={14} />} onClick={ask(selected, 'soat-reject')}>Rechazar excepción</Button>
-                  </div>
-                )}
-              </>
-            )}
           </div>
         )}
       </Modal>
@@ -295,21 +271,15 @@ Nota de gerencia: ${msgMod.trim()}` : ''}`} />
       <ConfirmDialog
         isOpen={!!confirmAction}
         onClose={closeConfirm}
-        onConfirm={isSoat ? handleSoat : isApprove ? handleApprove : handleReject}
-        title={isSoat
-          ? (isSoatApprove ? 'Aprobar excepción del SOAT' : 'Rechazar excepción del SOAT')
-          : isApprove ? 'Aprobar verificación' : 'Rechazar verificación'}
-        message={isSoat
-          ? (isSoatApprove
-            ? `¿Aprobar la excepción del SOAT de ${confirmName}? Podrá ser verificado sin SOAT.`
-            : `¿Rechazar la excepción del SOAT de ${confirmName}? Tendrá que subir el SOAT.`)
-          : isApprove
-            ? `¿Aprobar la verificación de ${confirmName}?`
-            : `¿Rechazar la verificación de ${confirmName}? Esta acción no se puede deshacer.`}
-        confirmText={isApprove || isSoatApprove ? 'Aprobar' : 'Rechazar'}
-        danger={!(isApprove || isSoatApprove)}
+        onConfirm={isApprove ? handleApprove : handleReject}
+        title={isApprove ? 'Aprobar verificación' : 'Rechazar verificación'}
+        message={isApprove
+          ? `¿Aprobar la verificación de ${confirmName}?`
+          : `¿Rechazar la verificación de ${confirmName}? Esta acción no se puede deshacer.`}
+        confirmText={isApprove ? 'Aprobar' : 'Rechazar'}
+        danger={!isApprove}
       >
-        {(!isApprove || isSoat) && (
+        {!isApprove && (
           <Textarea
             label="Nota (opcional)"
             value={nota}

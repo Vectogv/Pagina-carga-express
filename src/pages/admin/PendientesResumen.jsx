@@ -16,7 +16,7 @@ const CATEGORIAS = {
   reportes: { icon: Flag, sev: 'warning', to: '/admin/reports' },
   verificaciones: { icon: UserCheck, sev: 'info', to: '/admin/verifications' },
   moderadores: { icon: ShieldCheck, sev: 'info', to: '/admin/moderadores-verificaciones' },
-  soat: { icon: FileWarning, sev: 'info', to: '/admin/verifications' },
+  soat: { icon: FileWarning, sev: 'info', to: '/admin/verifications?tab=soat' },
   comunicados: { icon: Megaphone, sev: 'info', to: '/admin/comunicados' },
 };
 const ORDEN = Object.keys(CATEGORIAS);

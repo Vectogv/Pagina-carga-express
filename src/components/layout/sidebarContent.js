@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, TrendingUp, BadgeCheck,
   Flag, Scale, Siren, CircleX, CreditCard, Megaphone, Pin, MessagesSquare,
   ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, LifeBuoy,
-  CalendarClock, Gavel, ChartLine, Send, Mail, ListChecks, MapPinned, Gift, Building2, FileSignature,
+  CalendarClock, FileWarning, Gavel, ChartLine, Send, Mail, ListChecks, MapPinned, Gift, Building2, FileSignature,
 } from 'lucide-react';
 
 // Navegación agrupada como panel de seguridad y administración. Cada item: { icon, label, to, end? }
@@ -103,6 +103,7 @@ export const moderatorNav = [
       { icon: Truck, label: 'Directorio', to: '/moderator/conductores' },
       { icon: BadgeCheck, label: 'Por verificar', to: '/moderator/drivers', end: true },
       { icon: BedDouble, label: 'Inactivos', to: '/moderator/drivers/inactive' },
+      { icon: FileWarning, label: 'Excepciones de SOAT', to: '/moderator/soat-excepciones' },
       { icon: Flag, label: 'Mis reportes', to: '/moderator/reports' },
     ],
   },

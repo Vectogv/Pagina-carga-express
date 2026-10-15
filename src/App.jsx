@@ -57,6 +57,7 @@ const moderator = {
   index: lazy(() => import('./pages/moderator/DashboardPage')),
   drivers: lazy(() => import('./pages/moderator/DriversPage')),
   'drivers/inactive': lazy(() => import('./pages/moderator/InactiveDriversPage')),
+  'soat-excepciones': lazy(() => import('./pages/moderator/ExcepcionesSoatPage')),
   'drivers/:id': lazy(() => import('./pages/moderator/DriverDetailPage')),
   'clients/:id': lazy(() => import('./pages/panel/PerfilClientePage').then((m) => ({ default: () => <m.default area="moderator" /> }))),
   mapa: lazy(() => import('./pages/panel/MapaVivoPage').then((m) => ({ default: () => <m.default area="moderator" /> }))),

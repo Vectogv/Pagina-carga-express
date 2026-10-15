@@ -69,3 +69,7 @@ export const getModeratorProfile = () => api.get('/api/users/profile')
 // Conteos para las insignias (aceptan ?ciudad= cuando el admin elige una zona)
 export const getEmergencyCount = (params) => api.get('/api/moderator/emergency/count', { params })
 export const getTicketsCount = (params) => api.get('/api/moderator/tickets/count', { params })
+
+// Excepciones de SOAT de su zona (params: estado) y resolución { aprobar, nota? }. 403 fuera de su zona.
+export const getSoatExcepciones = (params) => api.get('/api/moderator/soat-excepciones', { params })
+export const resolveSoatException = (id, data) => api.put(`/api/moderator/drivers/${id}/soat-exception`, data)
