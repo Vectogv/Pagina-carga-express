@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { sendComunicacion } from '../../api/admin';
+import { sendComunicacion, avisarActualizacion } from '../../api/admin';
 import { errorMessage } from '../../utils/format';
 import { useZonas } from '../../hooks/useZonas';
 import { PageHeader, Select, Input, Textarea, Alert, Button, Card } from '../../components/ui';
@@ -13,6 +13,26 @@ export default function EnviarComunicacionPage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(null);
+
+  const [actDestino, setActDestino] = useState("ambos");
+  const [actMensaje, setActMensaje] = useState("");
+  const [avisando, setAvisando] = useState(false);
+
+  const avisar = async (e) => {
+    e.preventDefault();
+    try {
+      setAvisando(true);
+      setError(null);
+      setOk(null);
+      const { data } = await avisarActualizacion({ destino: actDestino, ...(actMensaje.trim() ? { mensaje: actMensaje } : {}) });
+      setOk(`Aviso de actualización enviado a ${data.destinatarios} usuario(s); ${data.conPush} con push.`);
+      setActMensaje("");
+    } catch (err) {
+      setError(errorMessage(err, "No se pudo enviar el aviso"));
+    } finally {
+      setAvisando(false);
+    }
+  };
 
   const enviar = async (e) => {
     e.preventDefault();
@@ -55,6 +75,20 @@ export default function EnviarComunicacionPage() {
             <Button type="submit" disabled={enviando || !titulo.trim() || !mensaje.trim()}>
               {enviando ? 'Enviando...' : 'Enviar'}
             </Button>
+          </div>
+        </form>
+      </Card>
+      <Card style={{ marginTop: 16 }}>
+        <form onSubmit={avisar} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 640 }}>
+          <strong>Avisar actualización</strong>
+          <Select label="Para" value={actDestino} onChange={(e) => setActDestino(e.target.value)}>
+            <option value="ambos">Conductores y clientes</option>
+            <option value="conductores">Conductores</option>
+            <option value="clientes">Clientes</option>
+          </Select>
+          <Textarea label="Mensaje (opcional)" value={actMensaje} maxLength={300} onChange={(e) => setActMensaje(e.target.value)} />
+          <div>
+            <Button type="submit" disabled={avisando}>{avisando ? "Enviando..." : "Avisar actualización"}</Button>
           </div>
         </form>
       </Card>
