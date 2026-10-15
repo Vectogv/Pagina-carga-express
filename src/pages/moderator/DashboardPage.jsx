@@ -1,3 +1,4 @@
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -88,6 +89,7 @@ function SeeAll({ to, label = 'Ver todo' }) {
 }
 
 export default function ModeratorDashboard() {
+  const zonas = useZonas();
   const navigate = useNavigate();
   const { emergencyBadge, closuresBadge, ticketBadge, unreadBadge } = useModeratorBadges();
   const { user: authUser } = useAuth();
@@ -182,7 +184,7 @@ export default function ModeratorDashboard() {
     return () => { socket.disconnect(); };
   }, [myId]);
 
-  const ciudad = user.zonaModerador || user.zona_moderador || '—';
+  const ciudad = zonaLabelFrom(zonas, user.zonaModerador || user.zona_moderador);
   const userName = [`${user.nombre || ''} ${user.apellido || ''}`.trim(), user.email].filter(Boolean).join(' · ') || 'Moderador';
 
   const asignados = stats.totalDrivers ?? 0;

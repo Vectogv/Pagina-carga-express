@@ -8,6 +8,7 @@ import { errorMessage, formatCurrency, formatDate, formatDateTime, fullName } fr
 import { resolveStorageUrl } from '../../utils/storage';
 import { faltantesDe, textoFaltantes } from '../../utils/documentos';
 import { textoCanales } from '../../utils/canales';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import useDocumentosConductor from '../../hooks/useDocumentosConductor';
 import NotificarDocumentosDialog from '../moderator/NotificarDocumentosDialog';
 import EnviarCorreoDialog from '../../components/panel/EnviarCorreoDialog';
@@ -38,6 +39,7 @@ function Detail({ label, children }) {
 export default function PerfilConductorPage({ area = 'moderator' }) {
   const { id } = useParams();
   const { documentos } = useDocumentosConductor();
+  const zonas = useZonas();
   const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -163,7 +165,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
           <AvatarAmpliable src={foto} name={nombre} size={112} className="perfil-cab__foto" />
           <div className="perfil-cab__info">
             <h2 className="perfil-cab__nombre">{nombre}</h2>
-            <span className="text-muted">{[driver.placa, driver.tipoVehiculo, driver.ciudad].filter(Boolean).join(' · ') || 'Conductor'}</span>
+            <span className="text-muted">{[driver.placa, driver.tipoVehiculo, driver.ciudad && zonaLabelFrom(zonas, driver.ciudad)].filter(Boolean).join(' · ') || 'Conductor'}</span>
             <div className="perfil-cab__badges">
               <StatusBadge status={driver.estadoVerificacion || 'pendiente'} />
               {(u.estadoCuenta === 'suspendida' || u.suspendido)
@@ -211,7 +213,7 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
             <Detail label="Teléfono">{u.telefono}</Detail>
             <Detail label="Correo">{u.email}</Detail>
             <Detail label="Edad">{u.edad}</Detail>
-            <Detail label="Ciudad">{driver.ciudad}</Detail>
+            <Detail label="Ciudad">{driver.ciudad ? zonaLabelFrom(zonas, driver.ciudad) : '—'}</Detail>
             <Detail label="Contacto de emergencia">
               {u.contactoEmergenciaNombre ? `${u.contactoEmergenciaNombre}${u.contactoEmergenciaTelefono ? ` · ${u.contactoEmergenciaTelefono}` : ''}` : null}
             </Detail>
