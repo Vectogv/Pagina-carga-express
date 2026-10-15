@@ -90,7 +90,7 @@ export default function EnviarCorreoDialog({ area, userId, destinatario, onClose
         ) : (
           <span className="text-sm text-muted">El texto de la plantilla lo define gerencia; las variables se rellenan con los datos del conductor.</span>
         )}
-        <VistaPreviaCorreo area={area} asunto={asunto} cuerpo={cuerpo} userId={userId} alto={380} />
+        <VistaPreviaCorreo area={area} asunto={asunto} cuerpo={cuerpo} userId={userId} />
       </div>
     </Modal>
   );

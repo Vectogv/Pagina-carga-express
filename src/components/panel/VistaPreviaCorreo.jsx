@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { previewCorreo } from '../../api/correo';
+import MarcoCelular from '../MarcoCelular';
 import { errorMessage } from '../../utils/format';
 
 /** Muestra el correo tal como llega (logo, colores y pie), pedido al servidor con una pausa al escribir. */
-export default function VistaPreviaCorreo({ area = 'admin', asunto, cuerpo, userId, alto = 460 }) {
+export default function VistaPreviaCorreo({ area = 'admin', asunto, cuerpo, userId }) {
   const [res, setRes] = useState(null);
   const [error, setError] = useState(null);
 
@@ -25,14 +26,12 @@ export default function VistaPreviaCorreo({ area = 'admin', asunto, cuerpo, user
   if (error) return <p className="text-sm text-danger">{error}</p>;
   if (!res) return <p className="text-sm text-muted">Generando vista previa…</p>;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <span className="text-sm"><strong>Asunto:</strong> {res.asunto}</span>
-      <iframe
-        title="Vista previa del correo"
-        srcDoc={res.html}
-        sandbox=""
-        style={{ width: '100%', height: alto, border: '1px solid var(--border)', borderRadius: 8, background: '#f1f5f9' }}
-      />
-    </div>
+    <MarcoCelular label="Vista previa del correo en el celular" caption="Así llega a la bandeja del conductor">
+      <div className="mail__head">
+        <div className="mail__from"><span className="mail__avatar">C</span>CargaExpress · ahora</div>
+        <p className="mail__subject">{res.asunto}</p>
+      </div>
+      <iframe title="Vista previa del correo" srcDoc={res.html} sandbox="" className="mail__body" />
+    </MarcoCelular>
   );
 }

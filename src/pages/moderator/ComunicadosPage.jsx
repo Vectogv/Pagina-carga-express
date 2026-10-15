@@ -1,3 +1,4 @@
+import VistaAviso from '../../components/VistaAviso';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { createComunicado, getModeratorComunicados } from '../../api/moderator';
@@ -149,6 +150,7 @@ export default function ModeratorComunicadosPage() {
             rows={4}
           />
         </form>
+        <VistaAviso tipo="lider" titulo={form.titulo} mensaje={form.contenido} />
       </Modal>
 
       {toast && (

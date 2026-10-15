@@ -3,6 +3,7 @@ import api from '../../api/axios';
 import { sendComunicacion, avisarActualizacion } from '../../api/admin';
 import { errorMessage } from '../../utils/format';
 import { useZonas } from '../../hooks/useZonas';
+import VistaAviso from '../../components/VistaAviso';
 import { PageHeader, Select, Input, Textarea, Alert, Button, Card } from '../../components/ui';
 
 export default function EnviarComunicacionPage() {
@@ -68,6 +69,7 @@ export default function EnviarComunicacionPage() {
       {error && <Alert variant="danger" onClose={() => setError(null)}>{error}</Alert>}
       {ok && <Alert variant="success" onClose={() => setOk(null)}>{ok}</Alert>}
       <Card>
+        <div className="vcel"><div className="vcel__form">
         <form onSubmit={enviar} style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 640 }}>
           <Select label="Para" value={destino} onChange={(e) => setDestino(e.target.value)}>
             <option value="conductores">Conductores</option>
@@ -85,8 +87,11 @@ export default function EnviarComunicacionPage() {
             </Button>
           </div>
         </form>
+        </div>
+        <div className="vcel__phone"><VistaAviso tipo="comunicado" titulo={titulo} mensaje={mensaje} /></div></div>
       </Card>
       <Card style={{ marginTop: 16 }}>
+        <div className="vcel"><div className="vcel__form">
         <form onSubmit={avisar} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 640 }}>
           <strong>Avisar actualización</strong>
           <Select label="Para" value={actDestino} onChange={(e) => setActDestino(e.target.value)}>
@@ -104,6 +109,8 @@ export default function EnviarComunicacionPage() {
             <Button type="submit" disabled={avisando}>{avisando ? "Enviando..." : "Avisar actualización"}</Button>
           </div>
         </form>
+        </div>
+        <div className="vcel__phone"><VistaAviso tipo={actMinima.trim() && Number(actMinima) > 0 ? 'bloqueo' : 'actualizacion'} mensaje={actMensaje} /></div></div>
       </Card>
     </div>
   );

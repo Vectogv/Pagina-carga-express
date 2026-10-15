@@ -1,0 +1,32 @@
+.bpp { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.bpp__caption { margin: 0; font-size: 12px; color: #5b6576; }
+.bpp__phone {
+  width: 280px; height: 520px; display: flex; flex-direction: column;
+  background: #f4f6f8; border: 8px solid #0f1b2d; border-radius: 34px; overflow: hidden; position: relative;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+}
+.bpp__notch { width: 90px; height: 16px; background: #0f1b2d; border-radius: 0 0 12px 12px; margin: 0 auto; flex: none; }
+.vcel { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.vcel__form { flex: 1 1 360px; min-width: 0; }
+.vcel__phone { flex: none; margin: 0 auto; }
+@media (min-width: 769px) { .vcel { flex-wrap: nowrap; } .vcel__phone { position: sticky; top: 16px; margin: 0; } }
+.aviso__push {
+  position: relative; margin: 8px 8px 0; padding: 8px 10px; background: #fff; border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18); font-size: 11px; color: #0f1b2d; z-index: 1;
+}
+.aviso__push-head { display: flex; align-items: center; gap: 6px; color: #5b6576; font-size: 10px; }
+.aviso__push-ico { width: 14px; height: 14px; border-radius: 4px; background: #1f5fd6; flex: none; }
+.aviso__push b { display: block; margin-top: 3px; font-size: 12px; }
+.aviso__push span.t { display: block; color: #3b4658; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.aviso__fondo { position: absolute; inset: 0; background: rgba(15,27,45,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.aviso__dlg { width: 100%; background: #fff; border-radius: 18px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.3); max-height: 70%; overflow: hidden; }
+.aviso__dlg-ico { width: 34px; height: 34px; border-radius: 10px; background: #e8f0fd; color: #1f5fd6; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+.aviso__dlg h4 { margin: 0 0 4px; font-size: 14px; color: #0f1b2d; }
+.aviso__dlg p { margin: 0 0 12px; font-size: 11px; line-height: 1.4; color: #3b4658; white-space: pre-wrap; overflow-wrap: anywhere; }
+.aviso__btn { display: block; padding: 9px; text-align: center; font-size: 12px; font-weight: 600; color: #fff; background: #1f5fd6; border-radius: 10px; }
+.aviso__btn--sec { margin-top: 6px; background: none; color: #5b6576; }
+.mail__head { padding: 10px 12px; background: #fff; border-bottom: 1px solid #e3e7ed; flex: none; }
+.mail__from { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #5b6576; }
+.mail__avatar { width: 24px; height: 24px; border-radius: 50%; background: #1f5fd6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+.mail__subject { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: #0f1b2d; overflow-wrap: anywhere; }
+.mail__body { flex: 1; width: 100%; border: 0; background: #f1f5f9; }

@@ -1,4 +1,5 @@
 import { Megaphone, ChevronRight, House, Package, LifeBuoy, User, X } from 'lucide-react';
+import MarcoCelular from '../../../components/MarcoCelular';
 import './BannerPhonePreview.css';
 
 /**
@@ -9,9 +10,7 @@ import './BannerPhonePreview.css';
 export default function BannerPhonePreview({ imageUrl, texto, link, activo }) {
   const visible = activo && (Boolean(texto?.trim()) || Boolean(imageUrl));
   return (
-    <div className="bpp" aria-label="Vista previa del anuncio en la app">
-      <div className="bpp__phone">
-        <div className="bpp__notch" aria-hidden="true" />
+    <MarcoCelular label="Vista previa del anuncio en la app" caption={visible ? 'Sale al abrir la app, una vez al día' : 'El anuncio no se mostrará'}>
         <div className="bpp__screen">
           <p className="bpp__hello">¡Hola, Carlos!</p>
           <p className="bpp__sub">¿Qué vas a enviar hoy?</p>
@@ -43,10 +42,6 @@ export default function BannerPhonePreview({ imageUrl, texto, link, activo }) {
             </div>
           </div>
         )}
-      </div>
-      <p className="bpp__caption">
-        {visible ? 'Sale al abrir la app, una vez al día' : 'El anuncio no se mostrará'}
-      </p>
-    </div>
+    </MarcoCelular>
   );
 }
