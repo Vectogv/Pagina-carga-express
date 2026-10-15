@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { getAdminModerator } from '../../api/admin';
@@ -28,6 +29,7 @@ function Detail({ label, children }) {
 /** Perfil del moderador (solo admin). */
 export default function PerfilModeradorPage() {
   const { id } = useParams();
+  const zonas = useZonas();
   const [m, setM] = useState(null);
   const [error, setError] = useState(null);
 
@@ -56,7 +58,7 @@ export default function PerfilModeradorPage() {
               <Badge variant={variante}>{etiqueta}</Badge>
               {m.contrato?.numero && <Badge variant="info">{m.contrato.numero}</Badge>}
               {m.suspendido && <Badge variant="danger">Cuenta suspendida</Badge>}
-              {m.zona && <Badge variant="neutral">Zona {m.zona}</Badge>}
+              {m.zona && <Badge variant="neutral">Zona {zonaLabelFrom(zonas, m.zona)}</Badge>}
             </div>
             <span className="text-sm text-muted">Registrado {formatDate(m.createdAt)}</span>
           </div>
@@ -82,7 +84,7 @@ export default function PerfilModeradorPage() {
           <div className="detail-list">
             <Detail label="Estado">{etiqueta}</Detail>
             <Detail label="Número">{m.contrato?.numero}</Detail>
-            <Detail label="Zona del contrato">{m.contrato?.zona}</Detail>
+            <Detail label="Zona del contrato">{zonaLabelFrom(zonas, m.contrato?.zona)}</Detail>
             <Detail label="Desde">{m.contrato?.desde ? formatDate(m.contrato.desde) : null}</Detail>
             <Detail label="Hasta">{m.contrato?.hasta ? formatDate(m.contrato.hasta) : null}</Detail>
             {m.contrato?.notaRechazo && <Detail label="Nota de rechazo">{m.contrato.notaRechazo}</Detail>}
