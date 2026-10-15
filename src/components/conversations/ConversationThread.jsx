@@ -110,9 +110,11 @@ export default function ConversationThread({
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, [draft, convId]);
 
-  // Presencia real solo de conductores (online/ultimaActividadAt del directorio); el resto no la expone el servidor.
+  // Conductores: presencia del directorio (online/sinSenal).
   const [filaConductor, setFilaConductor] = useState(null);
   const contactoId = contact?.id;
+  // Clientes y moderadores: el servidor manda online/ultimaActividadAt en `usuario` de /conversaciones.
+  const presencia = filaConductor || (contact && 'ultimaActividadAt' in contact ? contact : null);
   const esConductor = getRolEtiqueta(contact) === 'CONDUCTOR';
   const nombreContacto = contact?.nombre || conversation?.nombre;
   useEffect(() => {
@@ -192,13 +194,13 @@ export default function ConversationThread({
             <Badge variant={rol.variant} size="sm">{rol.label}</Badge>
           </div>
           <div className="chat__thread-sub">
-            {filaConductor && (() => {
-              const enLinea = filaConductor.online && !filaConductor.sinSenal;
-              const hace = timeAgo(filaConductor.ultimaActividadAt);
+            {presencia && (() => {
+              const enLinea = presencia.online && !presencia.sinSenal;
+              const hace = timeAgo(presencia.ultimaActividadAt);
               return (
-                <span className="chat__thread-meta" title="Estado del conductor">
+                <span className="chat__thread-meta" title="Estado de conexión">
                   <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: enLinea ? 'var(--success)' : '#9ca3af' }} />
-                  {enLinea ? 'En línea' : (filaConductor.ultimaActividadAt ? `Desconectado · Última conexión: ${formatUltimaConexion(filaConductor.ultimaActividadAt)} (${hace.toLowerCase()})` : 'Desconectado')}
+                  {enLinea ? 'En línea' : (presencia.ultimaActividadAt ? `Desconectado · Última conexión: ${formatUltimaConexion(presencia.ultimaActividadAt)} (${hace.toLowerCase()})` : 'Desconectado')}
                 </span>
               );
             })()}
