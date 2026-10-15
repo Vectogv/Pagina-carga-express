@@ -1,3 +1,4 @@
+import VistaAviso from '../../components/VistaAviso';
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, Eye, ShieldAlert, X } from 'lucide-react';
 import {
@@ -281,6 +282,8 @@ export default function VerificationsPage() {
               {textoFaltantes(faltantesDe(aviso)) || 'Tiene todos los documentos.'}
             </span>
             <Textarea label="Mensaje para el moderador (opcional)" value={msgMod} onChange={(e) => setMsgMod(e.target.value)} rows={2} maxLength={500} />
+            <VistaAviso tipo="bandeja" titulo="Conductor por verificar" mensaje={`${fullName(aviso.usuario)} (${aviso.ciudad || 'tu zona'}) necesita revisión. ${textoFaltantes(faltantesDe(aviso)) || ''}${msgMod.trim() ? `
+${msgMod.trim()}` : ''}`} />
           </div>
         )}
       </ConfirmDialog>

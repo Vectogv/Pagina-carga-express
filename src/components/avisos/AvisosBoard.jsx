@@ -1,3 +1,4 @@
+import VistaAviso from '../VistaAviso';
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { Pin, PinOff, Send, Trash2 } from 'lucide-react';
@@ -151,6 +152,7 @@ export default function AvisosBoard({ variante = 'ciudad' }) {
             {saving ? 'Publicando…' : 'Publicar'}
           </Button>
         </form>
+        <div style={{ marginTop: 16 }}><VistaAviso tipo="grupo" mensaje={contenido} /></div>
       </Card>
 
       {error && <div className="page-error" role="alert">{error}</div>}

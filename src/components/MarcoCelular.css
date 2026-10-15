@@ -30,3 +30,11 @@
 .mail__avatar { width: 24px; height: 24px; border-radius: 50%; background: #1f5fd6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
 .mail__subject { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: #0f1b2d; overflow-wrap: anywhere; }
 .mail__body { flex: 1; width: 100%; border: 0; background: #f1f5f9; }
+.aviso__lista { flex: 1; padding: 14px 12px; overflow: hidden; }
+.aviso__lista-t { margin: 0 0 10px; font-size: 16px; font-weight: 800; color: #0f1b2d; }
+.aviso__fila { display: flex; gap: 8px; padding: 10px; background: #fff; border: 1px solid #e3e7ed; border-radius: 12px; }
+.aviso__fila > div { min-width: 0; }
+.aviso__fila b { font-size: 12px; color: #0f1b2d; }
+.aviso__fila p { margin: 2px 0; font-size: 11px; line-height: 1.4; color: #3b4658; white-space: pre-wrap; overflow-wrap: anywhere; }
+.aviso__fila small { font-size: 10px; color: #8a93a3; }
+.aviso__fila .aviso__dlg-ico { flex: none; margin: 0; }

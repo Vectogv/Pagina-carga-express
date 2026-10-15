@@ -1,3 +1,4 @@
+import VistaAviso from '../../components/VistaAviso';
 import { useState, useEffect, useCallback } from 'react';
 import { BellRing } from 'lucide-react';
 import { getInactiveDrivers, notifyDriver } from '../../api/moderator';
@@ -111,7 +112,9 @@ export default function InactiveDriversPage() {
         title="Notificar conductor inactivo"
         message={`Se enviará un recordatorio a ${action ? driverName(action) : ''}${action?.usuario?.email ? ` (${action.usuario.email})` : ''}.`}
         confirmText="Notificar"
-      />
+      >
+        <VistaAviso tipo="bandeja" titulo="Recordatorio CargaExpress" mensaje="Hemos notado que no has realizado viajes recientemente. ¡Los clientes te esperan!" />
+      </ConfirmDialog>
 
       {toast && (
         <ToastContainer>
