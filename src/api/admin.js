@@ -151,3 +151,4 @@ export const rejectEmpresa = (id, data) => api.put(`${BASE}/empresas/${id}/rejec
 export const notificarModeradorVerificacion = (conductorId, data) => api.post(`/api/admin/verifications/${conductorId}/notificar-moderador`, data)
 export const getAdminModerator = (id) => api.get(`${BASE}/moderators/${id}`)
 export const getAdminEmpresa = (id) => api.get(`${BASE}/empresas/${id}`)
+export const avisarActualizacion = (data) => api.post(`${BASE}/comunicacion/actualizacion`, data)
