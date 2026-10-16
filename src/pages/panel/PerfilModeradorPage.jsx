@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { getAdminModerator } from '../../api/admin';
 import { errorMessage, formatDate, fullName } from '../../utils/format';
 import { AvatarAmpliable } from '../../components/panel';
+import { RestaurarCuenta } from '../../components/panel';
 import { PageHeader, Card, Badge, LoadingState } from '../../components/ui';
 
 const CONTRATO = {
@@ -33,11 +34,12 @@ export default function PerfilModeradorPage() {
   const [m, setM] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const cargar = useCallback(() => {
     getAdminModerator(id)
       .then((r) => setM(r.data))
       .catch((e) => setError(errorMessage(e, 'Error al cargar el moderador')));
   }, [id]);
+  useEffect(() => { cargar(); }, [cargar]);
 
   const volver = <Link className="btn btn--secondary btn--sm" to="/admin/moderators"><ArrowLeft size={14} /> Volver</Link>;
   if (error) return <div className="page"><PageHeader title="Perfil del moderador" actions={volver} /><div className="page-error" role="alert">{error}</div></div>;
@@ -47,7 +49,7 @@ export default function PerfilModeradorPage() {
   const [variante, etiqueta] = CONTRATO[m.contrato?.estado] || CONTRATO.sin_enviar;
   return (
     <div className="page">
-      <PageHeader title="Perfil del moderador" actions={volver} />
+      <PageHeader title="Perfil del moderador" actions={<><RestaurarCuenta userId={m.id} archivadaAt={m.archivadaAt} nombre={nombre} onDone={cargar} />{volver}</>} />
       <Card>
         <div className="perfil-cab">
           <AvatarAmpliable src={m.avatar} name={nombre} size={112} className="perfil-cab__foto" />

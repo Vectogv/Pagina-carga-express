@@ -152,3 +152,6 @@ export const notificarModeradorVerificacion = (conductorId, data) => api.post(`/
 export const getAdminModerator = (id) => api.get(`${BASE}/moderators/${id}`)
 export const getAdminEmpresa = (id) => api.get(`${BASE}/empresas/${id}`)
 export const avisarActualizacion = (data) => api.post(`${BASE}/comunicacion/actualizacion`, data)
+
+// Restaura una cuenta archivada. 404 no existe; 409 "La cuenta no está archivada".
+export const unarchiveUser = (id) => api.put(`${BASE}/users/${id}/unarchive`)

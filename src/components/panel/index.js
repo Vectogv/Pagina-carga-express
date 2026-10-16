@@ -11,3 +11,4 @@ export { default as FiltroZona } from './FiltroZona';
 export { FormularioCierreSos, ResumenCierreSos } from './CierreSos';
 export { CIERRE_VACIO, cierreSosValido, cuerpoCierreSos, TIPOS_DISPUTA } from './cierreSosValidacion';
 export { DocumentoFoto, AvatarAmpliable } from './DocumentoFoto';
+export { default as RestaurarCuenta } from './RestaurarCuenta';
