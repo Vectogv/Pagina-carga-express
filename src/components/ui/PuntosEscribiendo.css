@@ -1,0 +1,7 @@
+.escribiendo { display: flex; align-items: center; gap: 8px; padding: 4px 16px; font-size: 12px; color: var(--text-muted, #6b7280); }
+.escribiendo__burbuja { display: inline-flex; gap: 3px; padding: 7px 10px; border-radius: 14px; background: var(--surface-2, #eef0f3); }
+.escribiendo__burbuja i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: escribiendo-salto 1s infinite ease-in-out; }
+.escribiendo__burbuja i:nth-child(2) { animation-delay: .15s; }
+.escribiendo__burbuja i:nth-child(3) { animation-delay: .3s; }
+@keyframes escribiendo-salto { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-4px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .escribiendo__burbuja i { animation: none; } }

@@ -8,6 +8,8 @@ import { timeAgo } from '../../utils/format';
 import { getModeratorDrivers } from '../../api/moderator';
 import { CONEXION, ETIQUETA_CONEXION } from '../../hooks/useConversationSocket';
 import { Avatar, Badge, Button, EmptyState, StatusBadge } from '../ui';
+import PuntosEscribiendo from '../ui/PuntosEscribiendo';
+import useEscribiendo from '../../hooks/useEscribiendo';
 import {
   ROL_BADGE, ciudadDe, formatDia, formatFechaCompleta, formatHora, formatUltimaConexion, getRolEtiqueta, isSameDay, sameId, viajeCorto,
 } from './conversationUtils';
@@ -88,6 +90,7 @@ export default function ConversationThread({
   const inputRef = useRef(null);
   const convIdRef = useRef(null);
   const convId = conversation?.id;
+  const escribiendo = useEscribiendo('conversacion', convId, draft, messages[messages.length - 1]?.id);
 
   // Al cambiar de conversación salta al final sin animación; con mensajes nuevos, suave.
   useEffect(() => {
@@ -268,6 +271,8 @@ export default function ConversationThread({
         })}
         <div ref={endRef} />
       </div>
+
+      <PuntosEscribiendo nombre={escribiendo} />
 
       {sendError && <div className="chat__send-error" role="alert">{sendError}</div>}
 
