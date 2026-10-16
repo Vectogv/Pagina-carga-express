@@ -5,7 +5,7 @@ const POR_DEFECTO = 'Descarga la última versión desde Play Store.';
 
 /**
  * Cómo le llega al usuario: notificación push arriba y el diálogo de la app debajo.
- * tipo 'bandeja': push + fila en Notificaciones; 'grupo': tarjeta en Grupo de conductores (sin push).
+ * tipo 'push': solo la notificación. tipo 'bandeja': push + fila en Notificaciones; 'grupo': tarjeta en Grupo de conductores (sin push).
  * tipo: 'comunicado' | 'lider' (botón Entendido) | 'actualizacion' (Actualizar/Después) | 'bloqueo' (solo Actualizar).
  */
 export default function VistaAviso({ tipo = 'comunicado', titulo, mensaje }) {
@@ -14,6 +14,17 @@ export default function VistaAviso({ tipo = 'comunicado', titulo, mensaje }) {
   const m = act ? (mensaje?.trim() || POR_DEFECTO) : (mensaje?.trim() || 'Aquí va el mensaje…');
   const Icono = act ? RefreshCw : tipo === 'lider' ? Users : Megaphone;
   const bloqueo = tipo === 'bloqueo';
+  if (tipo === 'push') {
+    return (
+      <MarcoCelular label="Vista previa del aviso en el celular" caption="Solo notificación push, sin fila en la bandeja">
+        <div className="aviso__push">
+          <div className="aviso__push-head"><i className="aviso__push-ico" />CargaExpress · ahora</div>
+          <b>{t}</b>
+          <span className="t">{m}</span>
+        </div>
+      </MarcoCelular>
+    );
+  }
   if (tipo === 'bandeja' || tipo === 'grupo') {
     const grupo = tipo === 'grupo';
     return (
