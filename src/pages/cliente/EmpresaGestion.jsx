@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Check, Copy, KeyRound, RefreshCw, Truck, X } from 'lucide-react';
 import { clienteApi } from '../../api/cliente';
 import { errorMessage } from '../../utils/format';
 import { Encuadre, posicionDe } from '../../components/panel';
@@ -10,15 +11,17 @@ const REFRESCO_MS = 20000;
 const pesos = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`;
 const estadoTxt = (e) => String(e || '').replace(/_/g, ' ');
 const cuerpo = (r) => r.data?.data || r.data;
+const iniciales =(n) => String(n || 'C').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
 
-function Equipo({ codigo, onCodigo, setError }) {
+/** Equipo: tarjeta de acceso (código de invitación) + miembros con su estado. */
+export function Equipo({ codigo, onCodigo, onMiembros, setError }) {
   const [miembros, setMiembros] = useState(null);
   const [ocupado, setOcupado] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
   const cargar = useCallback(() => clienteApi.empresaMiembros()
-    .then((r) => setMiembros(cuerpo(r).miembros || []))
-    .catch((e) => setError(errorMessage(e, 'No se pudo cargar el equipo'))), [setError]);
+    .then((r) => { const m = cuerpo(r).miembros || []; setMiembros(m); onMiembros?.(m.length); })
+    .catch((e) => setError(errorMessage(e, 'No se pudo cargar el equipo'))), [setError, onMiembros]);
   useEffect(() => { cargar(); }, [cargar]);
 
   const accion = async (fn) => {
@@ -46,80 +49,86 @@ function Equipo({ codigo, onCodigo, setError }) {
     } catch { /* sin permiso de portapapeles */ }
   };
 
+  const pendientes = (miembros || []).filter((m) => m.estadoMiembro === 'pendiente' && !m.esDueno).length;
   return (
     <div className="cli-card">
-      <h2 className="cli-emp__h2">Equipo</h2>
+      <div className="cli-emp__cab">
+        <h2 className="cli-emp__h2">Equipo</h2>
+        {pendientes > 0 && <span className="cli-badge cli-badge--warning">{pendientes} por aprobar</span>}
+      </div>
       {codigo && (
-        <div className="cli-emp__barra">
-          <span>Código de invitación: <strong>{codigo}</strong></span>
-          <button type="button" className="cli-btn cli-btn--borde" onClick={copiar}>{copiado ? 'Copiado' : 'Copiar'}</button>
-          <button type="button" className="cli-btn cli-btn--borde" onClick={nuevoCodigo} disabled={ocupado}>Generar código nuevo</button>
+        <div className="cli-emp__codigo">
+          <span className="cli-emp__codigo-icono"><KeyRound size={22} /></span>
+          <div className="cli-emp__codigo-dato">
+            <small>Código de invitación</small>
+            <strong>{codigo}</strong>
+            <p>Compártelo con tu equipo: con él se unen a la empresa desde la app.</p>
+          </div>
+          <div className="cli-emp__codigo-acciones">
+            <button type="button" className="cli-btn cli-btn--borde" onClick={copiar}>{copiado ? <Check size={16} /> : <Copy size={16} />}{copiado ? 'Copiado' : 'Copiar'}</button>
+            <button type="button" className="cli-btn cli-btn--borde" onClick={nuevoCodigo} disabled={ocupado}><RefreshCw size={16} />Generar nuevo</button>
+          </div>
         </div>
       )}
       {!miembros ? <p className="cli-cargando">Cargando…</p> : (
-        <div className="cli-emp__scroll">
-          <table className="cli-emp__tabla">
-            <thead><tr><th>Nombre</th><th>Teléfono</th><th>Estado</th><th /></tr></thead>
-            <tbody>
-              {miembros.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.nombre} {m.apellido}{m.esDueno ? ' (dueño)' : ''}</td>
-                  <td>{m.telefono || '—'}</td>
-                  <td>{m.estadoMiembro === 'pendiente' ? 'Pendiente' : 'Aprobado'}</td>
-                  <td>
-                    {m.estadoMiembro === 'pendiente' && !m.esDueno && (
-                      <>
-                        <button type="button" className="cli-btn cli-btn--suave" disabled={ocupado} onClick={() => decidir(m, true)}>Aprobar</button>{' '}
-                        <button type="button" className="cli-btn cli-btn--borde" disabled={ocupado} onClick={() => decidir(m, false)}>Rechazar</button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="cli-emp__miembros">
+          {miembros.map((m) => {
+            const pendiente = m.estadoMiembro === 'pendiente';
+            return (
+              <li key={m.id}>
+                <span className="cli-conductor__avatar">{iniciales(`${m.nombre} ${m.apellido || ''}`)}</span>
+                <div className="cli-emp__miembro-dato">
+                  <strong>{m.nombre} {m.apellido}</strong>
+                  <small>{m.telefono || 'Sin teléfono'}</small>
+                </div>
+                <span className={`cli-badge ${m.esDueno ? 'cli-badge--info' : pendiente ? 'cli-badge--warning' : 'cli-badge--success'}`}>
+                  {m.esDueno ? 'Dueño' : pendiente ? 'Pendiente' : 'Aprobado'}
+                </span>
+                {pendiente && !m.esDueno && (
+                  <div className="cli-emp__miembro-acciones">
+                    <button type="button" className="cli-btn cli-btn--suave" disabled={ocupado} onClick={() => decidir(m, true)}><Check size={16} />Aprobar</button>
+                    <button type="button" className="cli-btn cli-btn--borde" disabled={ocupado} onClick={() => decidir(m, false)}><X size={16} />Rechazar</button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
 }
 
-function ViajesActivos({ setError }) {
+/** Operación en vivo: viajes en curso de la empresa, con mapa (refresca cada 20 s). */
+export function ViajesActivos({ onViajes, setError }) {
   const [viajes, setViajes] = useState(null);
   useEffect(() => {
     let vivo = true;
     const cargar = () => clienteApi.empresaViajesActivos()
-      .then((r) => { if (vivo) setViajes(cuerpo(r).viajes || []); })
+      .then((r) => { if (!vivo) return; const v = cuerpo(r).viajes || []; setViajes(v); onViajes?.(v.length); })
       .catch((e) => { if (vivo) setError(errorMessage(e, 'No se pudieron cargar los viajes en curso')); });
     cargar();
     const t = setInterval(cargar, REFRESCO_MS);
     return () => { vivo = false; clearInterval(t); };
-  }, [setError]);
+  }, [setError, onViajes]);
 
   const puntos = (viajes || []).flatMap((v) => [posicionDe(v.origen), posicionDe(v.conductor)]).filter(Boolean);
   return (
     <div className="cli-card">
-      <h2 className="cli-emp__h2">Viajes en curso</h2>
-      {!viajes ? <p className="cli-cargando">Cargando…</p> : viajes.length === 0 ? <p className="cli-cargando">No hay viajes en curso.</p> : (
+      <div className="cli-emp__cab">
+        <h2 className="cli-emp__h2">Operación en vivo</h2>
+        <span className={`cli-vivo ${viajes?.length ? 'cli-vivo--on' : ''}`}>{viajes?.length ? `${viajes.length} en curso` : 'Sin viajes'}</span>
+      </div>
+      {!viajes ? <p className="cli-cargando">Cargando…</p> : viajes.length === 0 ? (
+        <div className="cli-vacio cli-vacio--chico">
+          <span className="cli-vacio__icono"><Truck size={34} /></span>
+          <strong>Ningún viaje en curso</strong>
+          <p>Cuando tu equipo publique un envío desde la app Carga Express, lo verás aquí en vivo, con su conductor en el mapa.</p>
+        </div>
+      ) : (
         <>
-          <div className="cli-emp__scroll">
-            <table className="cli-emp__tabla">
-              <thead><tr><th>Estado</th><th>Empleado</th><th>Origen → Destino</th><th>Conductor</th><th>Valor</th></tr></thead>
-              <tbody>
-                {viajes.map((v) => (
-                  <tr key={v.id}>
-                    <td>{estadoTxt(v.estado)}</td>
-                    <td>{v.solicitante}</td>
-                    <td>{v.origen?.direccion} → {v.destino?.direccion}</td>
-                    <td>{v.conductor ? `${v.conductor.nombre} · ${v.conductor.placa || ''}` : 'Sin asignar'}</td>
-                    <td>{pesos(v.precio)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
           {puntos.length > 0 && (
-            <div className="panel-mapa" style={{ height: 280, marginTop: 12 }}>
+            <div className="panel-mapa cli-emp__mapa">
               <MapContainer center={puntos[0]} zoom={13} scrollWheelZoom>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} attribution="&copy; OpenStreetMap" />
                 <Encuadre puntos={puntos} />
@@ -134,23 +143,24 @@ function ViajesActivos({ setError }) {
               </MapContainer>
             </div>
           )}
+          <div className="cli-emp__scroll">
+            <table className="cli-emp__tabla">
+              <thead><tr><th>Estado</th><th>Empleado</th><th>Origen → Destino</th><th>Conductor</th><th>Valor</th></tr></thead>
+              <tbody>
+                {viajes.map((v) => (
+                  <tr key={v.id}>
+                    <td><span className="cli-badge cli-badge--info">{estadoTxt(v.estado)}</span></td>
+                    <td>{v.solicitante}</td>
+                    <td>{v.origen?.direccion} → {v.destino?.direccion}</td>
+                    <td>{v.conductor ? `${v.conductor.nombre} · ${v.conductor.placa || ''}` : 'Sin asignar'}</td>
+                    <td className="cli-emp__num">{pesos(v.precio)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
-    </div>
-  );
-}
-
-export default function EmpresaGestion() {
-  const [codigo, setCodigo] = useState(null);
-  const [error, setError] = useState(null);
-  useEffect(() => {
-    clienteApi.empresa().then((r) => setCodigo(cuerpo(r).empresa?.codigo || null)).catch(() => {});
-  }, []);
-  return (
-    <div className="cli-emp" style={{ marginBottom: 16 }}>
-      {error && <p className="cli-error" role="alert">{error}</p>}
-      <Equipo codigo={codigo} onCodigo={setCodigo} setError={setError} />
-      <ViajesActivos setError={setError} />
     </div>
   );
 }

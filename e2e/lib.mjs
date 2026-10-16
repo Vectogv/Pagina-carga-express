@@ -106,7 +106,7 @@ export const desborde = (page) => page.evaluate(() => {
   const cerrado = document.querySelector('.sidebar:not(.sidebar--open)');
   const out = [];
   for (const el of document.querySelectorAll('body *')) {
-    if ((cerrado && cerrado.contains(el)) || el.closest('.leaflet-container, .sidebar__backdrop, .dtable__scroll')) continue;
+    if ((cerrado && cerrado.contains(el)) || el.closest('.leaflet-container, .sidebar__backdrop, .dtable__scroll, .cli-emp__scroll')) continue;
     const s = getComputedStyle(el);
     if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') continue;
     const r = el.getBoundingClientRect();
