@@ -133,7 +133,7 @@ export default function TripDetailModal({
           <section className="trip-detail__section">
             <h4 className="section-title">Seguimiento</h4>
             <ServiceStatusTimeline estado={detail.estado} />
-            {detail.estado === 'buscando_conductor' && <DespertarConductores viajeId={detail.id} />}
+            {detail.estado === 'buscando_conductor' && <DespertarConductores viajeId={detail.id} origen={detail.origen?.direccion} destino={detail.destino?.direccion} precio={detail.dinero?.precioEstimado} zona={detail.zona || detail.zonaNombre} />}
             {detail.disputa && (
               <div className="row">
                 <Link className="btn btn--soft-danger btn--sm" to={`/moderator/disputes?viaje=${detail.id}`}>Ver disputa</Link>

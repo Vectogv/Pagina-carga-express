@@ -64,7 +64,7 @@ export default function AlertaViajeBanner() {
               <button type="button" className="btn btn--soft-primary btn--sm" onClick={() => { quitar(a.viajeId); navigate(`/moderator/trips?viaje=${a.viajeId}`); }}>
                 Ver viaje
               </button>
-              <DespertarConductores viajeId={a.viajeId} />
+              <DespertarConductores viajeId={a.viajeId} origen={a.origen} destino={a.destino} precio={a.precio} zona={a.zonaNombre} />
             </div>
           </div>
         ) : (
