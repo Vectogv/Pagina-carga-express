@@ -12,6 +12,8 @@ import {
   Badge, Button, Pagination, SegmentedFilter, Select, StatusBadge, statusLabel,
 } from '../ui';
 import './TicketsBoard.css';
+import PuntosEscribiendo from '../ui/PuntosEscribiendo';
+import useEscribiendo from '../../hooks/useEscribiendo';
 
 const ROL_AUTOR = {
   usuario: { label: 'Usuario', variant: 'info' },
@@ -311,6 +313,7 @@ export default function TicketsBoard({ area }) {
 
   const esMio = detail?.moderador && sameId(detail.moderador.id, myId);
   const cerrado = detail?.estado === 'cerrado';
+  const escribiendo = useEscribiendo('ticket', selectedId, cerrado ? '' : draft, detail?.mensajes?.[detail.mensajes.length - 1]?.id);
   const puedeTomar = detail && !cerrado && !esMio && (isAdmin || !detail.moderador);
   const zonaLabel = detail?.zona ? zonaLabelFrom(zonas, detail.zona) : 'Sin zona';
 
@@ -466,6 +469,8 @@ export default function TicketsBoard({ area }) {
                 <div ref={endRef} />
               </div>
             </div>
+
+            <PuntosEscribiendo nombre={escribiendo} />
 
             {sendError && <div className="tickets__send-error" role="alert">{sendError}</div>}
 
