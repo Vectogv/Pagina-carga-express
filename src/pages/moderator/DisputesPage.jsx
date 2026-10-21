@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getModeratorDisputes } from '../../api/moderator';
+import { getModeratorDisputes, getConversations, cerrarConversacion } from '../../api/moderator';
 import { useModeratorCity } from '../../contexts/ModeratorCityContext';
 import { errorMessage, formatCurrency, formatDate, formatDateTime, toList } from '../../utils/format';
 import { resolveStorageUrl } from '../../utils/storage';
@@ -30,6 +30,27 @@ export default function ModeratorDisputesPage() {
   const [estado, setEstado] = useState(viajeParam ? '' : FILTROS[0].value);
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState(null);
+  // Chat de soporte de la disputa (plan 2.3): conversaciones con disputaId = la disputa abierta.
+  const [chats, setChats] = useState([]);
+
+  const cargarChats = useCallback(async (disputaId) => {
+    if (!disputaId) { setChats([]); return; }
+    try {
+      const res = await getConversations();
+      setChats(toList(res.data).filter((c) => String(c.disputaId) === String(disputaId)));
+    } catch { setChats([]); }
+  }, []);
+
+  useEffect(() => { cargarChats(detail?.id); }, [detail?.id, cargarChats]);
+
+  const cerrarChat = async (c) => {
+    const resumen = window.prompt('Resumen del cierre para el usuario (mínimo 10 caracteres):');
+    if (resumen == null) return;
+    try {
+      await cerrarConversacion(c.id, { resumen: resumen.trim() });
+      await cargarChats(detail?.id);
+    } catch (e) { window.alert(errorMessage(e)); }
+  };
 
   const fetchDisputes = useCallback(async () => {
     setLoading(true);
@@ -145,6 +166,28 @@ export default function ModeratorDisputesPage() {
               <>
                 <h3 className="section-title">Recorrido y punto de cierre</h3>
                 <MapaRecorrido key={d.viajeId} area="moderator" viajeId={d.viajeId} alturaPx={260} modo="disputa" />
+              </>
+            )}
+            {chats.length > 0 && (
+              <>
+                <h3 className="section-title">Chat de soporte</h3>
+                <div className="detail-list">
+                  {chats.map((c) => (
+                    <div className="detail-list__item" key={c.id}>
+                      <span className="detail-list__label">{c.usuario?.nombre || 'Usuario'} · {c.usuario?.rol === 'conductor' ? 'Conductor' : 'Cliente'}</span>
+                      <span className="detail-list__value">
+                        <StatusBadge status={c.estado || 'abierta'} />{' '}
+                        {c.noLeidos > 0 && <span className="muted">{c.noLeidos} sin leer · </span>}
+                        <Link to={`/moderator/conversations?usuario=${c.usuario?.id}`}>Abrir chat</Link>
+                        {c.estado !== 'cerrada' && (
+                          <>{' · '}<Button variant="ghost" size="sm" onClick={() => cerrarChat(c)}>Cerrar caso</Button></>
+                        )}
+                        {c.resumenCierre && <div className="muted">Resumen: {c.resumenCierre}</div>}
+                        {c.calificacion && <div className="muted">Calificación del usuario: {c.calificacion.estrellas}/5{c.calificacion.comentario ? ` · ${c.calificacion.comentario}` : ''}</div>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </>
             )}
             {d.versionCliente && (<><h3 className="section-title">Versión del cliente</h3><p>{d.versionCliente}</p></>)}
