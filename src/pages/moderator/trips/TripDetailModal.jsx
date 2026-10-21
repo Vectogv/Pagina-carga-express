@@ -273,8 +273,8 @@ export default function TripDetailModal({
             )}
           </section>
 
-          {detail.estado === 'pendiente_confirmacion' && (
-            <PendingCloseResolver tripId={detail.id} onResolved={onEmergencyChanged} />
+          {(detail.estado === 'pendiente_confirmacion' || detail.estado === 'cierre_en_revision') && (
+            <PendingCloseResolver tripId={detail.id} trip={detail} onResolved={onEmergencyChanged} />
           )}
 
           {detail.motivoCancelacion && (

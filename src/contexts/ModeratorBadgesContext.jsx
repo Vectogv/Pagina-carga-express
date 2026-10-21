@@ -46,7 +46,7 @@ export function ModeratorBadgesProvider({ children }) {
     if (!tokenStore.access) return;
     setClosuresLoading(true);
     try {
-      const res = await getModeratorTrips({ page: 1, limit: 50, estado: 'pendiente_confirmacion', ...ciudadParams });
+      const res = await getModeratorTrips({ page: 1, limit: 50, estado: 'pendiente_confirmacion,cierre_en_revision', ...ciudadParams });
       const lista = toList(res.data, 'trips');
       setClosures(lista);
       // El servidor devuelve un arreglo plano (sin total); si algún día manda {data,total} se usa.
@@ -129,7 +129,7 @@ export function ModeratorBadgesProvider({ children }) {
       closuresTimer = setTimeout(() => refreshClosuresRef.current(), 400);
     };
     const onTrip = (p) => {
-      const esCierre = p?.estado === 'pendiente_confirmacion';
+      const esCierre = p?.estado === 'pendiente_confirmacion' || p?.estado === 'cierre_en_revision';
       const estaba = closuresIdsRef.current.has(String(p?.id));
       if (esCierre || estaba) scheduleClosures();
     };

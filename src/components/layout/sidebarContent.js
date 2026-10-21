@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, Handshake, Truck, ShieldCheck, Route, TrendingUp, BadgeCheck,
   Flag, Scale, Siren, CircleX, CreditCard, Megaphone, Pin, MessagesSquare,
   ClipboardList, Settings, DatabaseBackup, UserRound, BedDouble, UsersRound, LifeBuoy,
-  CalendarClock, FileWarning, Gavel, ChartLine, Send, Mail, ListChecks, MapPinned, Gift, Building2, FileSignature,
+  CalendarClock, FileWarning, Gavel, ChartLine, Send, Mail, ListChecks, MapPinned, Gift, Building2, FileSignature, ShieldAlert,
 } from 'lucide-react';
 
 // Navegación agrupada como panel de seguridad y administración. Cada item: { icon, label, to, end? }
@@ -26,6 +26,8 @@ export const adminNav = [
       { icon: Siren, label: 'SOS', to: '/admin/emergencies' },
       { icon: Scale, label: 'Disputas', to: '/admin/disputes' },
       { icon: Flag, label: 'Reportes entre usuarios', to: '/admin/reports' },
+      { icon: ShieldAlert, label: 'Señales de fraude', to: '/admin/fraude' },
+      { icon: Gavel, label: 'Sanciones', to: '/admin/sanciones' },
     ],
   },
   {
@@ -95,6 +97,8 @@ export const moderatorNav = [
       { icon: Siren, label: 'SOS', to: '/moderator/emergencies' },
       { icon: Gavel, label: 'Cierres por resolver', to: '/moderator/cierres' },
       { icon: Scale, label: 'Disputas', to: '/moderator/disputes' },
+      { icon: CircleX, label: 'Cancelaciones', to: '/moderator/cancelaciones' },
+      { icon: ShieldAlert, label: 'Señales de fraude', to: '/moderator/fraude' },
     ],
   },
   {

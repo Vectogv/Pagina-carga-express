@@ -46,6 +46,7 @@ const STATUS_GROUPS = [
     label: 'Requieren atención',
     options: [
       { value: 'pendiente_confirmacion', label: 'Cierre por resolver' },
+      { value: 'cierre_en_revision', label: 'Cierre en revisión' },
       { value: 'sos', label: 'SOS' },
       { value: 'disputa', label: 'En disputa' },
     ],

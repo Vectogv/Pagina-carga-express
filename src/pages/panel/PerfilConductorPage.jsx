@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import { ArrowLeft, Eye, BellRing, Check, Flag, Mail, MessageSquare, X } from 'lucide-react';
-import { getModeratorDriver, notifyDriver, reportDriver, approveDriver, rejectDriver } from '../../api/moderator';
+import { getModeratorDriver, notifyDriver, reportDriver, approveDriver, rejectDriver, getSancionesConductor, sancionarConductor } from '../../api/moderator';
+import { getAdminSanciones, crearAdminSancion } from '../../api/admin';
 import { errorMessage, formatCurrency, formatDate, formatDateTime, fullName } from '../../utils/format';
 import { resolveStorageUrl } from '../../utils/storage';
 import { faltantesDe, textoFaltantes } from '../../utils/documentos';
@@ -13,7 +14,7 @@ import NotificarDocumentosDialog from '../moderator/NotificarDocumentosDialog';
 import EnviarCorreoDialog from '../../components/panel/EnviarCorreoDialog';
 import { ConnectionBadge } from '../admin/drivers/DriverBadges';
 import MarcadorConductor from '../../components/panel/MarcadorConductor';
-import { TarjetaPersona, Encuadre, posicionDe, DocumentoFoto, AvatarAmpliable } from '../../components/panel';
+import { SancionesPanel, TarjetaPersona, Encuadre, posicionDe, DocumentoFoto, AvatarAmpliable } from '../../components/panel';
 import {
   PageHeader, Card, DataTable, ConfirmDialog, Button, Badge, StatusBadge, LoadingState,
   Textarea, Toast, ToastContainer,
@@ -314,6 +315,12 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
           </div>
         </Card>
       )}
+
+      <SancionesPanel
+        esAdmin={esAdmin}
+        cargar={() => (esAdmin ? getAdminSanciones({ usuarioId: u.id }) : getSancionesConductor(id))}
+        aplicar={(d) => (esAdmin ? crearAdminSancion({ usuarioId: u.id, ...d }) : sancionarConductor(id, d))}
+      />
 
       {action === 'notify' && (
         <NotificarDocumentosDialog

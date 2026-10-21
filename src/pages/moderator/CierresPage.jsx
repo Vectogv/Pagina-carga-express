@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { direccionCorta } from '../../utils/direccion';
 import { useModeratorBadges } from '../../contexts/ModeratorBadgesContext';
 import {
-  PageHeader, DataTable, Button, Modal, Toast, ToastContainer,
+  PageHeader, DataTable, Button, Modal, Toast, ToastContainer, StatusBadge,
 } from '../../components/ui';
 import { TarjetaPersona } from '../../components/panel';
 import PendingCloseResolver from '../../components/moderator/PendingCloseResolver';
@@ -24,7 +24,8 @@ export default function ModeratorCierresPage() {
   const onResolved = (resolucion) => {
     const id = selected?.id;
     setSelected(null);
-    setToast({ message: resolucion === 'disputa' ? `Viaje #${id} enviado a disputa` : `Viaje #${id} finalizado`, variant: 'success' });
+    const msg = { disputa: `Viaje #${id} enviado a disputa`, sancion: `Sanción aplicada (viaje #${id})` }[resolucion] || `Viaje #${id} finalizado`;
+    setToast({ message: msg, variant: 'success' });
     refreshClosures();
   };
 
@@ -64,6 +65,18 @@ export default function ModeratorCierresPage() {
       label: 'Conductor',
       render: (_, r) => (r.conductor ? <TarjetaPersona persona={r.conductor} tipo="conductor" area="moderator" /> : '—'),
     },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (v, r) => (
+        <span>
+          <StatusBadge status={v} />
+          {v === 'cierre_en_revision' && r.distanciaCierreKm != null && (
+            <span className="text-sm text-muted"> · a {Number(r.distanciaCierreKm).toFixed(1)} km del destino</span>
+          )}
+        </span>
+      ),
+    },
     { key: 'origenDireccion', label: 'Origen', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
     { key: 'destinoDireccion', label: 'Destino', render: (v) => <span title={v || ''}>{direccionCorta(v)}</span> },
   ];
@@ -72,7 +85,7 @@ export default function ModeratorCierresPage() {
     <div className="page">
       <PageHeader
         title="Cierres por resolver"
-        description="Viajes que el conductor cerró y el cliente no confirmó a tiempo. Revisa cada caso y decide si se finaliza o se envía a disputa."
+        description="Viajes que el conductor cerró y el cliente no confirmó a tiempo, o que se cerraron lejos del destino. Revisa cada caso: entrega válida, disputa o sanción."
       />
 
       {closuresError && <div className="page-error" role="alert">{closuresError}</div>}
@@ -91,7 +104,7 @@ export default function ModeratorCierresPage() {
         title={selected ? `Resolver cierre · Viaje #${String(selected.id).slice(0, 8)}` : ''}
         description={selected ? `${selected.origenDireccion || '—'} → ${selected.destinoDireccion || '—'}` : undefined}
       >
-        {selected && <PendingCloseResolver tripId={selected.id} onResolved={onResolved} showTitle={false} />}
+        {selected && <PendingCloseResolver tripId={selected.id} trip={selected} onResolved={onResolved} showTitle={false} />}
       </Modal>
 
       {toast && (

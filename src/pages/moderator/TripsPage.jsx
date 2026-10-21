@@ -21,6 +21,7 @@ const ESTADO_OPTIONS = [
   ['', 'Todos'],
   [EN_SERVICIO, 'En servicio'],
   ['pendiente_confirmacion', 'Cierre por resolver'],
+  ['cierre_en_revision', 'Cierre en revisión'],
   ['sos', 'SOS'],
   ['aceptado', 'Aceptado'],
   ['conductor_en_camino', 'Conductor en camino'],

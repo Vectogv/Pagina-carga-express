@@ -32,6 +32,6 @@ export const vehicleText = (p) => [p?.tipoVehiculo, p?.placa].filter(Boolean).jo
 
 // Grupos de estados. `value` puede agrupar varios estados con coma (el filtro los separa).
 export const EN_SERVICIO = 'aceptado,conductor_en_camino,conductor_llegada,en_curso,entregado,esperando_confirmacion';
-export const ATENCION = 'sos,disputa,pendiente_confirmacion';
+export const ATENCION = 'sos,disputa,pendiente_confirmacion,cierre_en_revision';
 
 export const matchesStatus = (filter, trip) => filter === 'all' || filter.split(',').includes(tripStatus(trip));

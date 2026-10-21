@@ -152,3 +152,10 @@ export const notificarModeradorVerificacion = (conductorId, data) => api.post(`/
 export const getAdminModerator = (id) => api.get(`${BASE}/moderators/${id}`)
 export const getAdminEmpresa = (id) => api.get(`${BASE}/empresas/${id}`)
 export const avisarActualizacion = (data) => api.post(`${BASE}/comunicacion/actualizacion`, data)
+
+// Fraude (3.3) y sanciones (3.4)
+export const getAdminFraude = (params) => api.get(`${BASE}/fraude`, { params })
+export const getAdminSanciones = (params) => api.get(`${BASE}/sanciones`, { params })
+export const crearAdminSancion = (data) => api.post(`${BASE}/sanciones`, data)
+// accion: 'confirmar' | 'modificar' | 'anular'; modificar admite { dias, motivo }
+export const resolverAdminSancion = (id, data) => api.put(`${BASE}/sanciones/${id}`, data)

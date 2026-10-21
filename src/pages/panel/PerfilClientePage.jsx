@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, MessageSquare } from 'lucide-react';
-import { getClientProfile } from '../../api/moderator';
+import { getClientProfile, getSancionesCliente, sancionarCliente } from '../../api/moderator';
+import { getAdminSanciones, crearAdminSancion } from '../../api/admin';
 import { errorMessage, formatCurrency, formatDate, fullName } from '../../utils/format';
 import { resolveStorageUrl } from '../../utils/storage';
-import { TarjetaPersona, AvatarAmpliable } from '../../components/panel';
+import { SancionesPanel, TarjetaPersona, AvatarAmpliable } from '../../components/panel';
 import {
   PageHeader, Card, DataTable, Avatar, Badge, StatusBadge, LoadingState, StatCard,
 } from '../../components/ui';
@@ -177,6 +178,12 @@ export default function PerfilClientePage({ area = 'moderator' }) {
           <DataTable columns={ticketCols} data={tickets} emptyMessage="Sin tickets" rowKey="id" />
         </Card>
       </div>
+
+      <SancionesPanel
+        esAdmin={area === 'admin'}
+        cargar={() => (area === 'admin' ? getAdminSanciones({ usuarioId: id }) : getSancionesCliente(id))}
+        aplicar={(d) => (area === 'admin' ? crearAdminSancion({ usuarioId: Number(id), ...d }) : sancionarCliente(id, d))}
+      />
     </div>
   );
 }

@@ -136,10 +136,10 @@ export default function TripDetailModal({ trip, onClose, onResolved }) {
             </div>
           </Section>
 
-          {status === 'pendiente_confirmacion' && (
+          {(status === 'pendiente_confirmacion' || status === 'cierre_en_revision') && (
             // H1: el cliente no confirmó ni rechazó el cierre a tiempo. El admin puede
             // resolverlo con el mismo endpoint del moderador (sin restricción de zona).
-            <PendingCloseResolver tripId={trip.id} onResolved={() => onResolved?.()} />
+            <PendingCloseResolver area="admin" tripId={trip.id} trip={trip} onResolved={() => onResolved?.()} />
           )}
 
           <Section title="Ruta">

@@ -9,6 +9,7 @@ const STATUS = {
   en_curso: ['En curso', 'warning'],
   esperando_confirmacion: ['Esperando confirmación', 'warning'],
   pendiente_confirmacion: ['Cierre por resolver', 'warning'],
+  cierre_en_revision: ['Cierre en revisión', 'danger'],
   pendiente_cierre: ['Pendiente de cierre', 'warning'],
   finalizado: ['Finalizado', 'success'],
   completado: ['Completado', 'success'],

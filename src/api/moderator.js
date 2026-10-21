@@ -73,3 +73,15 @@ export const getTicketsCount = (params) => api.get('/api/moderator/tickets/count
 // Excepciones de SOAT de su zona (params: estado) y resolución { aprobar, nota? }. 403 fuera de su zona.
 export const getSoatExcepciones = (params) => api.get('/api/moderator/soat-excepciones', { params })
 export const resolveSoatException = (id, data) => api.put(`/api/moderator/drivers/${id}/soat-exception`, data)
+
+// Cancelación por solicitud (3.2), fraude (3.3) y sanciones (3.4). Params: estado, zona.
+export const getModeratorCancelaciones = (params) => api.get('/api/moderator/cancellation-requests', { params })
+export const tomarCancelacion = (id) => api.post(`/api/moderator/cancellation-requests/${id}/take`)
+export const approveModeratorCancelacion = (id) => api.post(`/api/moderator/cancellation-requests/${id}/approve`)
+export const rejectModeratorCancelacion = (id) => api.post(`/api/moderator/cancellation-requests/${id}/reject`)
+export const getModeratorFraude = (params) => api.get('/api/moderator/fraude', { params })
+// :id del conductor = conductores.id; :id del cliente = users.id. Cuerpo: { tipo, dias?, motivo, viajeId? }
+export const getSancionesConductor = (id) => api.get(`/api/moderator/drivers/${id}/sanciones`)
+export const sancionarConductor = (id, data) => api.post(`/api/moderator/drivers/${id}/sanciones`, data)
+export const getSancionesCliente = (id) => api.get(`/api/moderator/clients/${id}/sanciones`)
+export const sancionarCliente = (id, data) => api.post(`/api/moderator/clients/${id}/sanciones`, data)

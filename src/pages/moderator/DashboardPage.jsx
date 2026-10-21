@@ -45,7 +45,7 @@ const tripRoute = (t) => {
 const tripConductor = (t) => (t.conductor ? t.conductor.nombre || t.conductor.telefono || t.conductor.placa || null : null);
 
 // SOS primero; luego lo que está en ruta y lo que va hacia el origen.
-const TRIP_ORDER = { sos: 0, pendiente_confirmacion: 1, en_curso: 2, entregado: 3, esperando_confirmacion: 4, conductor_llegada: 5, conductor_en_camino: 6, aceptado: 7 };
+const TRIP_ORDER = { sos: 0, pendiente_confirmacion: 1, cierre_en_revision: 1, en_curso: 2, entregado: 3, esperando_confirmacion: 4, conductor_llegada: 5, conductor_en_camino: 6, aceptado: 7 };
 const ACTIVE_TRIP_STATES = Object.keys(TRIP_ORDER);
 const ACTIVE_EMERGENCY_STATES = ['pendiente', 'atendida'];
 
