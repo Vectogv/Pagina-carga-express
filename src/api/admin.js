@@ -160,3 +160,5 @@ export const getAdminSanciones = (params) => api.get(`${BASE}/sanciones`, { para
 export const crearAdminSancion = (data) => api.post(`${BASE}/sanciones`, data)
 // accion: 'confirmar' | 'modificar' | 'anular'; modificar admite { dias, motivo }
 export const resolverAdminSancion = (id, data) => api.put(`${BASE}/sanciones/${id}`, data)
+// Restaura una cuenta archivada. 404 no existe; 409 "La cuenta no está archivada".
+export const unarchiveUser = (id) => api.put(`${BASE}/users/${id}/unarchive`)

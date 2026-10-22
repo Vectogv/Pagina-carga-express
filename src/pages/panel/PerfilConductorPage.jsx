@@ -14,7 +14,7 @@ import NotificarDocumentosDialog from '../moderator/NotificarDocumentosDialog';
 import EnviarCorreoDialog from '../../components/panel/EnviarCorreoDialog';
 import { ConnectionBadge } from '../admin/drivers/DriverBadges';
 import MarcadorConductor from '../../components/panel/MarcadorConductor';
-import { SancionesPanel, TarjetaPersona, Encuadre, posicionDe, DocumentoFoto, AvatarAmpliable } from '../../components/panel';
+import { SancionesPanel, RestaurarCuenta, TarjetaPersona, Encuadre, posicionDe, DocumentoFoto, AvatarAmpliable } from '../../components/panel';
 import {
   PageHeader, Card, DataTable, ConfirmDialog, Button, Badge, StatusBadge, LoadingState,
   Textarea, Toast, ToastContainer,
@@ -132,7 +132,12 @@ export default function PerfilConductorPage({ area = 'moderator' }) {
     <div className="page">
       <PageHeader
         title="Perfil del conductor"
-        actions={<Link className="btn btn--secondary btn--sm" to={volverA}><ArrowLeft size={14} /> Volver</Link>}
+        actions={(
+          <>
+            {esAdmin && <RestaurarCuenta userId={u.id} archivadaAt={u.archivadaAt ?? driver.archivadaAt} nombre={nombre} onDone={fetchDriver} />}
+            <Link className="btn btn--secondary btn--sm" to={volverA}><ArrowLeft size={14} /> Volver</Link>
+          </>
+        )}
       />
 
       {driver.enObservacion === true && (

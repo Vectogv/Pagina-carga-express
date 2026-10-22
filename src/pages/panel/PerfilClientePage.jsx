@@ -1,3 +1,4 @@
+import { RestaurarCuenta } from '../../components/panel';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, MessageSquare } from 'lucide-react';
@@ -58,7 +59,15 @@ export default function PerfilClientePage({ area = 'moderator' }) {
   const nombre = fullName(c);
   const foto = resolveStorageUrl(c.avatar);
   const cab = (
-    <PageHeader title="Perfil del cliente" actions={<Link className="btn btn--secondary btn--sm" to={volverA}><ArrowLeft size={14} /> Volver</Link>} />
+    <PageHeader
+      title="Perfil del cliente"
+      actions={(
+        <>
+          {area === 'admin' && <RestaurarCuenta userId={c.id} archivadaAt={c.archivadaAt} nombre={nombre} onDone={cargar} />}
+          <Link className="btn btn--secondary btn--sm" to={volverA}><ArrowLeft size={14} /> Volver</Link>
+        </>
+      )}
+    />
   );
 
   if (c.completo === false) {

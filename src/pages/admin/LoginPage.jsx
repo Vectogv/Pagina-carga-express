@@ -6,6 +6,9 @@ import { Button, Input } from '../../components/ui';
 import { errorMessage } from '../../utils/format';
 import './LoginPage.css';
 
+// No hay ruta pública con el contacto de soporte: se usa el correo fijo de la empresa.
+const SOPORTE_EMAIL = 'cargaexpressgv@gmail.com';
+
 // Un solo login: cada quien va a su sección. El conductor usa solo la app.
 const homeFor = (u) =>
   u?.rol === 'admin' ? '/admin' : u?.esModerador ? '/moderator' : u?.rol === 'cliente' ? '/cliente' : null;
@@ -21,8 +24,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [archivada, setArchivada] = useState(false);
 
-  useEffect(() => { setError(''); }, [email, password]);
+  useEffect(() => { setError(''); setArchivada(false); }, [email, password]);
 
   if (!authLoading && user && homeFor(user)) return <Navigate to={homeFor(user)} replace />;
 
@@ -32,6 +36,7 @@ export default function LoginPage() {
       return;
     }
     setSubmitting(true);
+    setArchivada(false);
     try {
       const u = await login(correo.trim(), clave);
       if (!homeFor(u)) {
@@ -42,7 +47,10 @@ export default function LoginPage() {
       }
     } catch (err) {
       const status = err?.response?.status;
-      if (status === 400 || status === 401) setError('Correo o contraseña incorrectos.');
+      const d = err?.response?.data;
+      const code = d?.code || d?.codigo || d?.errors?.[0]?.code;
+      if (status === 403 && code === 'CUENTA_ARCHIVADA') setArchivada(true);
+      else if (status === 400 || status === 401) setError('Correo o contraseña incorrectos.');
       else if (!err?.response) setError('No hay conexión con el servidor. Intenta de nuevo.');
       else setError(errorMessage(err, 'No se pudo iniciar sesión.'));
     } finally {
@@ -94,6 +102,12 @@ export default function LoginPage() {
           </div>
 
           {error && <div className="page-error" role="alert">{error}</div>}
+          {archivada && (
+            <div className="page-error" role="alert">
+              Esta cuenta está archivada. Para recuperarla, comunícate con soporte:{' '}
+              <a href={`mailto:${SOPORTE_EMAIL}`}>{SOPORTE_EMAIL}</a>
+            </div>
+          )}
 
           <Input
             label="Correo electrónico"
@@ -128,11 +142,7 @@ export default function LoginPage() {
             Entrar
           </Button>
 
-          <p className="login__hint">
-            {isStaffLogin
-              ? '¿Olvidaste tu contraseña? Pide a un administrador que la restablezca.'
-              : '¿Olvidaste tu contraseña? Escríbenos a cargaexpressgv@gmail.com.'}
-          </p>
+          {!archivada && <p className="login__hint"><Link to="/recuperar-contrasena">¿Olvidaste tu contraseña?</Link></p>}
 
           {!isStaffLogin && <p className="login__hint">¿Eres empresa? <Link to="/empresas/registro">Crea tu cuenta</Link></p>}
 

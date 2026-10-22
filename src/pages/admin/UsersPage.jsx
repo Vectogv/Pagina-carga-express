@@ -7,7 +7,7 @@ import { errorMessage, formatCurrency, fullName, toList } from '../../utils/form
 import {
   Alert, Avatar, Badge, Button, ConfirmDialog, DataTable, PageHeader, Pagination, SearchInput, SegmentedFilter, StatusBadge,
 } from '../../components/ui';
-import { FiltroZona, TarjetaPersona } from '../../components/panel';
+import { FiltroZona, TarjetaPersona, RestaurarCuenta } from '../../components/panel';
 import RoleBadge from './users/RoleBadge';
 import EditUserModal from './users/EditUserModal';
 import AddUserModal from './users/AddUserModal';
@@ -242,6 +242,7 @@ export default function UsersPage() {
         const isAdmin = u.rol === 'admin';
         return (
           <div className="acciones-tabla">
+            <RestaurarCuenta userId={userId(u)} archivadaAt={u.archivadaAt} nombre={name} onDone={fetchUsers} />
             {perfilUrl(u) && <Link className="btn btn--soft-primary btn--sm" to={perfilUrl(u)}>Ver perfil</Link>}
             <Button size="icon" variant="ghost" onClick={() => setEditUser(u)} aria-label={`Editar a ${name}`} title="Editar">
               <Pencil size={15} />
