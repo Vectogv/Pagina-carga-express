@@ -41,6 +41,7 @@ const admin = {
   emergencies: lazy(() => import('./pages/admin/EmergenciesPage')),
   'cancellation-requests': lazy(() => import('./pages/admin/CancellationRequestsPage')),
   pendientes: lazy(() => import('./pages/admin/PendientesPage')),
+  metricas: lazy(() => import('./pages/admin/MetricasPage')),
   referidos: lazy(() => import('./pages/admin/ReferidosPage')),
   comunicacion: lazy(() => import('./pages/admin/EnviarComunicacionPage')),
   correos: lazy(() => import('./pages/admin/CorreosPage')),
