@@ -13,7 +13,6 @@ const pesos = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`;
 const estadoTxt = (e) => String(e || '').replace(/_/g, ' ');
 const cuerpo = (r) => r.data?.data || r.data;
 const viajesTxt = (n) => `${n || 0} ${n === 1 ? 'viaje' : 'viajes'}`;
-const iniciales =(n) => String(n || 'C').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
 
 /** Equipo: tarjeta de acceso (código de invitación) + miembros con su estado. */
 export function Equipo({ codigo, onCodigo, onMiembros, setError }) {
