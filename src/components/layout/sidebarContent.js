@@ -63,6 +63,7 @@ export const adminNav = [
       { icon: CreditCard, label: 'Pagos pendientes', to: '/admin/payments' },
       { icon: TrendingUp, label: 'Comisiones', to: '/admin/commissions' },
       { icon: ChartLine, label: 'Estadísticas', to: '/admin/earnings' },
+      { icon: ChartLine, label: 'Métricas', to: '/admin/metricas' },
     ],
   },
   {

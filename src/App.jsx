@@ -43,6 +43,7 @@ const admin = {
   fraude: lazy(() => import('./pages/panel/FraudePage').then((m) => ({ default: () => <m.default area="admin" /> }))),
   sanciones: lazy(() => import('./pages/admin/SancionesPage')),
   pendientes: lazy(() => import('./pages/admin/PendientesPage')),
+  metricas: lazy(() => import('./pages/admin/MetricasPage')),
   referidos: lazy(() => import('./pages/admin/ReferidosPage')),
   comunicacion: lazy(() => import('./pages/admin/EnviarComunicacionPage')),
   correos: lazy(() => import('./pages/admin/CorreosPage')),

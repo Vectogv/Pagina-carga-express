@@ -138,6 +138,7 @@ export const getAdminComunicados = (params) => api.get(`${BASE}/comunicados`, { 
 
 // Gerencia: pendientes de moderadores por categoria/zona (?zona=) y comunicacion propia {titulo, mensaje, destino: conductores|moderadores, zona?}
 export const getPendientes = (params) => api.get(`${BASE}/pendientes`, { params })
+export const getMetricas = (params) => api.get(`${BASE}/metricas`, { params })
 export const sendComunicacion = (data) => api.post(`${BASE}/comunicacion`, data)
 
 // Programa de referidos de conductores: listado y anulación
