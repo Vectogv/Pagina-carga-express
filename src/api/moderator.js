@@ -58,6 +58,7 @@ export const getUnreadCount = () => api.get('/api/moderator/conversations/unread
 export const getConversationMessages = (id) => api.get(`/api/moderator/conversations/${id}/messages`)
 export const createConversation = (data) => api.post('/api/moderator/conversations', data)
 export const sendConversationMessage = (id, data) => api.post(`/api/moderator/conversations/${id}/messages`, data)
+export const cerrarConversacion = (id, data) => api.post(`/api/moderator/conversations/${id}/cerrar`, data)
 
 // Contactos buscables — conductores de la zona y equipo (admin/moderadores). Los clientes NO salen:
 // el moderador solo los contacta desde un ticket, un SOS o una disputa.
