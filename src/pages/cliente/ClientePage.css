@@ -390,6 +390,9 @@
 .cli-emp__miembro-dato strong { font-size: 15px; overflow-wrap: anywhere; }
 .cli-emp__miembro-dato small { color: var(--texto-2); font-size: 13px; }
 .cli-emp__miembro-acciones { display: flex; gap: 8px; }
+.cli-emp__ficha { width: 100%; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px 16px; padding: 12px 14px; border-radius: 12px; background: var(--fondo, #f4f6fa); }
+.cli-emp__ficha dt { color: var(--texto-2); font-size: 12px; }
+.cli-emp__ficha dd { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
 .cli-emp__miembro-acciones .cli-btn { min-height: 40px; padding: 8px 12px; }
 
 /* Barras por usuario */
