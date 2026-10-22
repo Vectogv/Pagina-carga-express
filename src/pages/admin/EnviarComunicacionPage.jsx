@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import api from '../../api/axios';
+import { useState } from 'react';
 import { sendComunicacion, avisarActualizacion } from '../../api/admin';
 import { errorMessage } from '../../utils/format';
 import { useZonas } from '../../hooks/useZonas';
@@ -18,12 +17,7 @@ export default function EnviarComunicacionPage() {
 
   const [actDestino, setActDestino] = useState("ambos");
   const [actMensaje, setActMensaje] = useState("");
-  const [actMinima, setActMinima] = useState("");
-  const [minimas, setMinimas] = useState(null);
   const [avisando, setAvisando] = useState(false);
-
-  const cargarMinimas = () => api.get('/api/config/version').then((r) => setMinimas(r.data)).catch(() => {});
-  useEffect(() => { cargarMinimas(); }, []);
 
   const avisar = async (e) => {
     e.preventDefault();
@@ -31,11 +25,9 @@ export default function EnviarComunicacionPage() {
       setAvisando(true);
       setError(null);
       setOk(null);
-      const { data } = await avisarActualizacion({ destino: actDestino, ...(actMensaje.trim() ? { mensaje: actMensaje } : {}), ...(actMinima.trim() ? { versionMinima: Number(actMinima) } : {}) });
+      const { data } = await avisarActualizacion({ destino: actDestino, ...(actMensaje.trim() ? { mensaje: actMensaje } : {}) });
       setOk(`Aviso de actualización enviado a ${data.destinatarios} usuario(s); ${data.conPush} con push.`);
       setActMensaje("");
-      setActMinima("");
-      cargarMinimas();
     } catch (err) {
       setError(errorMessage(err, "No se pudo enviar el aviso"));
     } finally {
@@ -100,17 +92,13 @@ export default function EnviarComunicacionPage() {
             <option value="clientes">Clientes</option>
           </Select>
           <Textarea label="Mensaje (opcional)" value={actMensaje} maxLength={300} onChange={(e) => setActMensaje(e.target.value)} />
-          <Input
-            label="Versión mínima obligatoria (número de compilación de Play, ej. 108). Déjalo vacío para solo avisar."
-            type="number" min={0} step={1} value={actMinima} onChange={(e) => setActMinima(e.target.value)}
-          />
-          {minimas && <small>Mínima actual: conductor {minimas.conductor || 'sin exigir'} · cliente {minimas.cliente || 'sin exigir'}. Para dejar de exigir, escribe 0.</small>}
+          <small>Les llega un aviso con el botón "Actualizar", que abre Play Store. No bloquea la app.</small>
           <div>
             <Button type="submit" disabled={avisando}>{avisando ? "Enviando..." : "Avisar actualización"}</Button>
           </div>
         </form>
         </div>
-        <div className="vcel__phone"><VistaAviso tipo={actMinima.trim() && Number(actMinima) > 0 ? 'bloqueo' : 'actualizacion'} mensaje={actMensaje} /></div></div>
+        <div className="vcel__phone"><VistaAviso tipo="actualizacion" mensaje={actMensaje} /></div></div>
       </Card>
     </div>
   );
