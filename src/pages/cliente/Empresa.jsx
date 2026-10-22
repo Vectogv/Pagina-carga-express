@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { BadgeCheck, Clock, Download, FileSpreadsheet, Package, Store, Truck, Users, Wallet } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { clienteApi } from '../../api/cliente';
 import { descargarBlob, descargarCsv } from '../../utils/csv';
 import Marca from '../../components/Marca/Marca';
 import { Equipo, ViajesActivos } from './EmpresaGestion';
+import { Miembro, SinEmpresa } from './EmpresaMiembro';
 import { errorMessage, formatDate } from '../../utils/format';
 
 const pesos = (v) => `$${Number(v || 0).toLocaleString('es-CO')}`;
@@ -105,7 +105,8 @@ export default function Empresa() {
   const onViajes = useCallback((n) => setEnCurso(n), []);
   const onMiembros = useCallback((n) => setMiembros(n), []);
 
-  if (!esDueno) return <Navigate to="/cliente" replace />;
+  if (!user?.empresa) return <SinEmpresa />;
+  if (!esDueno) return <Miembro empresa={user.empresa} />;
 
   const emprendimiento = empresa && !empresa.nit;
   const insignia = enRevision
