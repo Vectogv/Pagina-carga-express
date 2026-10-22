@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Badge, Button, Card, ConfirmDialog, Input, LoadingState, Textarea } from '../../../components/ui';
 import {
-  getAcuerdos, getConfigAcuerdo, getVerificacionesModeradores, guardarConfigAcuerdo, partirMarcadores, publicarAcuerdo, subirFirmaGerencia,
+  enviarPlantillaPorCorreo, getAcuerdos, getConfigAcuerdo, getVerificacionesModeradores, guardarConfigAcuerdo, partirMarcadores, publicarAcuerdo, subirFirmaGerencia,
 } from '../../../api/contrato';
 import { resolveStorageUrl } from '../../../utils/storage';
 import { limpiarFirma } from '../../../utils/limpiarFirma';
 import { errorMessage, formatDateTime } from '../../../utils/format';
+import EnviarCorreoModal from '../../../components/moderator/EnviarCorreoModal';
 import DocumentoContrato from '../../../components/moderator/DocumentoContrato';
 import '../../../components/moderator/ModeradorBloqueado.css';
 import '../VerificacionesModeradoresPage.css';
@@ -123,6 +124,7 @@ export default function AcuerdoConfig({ notify }) {
   const [form, setForm] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [aFirmar, setAFirmar] = useState(null);
+  const [correoAbierto, setCorreoAbierto] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -189,9 +191,10 @@ export default function AcuerdoConfig({ notify }) {
         title="Acuerdo del moderador"
         description="El moderador lo lee y lo firma al verificarse. Al publicar una versión nueva, todos los moderadores con contrato deben firmarla de nuevo para seguir operando; conservan su número y vigencia."
         actions={!form && (
-          <Button size="sm" onClick={editar}>
-            Editar contrato
-          </Button>
+          <>
+            <Button size="sm" variant="secondary" onClick={() => setCorreoAbierto(true)}>Enviar plantilla por correo</Button>
+            <Button size="sm" onClick={editar}>Editar contrato</Button>
+          </>
         )}
       >
         {form ? (
@@ -238,6 +241,15 @@ export default function AcuerdoConfig({ notify }) {
           ? `${aFirmar} moderador${aFirmar === 1 ? ' tendrá' : 'es tendrán'} que firmar de nuevo y quedarán bloqueados hasta hacerlo.`
           : 'Ningún moderador tiene contrato vigente: nadie debe firmar de nuevo.'}
       />
+      {correoAbierto && (
+        <EnviarCorreoModal
+          titulo="Enviar plantilla por correo"
+          descripcion="Se adjunta la versión vigente del contrato en PDF."
+          enviar={enviarPlantillaPorCorreo}
+          onClose={() => setCorreoAbierto(false)}
+          notify={notify}
+        />
+      )}
     </div>
   );
 }
