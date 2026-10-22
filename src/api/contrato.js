@@ -24,6 +24,10 @@ export const getPdfVerificacion = (userId) => api.get(`${BASE}/${userId}/pdf`, {
 export const generarContrato = (userId) => api.put(`${BASE}/${userId}/generar-contrato`, { cedulaVerificada: true })
 export const suspenderVerificacion = (userId, nota) => api.put(`${BASE}/${userId}/suspender`, { nota })
 export const rechazarVerificacion = (userId, nota) => api.put(`${BASE}/${userId}/reject`, { nota })
+// Envía el contrato (firmado, o el texto sin firmar si aún no lo firma) en PDF. `email` opcional: por defecto el del moderador.
+export const enviarContratoPorCorreo = (userId, email) => api.post(`${BASE}/${userId}/enviar-correo`, email ? { email } : {})
+// Envía la plantilla vigente del acuerdo en PDF.
+export const enviarPlantillaPorCorreo = (email) => api.post('/api/admin/acuerdos/enviar-correo', { email })
 export const getAcuerdos = () => api.get('/api/admin/acuerdos')
 export const publicarAcuerdo = (data) => api.post('/api/admin/acuerdos', data)
 // Datos de gerencia para el contrato: nombre, cédula opcional, % del moderador, cláusula penal y firma.

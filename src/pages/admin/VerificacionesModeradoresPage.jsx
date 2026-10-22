@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, FileDown, X } from 'lucide-react';
+import { Check, FileDown, Mail, X } from 'lucide-react';
 import {
   Alert, Avatar, Badge, Button, DataTable, LoadingState, Modal, PageHeader, SegmentedFilter, Textarea,
   Toast, ToastContainer,
 } from '../../components/ui';
 import {
-  ESTADO_VERIFICACION, abrirPdf, generarContrato, getPdfVerificacion, suspenderVerificacion, getVerificacionModerador,
+  ESTADO_VERIFICACION, abrirPdf, enviarContratoPorCorreo, generarContrato, getPdfVerificacion, suspenderVerificacion, getVerificacionModerador,
   getVerificacionesModeradores, rechazarVerificacion,
 } from '../../api/contrato';
 import { useZonas, zonaLabelFrom } from '../../hooks/useZonas';
+import EnviarCorreoModal from '../../components/moderator/EnviarCorreoModal';
 import DocumentoContrato, { ImagenDocumento as Imagen } from '../../components/moderator/DocumentoContrato';
 import '../../components/moderator/ModeradorBloqueado.css';
 import { errorMessage, formatDate, formatDateTime } from '../../utils/format';
@@ -49,6 +50,7 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
   const [nota, setNota] = useState('');
   const [enviando, setEnviando] = useState('');
   const [cedulaOk, setCedulaOk] = useState(false);
+  const [correoAbierto, setCorreoAbierto] = useState(false);
 
   const [ahora] = useState(() => Date.now());
   const cargar = useCallback(async () => {
@@ -103,6 +105,9 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
     </>
   ) : (
     <>
+      {['contrato_enviado', 'activo'].includes(d.estado) && (
+        <Button variant="secondary" icon={<Mail size={14} />} onClick={() => setCorreoAbierto(true)}>Enviar por correo</Button>
+      )}
       {puedeRechazar && <Button variant="danger" icon={<X size={14} />} onClick={() => setModoNota('rechazar')}>Rechazar</Button>}
       {d.estado === 'activo' && <Button variant="danger" onClick={() => setModoNota('suspender')}>Suspender</Button>}
       {puedeRenovar && (
@@ -233,6 +238,16 @@ function Detalle({ ZONAS, userId, onClose, onCambio, notify }) {
             </ul>
           ) : <p className="vermod__ayuda">Sin movimientos.</p>}
         </div>
+      )}
+      {correoAbierto && (
+        <EnviarCorreoModal
+          titulo="Enviar contrato por correo"
+          descripcion={d.estado === 'activo' ? 'Se adjunta el contrato firmado en PDF.' : 'Se adjunta el contrato en PDF, sin firma del moderador.'}
+          emailInicial={d.email}
+          enviar={(email) => enviarContratoPorCorreo(userId, email)}
+          onClose={() => setCorreoAbierto(false)}
+          notify={notify}
+        />
       )}
     </Modal>
   );
