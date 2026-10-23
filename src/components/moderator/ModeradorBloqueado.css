@@ -1,5 +1,7 @@
 .modbloq {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: var(--bg-primary);
   color: var(--text-primary);
   padding: 0 var(--space-4) var(--space-8);
