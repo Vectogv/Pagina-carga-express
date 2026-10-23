@@ -7,6 +7,7 @@ const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const ModeratorLayout = lazy(() => import('./layouts/ModeratorLayout'));
 const LoginPage = lazy(() => import('./pages/admin/LoginPage'));
 const RecuperarPasswordPage = lazy(() => import('./pages/admin/RecuperarPasswordPage'));
+const InvitacionModeradorPage = lazy(() => import('./pages/admin/InvitacionModeradorPage'));
 const RegistroEmpresa = lazy(() => import('./pages/empresa/RegistroEmpresa'));
 const Legal = lazy(() => import('./pages/Legal'));
 const Inicio = lazy(() => import('./pages/Inicio'));
@@ -127,6 +128,7 @@ export default function App() {
             <Route path="/eliminar-cuenta" element={<Legal tipo="eliminar" />} />
             <Route path="/ingresar" element={<LoginPage />} />
             <Route path="/recuperar-contrasena" element={<RecuperarPasswordPage />} />
+            <Route path="/moderacion/solicitud/:token" element={<InvitacionModeradorPage />} />
             <Route path="/empresas/registro" element={<RegistroEmpresa />} />
             <Route path="/admin/login" element={<LoginPage />} />
             <Route path="/moderator/login" element={<LoginPage />} />

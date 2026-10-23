@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Pencil, Search, UserMinus, UserPlus } from 'lucide-react';
+import { Ban, Copy, Link2, Pencil, RefreshCw, Search, UserMinus, UserPlus } from 'lucide-react';
 import { getUsers, setModerator } from '../../api/admin';
+import {
+  anularInvitacionModerador, crearInvitacionModerador, getInvitacionesModerador, reenviarInvitacionModerador,
+} from '../../api/invitacion';
 import { errorMessage, fullName, toList } from '../../utils/format';
 import {
   Alert, Avatar, Badge, Button, Card, ConfirmDialog, DataTable, Input, Modal, PageHeader, Pagination, Select,
@@ -26,7 +29,8 @@ export default function ModeratorsPage() {
   const [pagination, setPagination] = useState({ total: undefined, totalPages: 1 });
   const [removeTarget, setRemoveTarget] = useState(null);
 
-  // Buscador para agregar moderadores
+  // Modal "Asignar moderador de zona": buscador de usuarios
+  const [asignarOpen, setAsignarOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedZonaRaw, setSelectedZona] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -34,6 +38,17 @@ export default function ModeratorsPage() {
   const [searched, setSearched] = useState(false);
 
   const selectedZona = selectedZonaRaw || ZONAS[0]?.value || '';
+
+  // Invitaciones con enlace
+  const [invOpen, setInvOpen] = useState(false);
+  const [invZonaRaw, setInvZona] = useState('');
+  const [invEmail, setInvEmail] = useState('');
+  const [invSaving, setInvSaving] = useState(false);
+  const [invError, setInvError] = useState(null);
+  const [invResultado, setInvResultado] = useState(null);
+  const [invitaciones, setInvitaciones] = useState([]);
+  const [anularTarget, setAnularTarget] = useState(null);
+  const invZona = invZonaRaw || ZONAS[0]?.value || '';
 
   // Modal de modificación de zona
   const [edit, setEdit] = useState(null);
@@ -116,9 +131,7 @@ export default function ModeratorsPage() {
   const handleAddModerador = async (u) => {
     try {
       await setModerator(userId(u), { esModerador: true, zonaModerador: selectedZona });
-      setSearch('');
-      setSearchResults([]);
-      setSearched(false);
+      cerrarAsignar();
       setNotice(`${fullName(u)} asignado como moderador de ${zonaLabel(selectedZona)}`);
       fetchMods();
     } catch (err) {
@@ -126,6 +139,77 @@ export default function ModeratorsPage() {
     }
   };
 
+  const fetchInvitaciones = useCallback(async () => {
+    try {
+      const res = await getInvitacionesModerador();
+      setInvitaciones(toList(res.data, 'data'));
+    } catch {
+      setInvitaciones([]);
+    }
+  }, []);
+
+  useEffect(() => { fetchInvitaciones(); }, [fetchInvitaciones]);
+
+  const cerrarAsignar = () => {
+    setAsignarOpen(false);
+    setSearch('');
+    setSearchResults([]);
+    setSearched(false);
+  };
+
+  const abrirInvitar = () => {
+    setInvEmail('');
+    setInvError(null);
+    setInvResultado(null);
+    setInvOpen(true);
+  };
+
+  const handleInvitar = async () => {
+    setInvSaving(true);
+    setInvError(null);
+    try {
+      const res = await crearInvitacionModerador({ zona: invZona, email: invEmail.trim() || undefined, dias: 7 });
+      setInvResultado(res.data);
+      fetchInvitaciones();
+    } catch (err) {
+      setInvError(errorMessage(err, 'No se pudo crear la invitación'));
+    } finally {
+      setInvSaving(false);
+    }
+  };
+
+  const copiarEnlace = async (enlace) => {
+    try {
+      await navigator.clipboard.writeText(enlace);
+      setNotice('Enlace copiado');
+    } catch {
+      setNotice('No se pudo copiar: selecciona el enlace y cópialo a mano');
+    }
+  };
+
+  const handleReenviar = async (inv) => {
+    try {
+      const res = await reenviarInvitacionModerador(inv.id, { dias: 7 });
+      setInvResultado(res.data);
+      setInvError(null);
+      setInvOpen(true);
+      fetchInvitaciones();
+    } catch (err) {
+      setError(errorMessage(err, 'No se pudo generar el enlace nuevo'));
+    }
+  };
+
+  const handleAnular = async () => {
+    const inv = anularTarget;
+    if (!inv) return;
+    try {
+      await anularInvitacionModerador(inv.id);
+      setNotice('Invitación anulada');
+      fetchInvitaciones();
+    } catch (err) {
+      setError(errorMessage(err, 'No se pudo anular la invitación'));
+    }
+  };
   const columns = [
     {
       key: 'nombre',
@@ -161,48 +245,40 @@ export default function ModeratorsPage() {
       <PageHeader
         title="Moderadores"
         description="Personas que atienden emergencias, verifican conductores y publican avisos en una ciudad. Cada moderador tiene una sola zona."
+        actions={(
+          <>
+            <Button variant="secondary" icon={<UserPlus size={15} />} onClick={() => setAsignarOpen(true)}>Asignar moderador de zona</Button>
+            <Button icon={<Link2 size={15} />} onClick={abrirInvitar}>Invitar con enlace</Button>
+          </>
+        )}
       />
 
-      <Card title="Agregar moderador" description="Busca un usuario existente y asígnale una zona.">
-        <div className="stack">
-          <form className="toolbar" onSubmit={handleSearch}>
-            <Input
-              className="toolbar__spacer"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setSearched(false); }}
-              placeholder="Buscar nombre o correo"
-              aria-label="Buscar usuario por nombre o correo"
-            />
-            <Select className="inline-select" value={selectedZona} onChange={(e) => setSelectedZona(e.target.value)} aria-label="Zona a asignar">
-              {ZONAS.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
-            </Select>
-            <Button type="submit" variant="secondary" icon={<Search size={15} />} loading={searching} disabled={!search.trim()}>
-              Buscar
-            </Button>
-          </form>
-
-          {searchResults.length > 0 && (
-            <div className="result-list">
-              {searchResults.map((u) => (
-                <div key={userId(u)} className="result-item">
-                  <div className="cell-user">
-                    <Avatar src={u.avatar} name={fullName(u)} />
-                    <div className="cell-user__text">
-                      <span className="cell-user__name">{fullName(u)}</span>
-                      <span className="cell-user__meta">{u.email} · {u.rol}</span>
-                    </div>
-                  </div>
-                  <Button size="sm" variant="soft-success" icon={<UserPlus size={14} />} onClick={() => handleAddModerador(u)}>
-                    Asignar a {zonaLabel(selectedZona)}
-                  </Button>
+      <Card title="Invitaciones con enlace" description="Enlaces personales de un solo uso para que alguien pida ser moderador sin tener cuenta.">
+        {invitaciones.length === 0 ? (
+          <p className="text-sm text-muted">Aún no hay invitaciones.</p>
+        ) : (
+          <div className="result-list">
+            {invitaciones.slice(0, 10).map((inv) => (
+              <div key={inv.id} className="result-item">
+                <div className="cell-user__text">
+                  <span className="cell-user__name">{zonaLabel(inv.zona)} · {inv.email || 'sin correo'}</span>
+                  <span className="cell-user__meta">
+                    Vence {new Date(inv.venceAt).toLocaleDateString('es-CO')}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-          {searched && !searching && searchResults.length === 0 && (
-            <p className="text-sm text-muted">Sin resultados. Prueba con otro nombre o correo.</p>
-          )}
-        </div>
+                <div className="row row--end">
+                  <Badge variant={{ pendiente: 'info', usada: 'success', anulada: 'neutral', vencida: 'warning' }[inv.estado] || 'neutral'}>{inv.estado}</Badge>
+                  {(inv.estado === 'pendiente' || inv.estado === 'vencida') && (
+                    <Button size="sm" variant="secondary" icon={<RefreshCw size={14} />} onClick={() => handleReenviar(inv)}>Enlace nuevo</Button>
+                  )}
+                  {inv.estado === 'pendiente' && (
+                    <Button size="sm" variant="soft-danger" icon={<Ban size={14} />} onClick={() => setAnularTarget(inv)}>Anular</Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <div className="toolbar">
@@ -247,6 +323,105 @@ export default function ModeratorsPage() {
           {ZONAS.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
         </Select>
       </Modal>
+      <Modal
+        isOpen={asignarOpen}
+        onClose={cerrarAsignar}
+        title="Asignar moderador de zona"
+        description="Busca un usuario existente y asígnale una zona."
+        size="md"
+      >
+        <div className="stack">
+          <form className="toolbar" onSubmit={handleSearch}>
+            <Input
+              className="toolbar__spacer"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setSearched(false); }}
+              placeholder="Buscar nombre o correo"
+              aria-label="Buscar usuario por nombre o correo"
+            />
+            <Select className="inline-select" value={selectedZona} onChange={(e) => setSelectedZona(e.target.value)} aria-label="Zona a asignar">
+              {ZONAS.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
+            </Select>
+            <Button type="submit" variant="secondary" icon={<Search size={15} />} loading={searching} disabled={!search.trim()}>
+              Buscar
+            </Button>
+          </form>
+
+          {searchResults.length > 0 && (
+            <div className="result-list">
+              {searchResults.map((u) => (
+                <div key={userId(u)} className="result-item">
+                  <div className="cell-user">
+                    <Avatar src={u.avatar} name={fullName(u)} />
+                    <div className="cell-user__text">
+                      <span className="cell-user__name">{fullName(u)}</span>
+                      <span className="cell-user__meta">{u.email} · {u.rol}</span>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="soft-success" icon={<UserPlus size={14} />} onClick={() => handleAddModerador(u)}>
+                    Asignar a {zonaLabel(selectedZona)}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {searched && !searching && searchResults.length === 0 && (
+            <p className="text-sm text-muted">Sin resultados. Prueba con otro nombre o correo.</p>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={invOpen}
+        onClose={() => setInvOpen(false)}
+        title="Invitar con enlace"
+        description="Genera un enlace personal (vence en 7 días) para que la persona pida ser moderadora."
+        size="sm"
+        footer={invResultado ? (
+          <Button onClick={() => setInvOpen(false)}>Listo</Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={() => setInvOpen(false)} disabled={invSaving}>Cancelar</Button>
+            <Button onClick={handleInvitar} loading={invSaving}>Crear invitación</Button>
+          </>
+        )}
+      >
+        {invResultado ? (
+          <div className="stack">
+            <Alert variant="success">
+              {invResultado.correoEnviado === true && `Invitación enviada a ${invResultado.email}. `}
+              {invResultado.correoEnviado === false && 'No se pudo enviar el correo: comparte el enlace a mano. '}
+              Este enlace solo se muestra ahora.
+            </Alert>
+            <Input label="Enlace" readOnly value={invResultado.enlace} onFocus={(e) => e.target.select()} />
+            <Button variant="secondary" icon={<Copy size={14} />} onClick={() => copiarEnlace(invResultado.enlace)}>Copiar enlace</Button>
+          </div>
+        ) : (
+          <div className="stack">
+            {invError && <div className="page-error" role="alert">{invError}</div>}
+            <Select label="Zona" value={invZona} onChange={(e) => setInvZona(e.target.value)}>
+              {ZONAS.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
+            </Select>
+            <Input
+              label="Correo (opcional)"
+              type="email"
+              value={invEmail}
+              onChange={(e) => setInvEmail(e.target.value)}
+              helperText="Si lo pones, enviamos el enlace por correo y solo ese correo podrá usarlo."
+            />
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={!!anularTarget}
+        onClose={() => setAnularTarget(null)}
+        onConfirm={handleAnular}
+        title="Anular invitación"
+        message="El enlace dejará de funcionar. ¿Anular esta invitación?"
+        confirmText="Anular"
+        danger
+      />
     </div>
   );
 }
